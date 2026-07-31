@@ -1,0 +1,51 @@
+#app-root {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+  text-align: left;
+  min-height: 100%;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.app-title {
+  font-size: 28px;
+  margin: 0;
+  letter-spacing: -0.4px;
+}
+
+.app-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--code-bg);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.app-tab {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.app-tab-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.app-main {
+  padding-bottom: 60px;
+}

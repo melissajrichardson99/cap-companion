@@ -1,0 +1,155 @@
+.bingo-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bingo-loading {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.bingo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bingo-owner {
+  font-size: 18px;
+  margin: 0;
+}
+
+.bingo-milestone-summary {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.milestone-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.milestone-chip-line {
+  background: var(--milestone-line);
+}
+
+.milestone-chip-x {
+  background: var(--milestone-x);
+}
+
+.milestone-chip-blackout {
+  background: var(--milestone-blackout);
+  color: #1a1400;
+}
+
+.bingo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  aspect-ratio: 1 / 1;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.bingo-tile {
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1.25;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  border: 1.5px solid var(--border);
+  color: var(--text-h);
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.bingo-tile-open {
+  background: var(--bg);
+}
+
+.bingo-tile-open:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.bingo-tile-completed {
+  background: var(--state-visited-bg);
+  border-color: var(--state-visited);
+  color: var(--state-visited);
+  cursor: default;
+}
+
+.bingo-tile-label {
+  opacity: 1;
+}
+
+.bingo-tile-completed .bingo-tile-label {
+  opacity: 0.65;
+}
+
+.bingo-tile-stamp {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--state-visited);
+}
+
+.bingo-tile:disabled {
+  opacity: 0.85;
+}
+
+/* Milestone shape highlight — exact tiles forming the completed line/X/blackout,
+   swept in one at a time via the animation-delay set inline per tile. */
+
+@keyframes tile-sweep {
+  0% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1.04);
+  }
+}
+
+.bingo-tile-milestone-line {
+  animation: tile-sweep 0.4s ease-out forwards;
+  border-color: var(--milestone-line);
+  background: color-mix(in srgb, var(--milestone-line) 22%, var(--bg));
+  box-shadow: 0 0 0 2px var(--milestone-line);
+  z-index: 1;
+}
+
+.bingo-tile-milestone-x {
+  animation: tile-sweep 0.4s ease-out forwards;
+  border-color: var(--milestone-x);
+  background: color-mix(in srgb, var(--milestone-x) 22%, var(--bg));
+  box-shadow: 0 0 0 2px var(--milestone-x);
+  z-index: 1;
+}
+
+.bingo-tile-milestone-blackout {
+  animation: tile-sweep 0.4s ease-out forwards;
+  border-color: var(--milestone-blackout);
+  background: color-mix(in srgb, var(--milestone-blackout) 28%, var(--bg));
+  box-shadow: 0 0 0 2px var(--milestone-blackout);
+  z-index: 1;
+}

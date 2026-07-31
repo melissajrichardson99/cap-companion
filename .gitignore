@@ -141,3 +141,18 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# --- Godot build output (already copied into frontend/public/games/) ---
+/minigames/*/export_web/
+
+# --- Playwright test artifacts ---
+test-results/
+playwright-report/
+playwright/.cache/

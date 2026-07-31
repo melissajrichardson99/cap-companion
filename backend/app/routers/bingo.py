@@ -1,0 +1,30 @@
+from uuid import UUID
+
+from fastapi import APIRouter, HTTPException
+
+from app.errors import NotFoundError
+from app.models import BingoCard, BingoCardSummary, TileCompletionResult
+from app.services import map_bingo
+
+router = APIRouter(prefix="/bingo", tags=["bingo"])
+
+
+@router.get("/cards", response_model=list[BingoCardSummary])
+def list_cards() -> list[BingoCardSummary]:
+    return map_bingo.list_bingo_cards()
+
+
+@router.get("/card/{card_id}", response_model=BingoCard)
+def get_card(card_id: UUID) -> BingoCard:
+    try:
+        return map_bingo.get_bingo_card(card_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/tiles/{tile_id}/complete", response_model=TileCompletionResult)
+def complete_tile(tile_id: UUID) -> TileCompletionResult:
+    try:
+        return map_bingo.complete_tile(tile_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

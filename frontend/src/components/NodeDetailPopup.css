@@ -1,0 +1,95 @@
+.popup-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.popup-heading {
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+
+.popup-category {
+  margin: 0 0 12px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.popup-description {
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.popup-tile-count {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-size: 14px;
+}
+
+.popup-error {
+  color: var(--state-closed);
+  margin: 0 0 12px;
+}
+
+.popup-status {
+  margin: 12px 0 0;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.popup-closed-note {
+  font-size: 13px;
+  color: var(--state-closed);
+  align-self: center;
+}
+
+.popup-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tile-confirm-progress {
+  margin: 0 0 8px;
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+.tile-confirm-question {
+  font-size: 17px;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.state-pill {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.state-pill-not_visited {
+  color: var(--state-not-visited);
+  background: var(--state-not-visited-bg);
+}
+
+.state-pill-visited {
+  color: var(--state-visited);
+  background: var(--state-visited-bg);
+}
+
+.state-pill-closed {
+  color: var(--state-closed);
+  background: var(--state-closed-bg);
+}

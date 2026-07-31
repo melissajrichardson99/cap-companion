@@ -1,0 +1,8 @@
+78098b89c88a74ebe8c20117b8754620
+::res://::1785429903
+export_presets.cfg::TextFile::-1::1785429442::0::1::::<><><>0<>0<><>::
+::res://export_web/::1785429896
+::res://scenes/::1785429535
+Main.tscn::PackedScene::-1::1785429535::0::1::::<><><>0<>0<><>::res://scripts/Main.gd
+::res://scripts/::1785429557
+Main.gd::GDScript::5714549728045300527::1785429557::0::1::::<>Node2D<><>0<>0<><>::
