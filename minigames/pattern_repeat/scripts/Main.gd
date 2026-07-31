@@ -1,6 +1,8 @@
 extends Node2D
 
-const TARGET_LENGTH := 8
+const TARGET_LENGTH := 10
+const START_LENGTH := 2
+const GROWTH_PER_ROUND := 2
 const PRE_DELAY := 0.6
 const SHOW_DURATION := 0.55
 const GAP_DURATION := 0.25
@@ -66,7 +68,8 @@ func _start_game() -> void:
 	game_over_layer.visible = false
 	for i in range(animal_buttons.size()):
 		_set_button_lit(i, false)
-	sequence.append(randi() % ANIMAL_NAMES.size())
+	for i in range(START_LENGTH):
+		sequence.append(randi() % ANIMAL_NAMES.size())
 	_update_labels()
 	_play_sequence(round_token)
 
@@ -115,7 +118,8 @@ func _on_animal_pressed(index: int) -> void:
 	await get_tree().create_timer(ROUND_GAP).timeout
 	if token != round_token or not is_running:
 		return
-	sequence.append(randi() % ANIMAL_NAMES.size())
+	for i in range(GROWTH_PER_ROUND):
+		sequence.append(randi() % ANIMAL_NAMES.size())
 	_play_sequence(token)
 
 func _set_button_lit(index: int, lit: bool) -> void:

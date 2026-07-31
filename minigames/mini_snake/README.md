@@ -4,6 +4,7 @@ Godot 4.x project (GDScript only). Open `project.godot` in the Godot editor to t
 
 ## Gameplay
 - 10x10 grid, grid-based movement on a tick timer (`TICK_INTERVAL` in `scripts/Main.gd`, default 0.2s).
+- Snake starts at length 3, centered on the board (`start_x/start_y = GRID_WIDTH/HEIGHT / 2`), giving 3-4 cells of margin to every wall. Each round opens with a short "Ready? 3 2 1 Go!" countdown (`READY_COUNTDOWN`/`READY_STEP_DURATION`) before the tick timer starts, so the player gets a moment to orient before the snake begins moving.
 - Snake starts at length 3; round ends in a **win** at length 10 (`TARGET_LENGTH`), or a **loss** on wall/self collision. No endless mode.
 - Controls: on-screen D-pad buttons, or swipe/drag anywhere on the board (mouse drag also works when testing in the editor).
 - "Play Again" on the game-over screen calls `_start_game()` directly (no scene reload), so state resets cleanly.

@@ -8,6 +8,8 @@ const TARGET_LENGTH := 10
 const START_LENGTH := 3
 const TICK_INTERVAL := 0.2
 const SWIPE_MIN_DISTANCE := 24.0
+const READY_COUNTDOWN := ["Ready?", "3", "2", "1", "Go!"]
+const READY_STEP_DURATION := 0.5
 
 const DIR_UP := Vector2i(0, -1)
 const DIR_DOWN := Vector2i(0, 1)
@@ -38,6 +40,11 @@ var is_running: bool = false
 var touch_start: Vector2 = Vector2.ZERO
 var touch_active: bool = false
 
+# Bumped each time a new round starts so a stale countdown await from a
+# previous round (abandoned via exit/restart) can detect it's outdated and
+# bail out instead of starting the tick timer on top of a new round.
+var round_token: int = 0
+
 func _ready() -> void:
 	randomize()
 	tick_timer.wait_time = TICK_INTERVAL
@@ -52,6 +59,11 @@ func _ready() -> void:
 	_start_game()
 
 func _start_game() -> void:
+	round_token += 1
+	var token := round_token
+	# Centered so the length-3 body (occupying start_x, start_x-1, start_x-2)
+	# has 3-4 cells of margin to every wall - as balanced as an odd-length
+	# snake gets on an even-sized grid.
 	var start_x := GRID_WIDTH / 2
 	var start_y := GRID_HEIGHT / 2
 	snake.clear()
@@ -62,10 +74,22 @@ func _start_game() -> void:
 	score = 0
 	is_running = true
 	game_over_layer.visible = false
+	tick_timer.stop()
 	_spawn_food()
 	_update_labels()
-	tick_timer.start()
 	queue_redraw()
+	await _run_ready_countdown(token)
+	if token != round_token or not is_running:
+		return
+	_update_labels()
+	tick_timer.start()
+
+func _run_ready_countdown(token: int) -> void:
+	for step_text in READY_COUNTDOWN:
+		status_label.text = step_text
+		await get_tree().create_timer(READY_STEP_DURATION).timeout
+		if token != round_token:
+			return
 
 func _spawn_food() -> void:
 	var empty_cells: Array[Vector2i] = []
@@ -119,6 +143,7 @@ func _hits_self(pos: Vector2i, grows: bool) -> bool:
 
 func _end_game(won: bool) -> void:
 	is_running = false
+	round_token += 1
 	tick_timer.stop()
 	result_label.text = "You Win!" if won else "Game Over"
 	score_result_label.text = "Length reached: %d" % snake.size()
@@ -127,6 +152,7 @@ func _end_game(won: bool) -> void:
 
 func _on_exit_pressed() -> void:
 	is_running = false
+	round_token += 1
 	tick_timer.stop()
 	_notify_host_complete()
 

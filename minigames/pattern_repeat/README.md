@@ -4,9 +4,16 @@ Godot 4.x project (GDScript only). Open `project.godot` in the Godot editor to t
 
 ## Gameplay
 - Simon-style memory game, farm animal theme: 4 buttons (COW/PIG/HEN/EWE), each with a distinct idle/lit color.
-- Round 1 shows a 1-step sequence; each successful round appends one more random step (`randi() % 4`, uniform per step).
-- Player taps the sequence back in order. Round ends immediately on the first wrong tap (loss), or on completing a round at `TARGET_LENGTH` (8) steps (win) — no endless mode.
+- Round 1 shows a `START_LENGTH` (2) step sequence; each successful round appends `GROWTH_PER_ROUND` (2) more random steps (`randi() % 4`, uniform per step) — so lengths go 2, 4, 6, 8, 10.
+- Player taps the sequence back in order. Round ends immediately on the first wrong tap (loss), or on completing a round at `TARGET_LENGTH` (10) steps (win) — no endless mode.
 - "Play Again" on the game-over screen calls `_start_game()` directly (no scene reload), so state resets cleanly.
+
+## Pacing choice: why target length 10, not 8
+The original version grew by 1 starting at length 1, up to a target of 8 (8 rounds total) — timed out, that's ~45s+ of playback/gap time alone before factoring in tap time, well over the ~30s-per-minigame target below, which is what "too slow/easy" was about: a gentle, grindy ramp.
+
+Doubling the growth rate to +2 while keeping the old target of 8 would only take 4 rounds (2, 4, 6, 8) to win — a full playthrough in well under 15s, tripping the opposite failure mode this task explicitly warned against ("without being trivially short").
+
+Target length 10 (5 rounds: 2, 4, 6, 8, 10) is the middle path: sequence-display + round-gap time alone comes to ~35s (close to the ~30s/minigame budget from `CAP_Companion_App_Plan.md`), it's a real step up in peak difficulty from the old length-8 ceiling, and 5 rounds is enough that a win still feels earned rather than instant. Revisit `TARGET_LENGTH`/`GROWTH_PER_ROUND` together if playtesting says otherwise.
 
 ## Implementation notes
 - Playback and round-gap pacing use `await get_tree().create_timer(...).timeout` rather than a dedicated `Timer` node.
