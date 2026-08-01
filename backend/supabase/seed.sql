@@ -107,6 +107,15 @@ insert into minigames (name, engine_group, theme, target_duration_seconds, phase
 on conflict (name) do nothing;
 
 -- ---------------------------------------------------------------------------
+-- minigames — Phase 2 pool (2 of 5 built so far; not yet in the live draw
+-- pool — map_bingo.CURRENT_MINIGAME_PHASE stays at 1 until all 5 ship)
+-- ---------------------------------------------------------------------------
+insert into minigames (name, engine_group, theme, target_duration_seconds, phase) values
+    ('Mini Platformer', 'standalone',  'kangaroo', 30, 2),
+    ('Obstacle Dodge',  'auto_scroll', 'alpaca',   30, 2)
+on conflict (name) do nothing;
+
+-- ---------------------------------------------------------------------------
 -- bingo_cards + bingo_tiles — one demo 25-tile card (tech spec section 6.2),
 -- linked to map_nodes above wherever a tile implies a real park section.
 -- Only seeded once (skipped on re-run) since bingo_cards has no natural

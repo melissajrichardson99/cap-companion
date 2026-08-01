@@ -1,0 +1,162 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
+size = Vector2(28, 36)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p0"]
+size = Vector2(480, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p1"]
+size = Vector2(260, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p2"]
+size = Vector2(200, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p3"]
+size = Vector2(900, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p4"]
+size = Vector2(700, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hazard"]
+size = Vector2(30, 30)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_goal"]
+size = Vector2(20, 100)
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Player" type="CharacterBody2D" parent="."]
+position = Vector2(40, 442)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
+shape = SubResource("RectangleShape2D_player")
+
+[node name="Platforms" type="Node2D" parent="."]
+
+[node name="Platform0" type="StaticBody2D" parent="Platforms"]
+position = Vector2(240, 472)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform0"]
+shape = SubResource("RectangleShape2D_p0")
+
+[node name="Platform1" type="StaticBody2D" parent="Platforms"]
+position = Vector2(650, 472)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform1"]
+shape = SubResource("RectangleShape2D_p1")
+
+[node name="Platform2" type="StaticBody2D" parent="Platforms"]
+position = Vector2(920, 402)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform2"]
+shape = SubResource("RectangleShape2D_p2")
+
+[node name="Platform3" type="StaticBody2D" parent="Platforms"]
+position = Vector2(1510, 472)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform3"]
+shape = SubResource("RectangleShape2D_p3")
+
+[node name="Platform4" type="StaticBody2D" parent="Platforms"]
+position = Vector2(2350, 472)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Platforms/Platform4"]
+shape = SubResource("RectangleShape2D_p4")
+
+[node name="Hazards" type="Node2D" parent="."]
+
+[node name="Hazard0" type="Area2D" parent="Hazards"]
+position = Vector2(650, 445)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hazards/Hazard0"]
+shape = SubResource("RectangleShape2D_hazard")
+
+[node name="Hazard1" type="Area2D" parent="Hazards"]
+position = Vector2(1500, 445)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hazards/Hazard1"]
+shape = SubResource("RectangleShape2D_hazard")
+
+[node name="Goal" type="Area2D" parent="."]
+position = Vector2(2650, 410)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Goal"]
+shape = SubResource("RectangleShape2D_goal")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(200, 300)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="TopBar" type="Control" parent="UI"]
+offset_right = 400.0
+offset_bottom = 60.0
+
+[node name="StatusLabel" type="Label" parent="UI/TopBar"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 354.0
+offset_bottom = 44.0
+horizontal_alignment = 1
+text = "Ready?"
+
+[node name="ExitButton" type="Button" parent="UI/TopBar"]
+offset_left = 354.0
+offset_top = 10.0
+offset_right = 400.0
+offset_bottom = 42.0
+text = "X"
+
+[node name="Controls" type="Control" parent="UI"]
+offset_top = 500.0
+offset_right = 400.0
+offset_bottom = 600.0
+
+[node name="JumpButton" type="Button" parent="UI/Controls"]
+offset_left = 130.0
+offset_top = 10.0
+offset_right = 270.0
+offset_bottom = 90.0
+text = "JUMP"
+
+[node name="GameOverLayer" type="Control" parent="UI"]
+visible = false
+offset_right = 400.0
+offset_bottom = 600.0
+
+[node name="Dim" type="ColorRect" parent="UI/GameOverLayer"]
+offset_right = 400.0
+offset_bottom = 600.0
+color = Color(0, 0, 0, 0.6)
+
+[node name="ResultLabel" type="Label" parent="UI/GameOverLayer"]
+offset_top = 220.0
+offset_right = 400.0
+offset_bottom = 260.0
+horizontal_alignment = 1
+text = "Game Over"
+
+[node name="ScoreResultLabel" type="Label" parent="UI/GameOverLayer"]
+offset_top = 270.0
+offset_right = 400.0
+offset_bottom = 300.0
+horizontal_alignment = 1
+text = ""
+
+[node name="RestartButton" type="Button" parent="UI/GameOverLayer"]
+offset_left = 140.0
+offset_top = 330.0
+offset_right = 260.0
+offset_bottom = 370.0
+text = "Play Again"
+
+[node name="ExitButton" type="Button" parent="UI/GameOverLayer"]
+offset_left = 140.0
+offset_top = 380.0
+offset_right = 260.0
+offset_bottom = 420.0
+text = "Exit"

@@ -11,6 +11,8 @@ const GAME_SLUGS: Record<string, string> = {
   'Card Flip Pairs': 'card_flip_pairs',
   'Pattern Repeat': 'pattern_repeat',
   'Mini Maze': 'mini_maze',
+  'Mini Platformer': 'mini_platformer',
+  'Obstacle Dodge': 'obstacle_dodge',
 }
 
 export function getMinigameSlug(game: Minigame): string | null {
