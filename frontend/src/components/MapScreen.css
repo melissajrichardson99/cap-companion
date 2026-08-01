@@ -10,12 +10,172 @@
   text-align: center;
 }
 
-.map-category-heading {
-  font-size: 18px;
-  margin: 0 0 12px;
+.map-image-wrap {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+}
+
+.map-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.map-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  z-index: 1;
+}
+
+.map-pin:hover,
+.map-pin:focus-visible {
+  z-index: 2;
+}
+
+.map-pin-shape {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  /* Real SVG geometry, not a clipped/rotated CSS box: stroke traces the
+     actual path outline in one continuous line, so a state/color change is
+     one fill swap on .map-pin-shape-fill with nothing left over to leak
+     from a separate border layer -- no per-shape CSS workaround needed. */
+  overflow: visible;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
+}
+
+.map-pin-shape-fill {
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.map-pin-attraction .map-pin-shape-fill {
+  fill: var(--cat-attraction);
+  /* Star pins get a black outline instead of the white every other shape
+     uses -- distinct from the other categories' stroke by design. Thinner
+     than the default stroke-width so the black doesn't read as heavy
+     against the star's many points. */
+  stroke: #000;
+  stroke-width: 1;
+}
+
+.map-pin-animal .map-pin-shape-fill {
+  fill: var(--cat-animal);
+}
+
+.map-pin-service .map-pin-shape-fill {
+  fill: var(--cat-service);
+}
+
+.map-pin-food .map-pin-shape-fill {
+  fill: var(--cat-food);
+}
+
+.map-pin-seasonal .map-pin-shape-fill {
+  fill: var(--cat-seasonal);
+}
+
+/* Wins over the category-color rules above on source-order (equal
+   specificity), so a visited pin always shows solid green regardless of
+   category, with the checkmark replacing the number. */
+.map-pin-visited .map-pin-shape-fill {
+  fill: var(--map-pin-visited);
+}
+
+.map-pin-shape-text {
+  font-size: 12px;
+  font-weight: 700;
+  fill: #fff;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Legend yellow is very light -- white text (the other shapes' default)
+   would be unreadable on it. */
+.map-pin-service .map-pin-shape-text {
+  fill: #1a1a00;
+}
+
+.map-pin-visited .map-pin-shape-text {
+  fill: #fff;
+}
+
+.map-pin-closed .map-pin-shape {
+  filter: grayscale(1) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
+  opacity: 0.75;
+}
+
+.map-pin-tile-badge {
+  position: absolute;
+  top: -11px;
+  right: -11px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--map-pin-badge);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* Food & Store diamonds are the one category with real nodes this tight --
+   Granny Ann's Kitchen and Sugar Shack sit only ~30px apart at the map's
+   max render width. -11px overlaps a NEIGHBORING diamond there even though
+   the shape-aware check confirms it's safe everywhere else; -3px is the
+   largest offset that stays clear of a neighbor across every food node
+   pair (verified against live position data). Overlapping a different
+   node's pin is worse than this category's badges sitting closer to their
+   own corner than the rest of the map. */
+.map-pin-food .map-pin-tile-badge {
+  top: -3px;
+  right: -3px;
+}
+
+.map-pin-label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-h);
+  background: var(--bg);
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.map-pin:hover .map-pin-label,
+.map-pin:focus-visible .map-pin-label {
+  opacity: 1;
+}
+
+.map-unplaced-heading {
+  font-size: 18px;
+  margin: 0 0 12px;
 }
 
 .node-grid {

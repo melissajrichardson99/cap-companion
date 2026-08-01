@@ -72,8 +72,12 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
     setQueueIndex(nextIndex)
   }
 
-  if (step === 'confirming' || step === 'submitting') {
-    const tile = queue[queueIndex]
+  // A node with no uncompleted linked tiles skips straight from 'detail' to
+  // submit()'s 'submitting' step (see startMarkVisited) without ever
+  // populating queue -- guard on an actual tile existing, not just the step,
+  // so that fast path doesn't crash reading .label off an empty queue.
+  const tile = queue[queueIndex]
+  if ((step === 'confirming' || step === 'submitting') && tile) {
     return (
       <Modal onClose={onClose} labelledBy="tile-confirm-heading">
         <h2 id="tile-confirm-heading" className="popup-heading">
@@ -117,6 +121,10 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
       <p className="popup-category">{CATEGORY_LABEL[node.category]}</p>
       <p className="popup-description">{node.description}</p>
 
+      {node.children.length > 0 && (
+        <p className="popup-children">Games here: {node.children.map((c) => c.name).join(', ')}</p>
+      )}
+
       {node.linked_tiles.length > 0 && (
         <p className="popup-tile-count">
           {uncompletedTiles.length > 0
@@ -128,16 +136,24 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
       {error && <p className="popup-error">{error}</p>}
 
       <div className="popup-actions">
-        <button type="button" className="btn btn-secondary" onClick={onClose}>
+        <button type="button" className="btn btn-secondary" onClick={onClose} disabled={step === 'submitting'}>
           Close
         </button>
         {node.state === 'not_visited' && (
-          <button type="button" className="btn btn-primary" onClick={startMarkVisited}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={startMarkVisited}
+            disabled={step === 'submitting'}
+          >
             Mark Visited
           </button>
         )}
         {node.state === 'closed' && <span className="popup-closed-note">Currently closed by park staff.</span>}
       </div>
+      {/* Only reachable here when there was nothing to confirm (queue stayed
+          empty) -- startMarkVisited went straight to submit(). */}
+      {step === 'submitting' && <p className="popup-status">Saving…</p>}
     </Modal>
   )
 }

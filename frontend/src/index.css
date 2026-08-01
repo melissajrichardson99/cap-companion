@@ -18,11 +18,18 @@
   --state-closed: #b3475a;
   --state-closed-bg: rgba(179, 71, 90, 0.1);
 
-  --cat-attraction: #3b82f6;
-  --cat-animal: #d97706;
-  --cat-service: #6b7280;
-  --cat-food: #dc2626;
+  /* Map pin shape colors match the physical park map's legend exactly, so
+     they're fixed real-world colors rather than adaptive theme colors --
+     intentionally not overridden in the dark-mode block below. */
+  --cat-attraction: #ff0000;
+  --cat-animal: #ff7700;
+  --cat-service: #eaff00;
+  --cat-food: #3b7801;
   --cat-seasonal: #7c3aed;
+  --map-pin-visited: #22c55e;
+  /* Blue isn't used by any pin category or the visited-state green, so the
+     badge stays visually distinct from everything else on the map. */
+  --map-pin-badge: #3b82f6;
 
   --milestone-line: #3b82f6;
   --milestone-x: #ea580c;
@@ -68,10 +75,6 @@
     --state-closed: #f87171;
     --state-closed-bg: rgba(248, 113, 113, 0.15);
 
-    --cat-attraction: #60a5fa;
-    --cat-animal: #fbbf24;
-    --cat-service: #9ca3af;
-    --cat-food: #f87171;
     --cat-seasonal: #a78bfa;
 
     --milestone-line: #60a5fa;

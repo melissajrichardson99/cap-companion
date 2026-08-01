@@ -13,6 +13,14 @@ create table if not exists map_nodes (
     category    text not null check (category in ('attraction', 'animal', 'service', 'food', 'seasonal')),
     description text not null default '',
     state       text not null default 'not_visited' check (state in ('not_visited', 'visited', 'closed')),
+    -- Percentage position (0-100) on the map background image, not pixel
+    -- coordinates. Null until the node has been placed on the hand-drawn map.
+    x_pct       double precision check (x_pct is null or (x_pct >= 0 and x_pct <= 100)),
+    y_pct       double precision check (y_pct is null or (y_pct >= 0 and y_pct <= 100)),
+    -- Self-referential: set on nodes that are really a sub-game of a single
+    -- physical pad (e.g. Cornhole -> Arcade Pad). Parented nodes don't render
+    -- their own pin; the parent's popup lists them instead.
+    parent_node_id uuid references map_nodes(id) on delete set null,
     created_at  timestamptz not null default now()
 );
 

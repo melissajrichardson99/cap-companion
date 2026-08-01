@@ -48,6 +48,18 @@ class LinkedTile(BaseModel):
     completed: bool
 
 
+class ChildNode(BaseModel):
+    """Minimal child-node summary embedded in a parent MapNode response.
+
+    Lets the frontend render "Games here: X, Y" on a parent's popup, and
+    identify which nodes are children (and so shouldn't get their own pin)
+    without a second round trip.
+    """
+
+    id: UUID
+    name: str
+
+
 class MapNode(BaseModel):
     id: UUID
     name: str
@@ -55,6 +67,17 @@ class MapNode(BaseModel):
     description: str
     state: NodeState = NodeState.NOT_VISITED
     linked_tiles: list[LinkedTile] = Field(default_factory=list)
+    # Percentage position (0-100) on the map background image, not pixel
+    # coordinates, so pins stay correctly placed regardless of the final
+    # artwork's resolution. Null for nodes not yet placed on the map.
+    x_pct: float | None = Field(default=None, ge=0, le=100)
+    y_pct: float | None = Field(default=None, ge=0, le=100)
+    # Set when this node is really a sub-game of a single physical pad (e.g.
+    # Cornhole -> Arcade Pad) rather than its own map location. Parented
+    # nodes don't render their own pin/fallback entry; the parent's
+    # `children` list stands in for them instead.
+    parent_node_id: UUID | None = None
+    children: list[ChildNode] = Field(default_factory=list)
 
     @property
     def linked_bingo_tile_ids(self) -> list[UUID]:

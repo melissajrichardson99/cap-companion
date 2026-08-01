@@ -24,6 +24,12 @@
   line-height: 1.5;
 }
 
+.popup-children {
+  margin: 0 0 16px;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
 .popup-tile-count {
   margin: 0 0 16px;
   padding: 8px 12px;

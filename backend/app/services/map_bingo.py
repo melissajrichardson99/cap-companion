@@ -17,6 +17,7 @@ from app.models import (
     BingoCard,
     BingoCardSummary,
     BingoTile,
+    ChildNode,
     LinkedTile,
     MapNode,
     MilestoneEvent,
@@ -37,7 +38,9 @@ CURRENT_MINIGAME_PHASE = 1  # Phase 1 pool = 5 games; bump once Phase 2 ships (4
 _last_played_minigame_id: UUID | None = None
 
 
-def _row_to_map_node(row: dict, linked_tiles: list[LinkedTile]) -> MapNode:
+def _row_to_map_node(
+    row: dict, linked_tiles: list[LinkedTile], children: list[ChildNode] | None = None
+) -> MapNode:
     return MapNode(
         id=row["id"],
         name=row["name"],
@@ -45,6 +48,10 @@ def _row_to_map_node(row: dict, linked_tiles: list[LinkedTile]) -> MapNode:
         description=row["description"],
         state=row["state"],
         linked_tiles=linked_tiles,
+        x_pct=row["x_pct"],
+        y_pct=row["y_pct"],
+        parent_node_id=row["parent_node_id"],
+        children=children or [],
     )
 
 
@@ -83,7 +90,28 @@ def list_map_nodes() -> list[MapNode]:
             LinkedTile(id=t["id"], label=t["label"], completed=t["completed"])
         )
 
-    return [_row_to_map_node(n, tiles_by_node.get(n["id"], [])) for n in nodes]
+    children_by_parent: dict[str, list[dict]] = {}
+    for n in nodes:
+        parent_id = n["parent_node_id"]
+        if parent_id is not None:
+            children_by_parent.setdefault(parent_id, []).append(n)
+    for child_rows in children_by_parent.values():
+        child_rows.sort(key=lambda c: c["name"])
+
+    result = []
+    for n in nodes:
+        child_rows = children_by_parent.get(n["id"], [])
+        # A parent's "linked tiles" for the sequential visit-confirmation
+        # flow (4.3) include its children's linked tiles too — the games
+        # under Arcade Pad/Ground Games each link their own bingo tile, but
+        # only the parent renders a pin/popup to walk through them from.
+        linked_tiles = list(tiles_by_node.get(n["id"], []))
+        for child in child_rows:
+            linked_tiles.extend(tiles_by_node.get(child["id"], []))
+        children = [ChildNode(id=c["id"], name=c["name"]) for c in child_rows]
+        result.append(_row_to_map_node(n, linked_tiles, children))
+
+    return result
 
 
 def list_bingo_cards() -> list[BingoCardSummary]:
@@ -249,8 +277,20 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID]) -> VisitNodeRespon
     if not node_rows:
         raise NotFoundError(f"Map node {node_id} not found")
 
+    child_rows = (
+        client.table("map_nodes")
+        .select("id,name")
+        .eq("parent_node_id", str(node_id))
+        .order("name")
+        .execute()
+        .data
+    )
+    # A parent's linked tiles include its children's tiles too, so confirming
+    # them here must recognize child-linked tile ids, not just the node's own.
+    relevant_node_ids = [str(node_id)] + [c["id"] for c in child_rows]
+
     linked_tile_rows = (
-        client.table("bingo_tiles").select("id").eq("linked_map_node_id", str(node_id)).execute().data
+        client.table("bingo_tiles").select("id").in_("linked_map_node_id", relevant_node_ids).execute().data
     )
     linked_ids = {r["id"] for r in linked_tile_rows}
 
@@ -265,11 +305,12 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID]) -> VisitNodeRespon
     tiles = (
         client.table("bingo_tiles")
         .select("id,label,completed")
-        .eq("linked_map_node_id", str(node_id))
+        .in_("linked_map_node_id", relevant_node_ids)
         .execute()
         .data
     )
     linked_tiles = [LinkedTile(id=t["id"], label=t["label"], completed=t["completed"]) for t in tiles]
+    children = [ChildNode(id=c["id"], name=c["name"]) for c in child_rows]
 
-    node = _row_to_map_node(updated_node_row, linked_tiles)
+    node = _row_to_map_node(updated_node_row, linked_tiles, children)
     return VisitNodeResponse(node=node, tile_completions=tile_completions)

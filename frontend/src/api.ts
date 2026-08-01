@@ -11,6 +11,11 @@ export interface LinkedTile {
   completed: boolean
 }
 
+export interface ChildNode {
+  id: string
+  name: string
+}
+
 export interface MapNode {
   id: string
   name: string
@@ -18,6 +23,10 @@ export interface MapNode {
   description: string
   state: NodeState
   linked_tiles: LinkedTile[]
+  x_pct: number | null
+  y_pct: number | null
+  parent_node_id: string | null
+  children: ChildNode[]
 }
 
 export interface BingoTile {

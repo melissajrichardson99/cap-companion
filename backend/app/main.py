@@ -1,9 +1,33 @@
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.routers import bingo, map as map_router
 
+logger = logging.getLogger("app")
+
 app = FastAPI(title="Cobb's Adventure Park Companion API")
+
+
+@app.middleware("http")
+async def catch_unhandled_exceptions(request: Request, call_next):
+    # Registered before CORSMiddleware is added below, so it ends up *inside*
+    # CORSMiddleware in the middleware stack. A handler registered via
+    # @app.exception_handler(Exception) instead binds to Starlette's
+    # ServerErrorMiddleware, which always sits outside every user middleware
+    # (including CORSMiddleware) — so an unhandled exception would ship with
+    # no Access-Control-Allow-Origin header, the browser would block the
+    # frontend from reading it, and fetch() would throw a generic
+    # "TypeError: Failed to fetch" instead of surfacing the real error.
+    # Catching it here keeps the response inside CORSMiddleware's wrapping.
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+        return JSONResponse(status_code=500, content={"detail": str(exc)})
+
 
 app.add_middleware(
     CORSMiddleware,
