@@ -11,6 +11,8 @@ Resets:
     completed_at = null
   - that card's milestone_lines/milestone_x/milestone_blackout back to none
   - every map_nodes row (all cards share the same map): state = 'not_visited'
+  - every puzzle_attempts row deleted, so the Puzzle Timer leaderboard specs
+    start from an empty leaderboard each run
 """
 
 from __future__ import annotations
@@ -57,6 +59,16 @@ def reset_demo_data() -> None:
         .data
     )
     print(f"Reset {len(node_rows)} map node(s) to not_visited.")
+
+    # Same "no bare delete" PostgREST rule as the map_nodes update above.
+    attempt_rows = (
+        client.table("puzzle_attempts")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+        .execute()
+        .data
+    )
+    print(f"Deleted {len(attempt_rows)} puzzle attempt(s).")
 
 
 if __name__ == "__main__":

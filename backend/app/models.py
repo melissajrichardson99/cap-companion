@@ -36,6 +36,17 @@ class MilestoneType(StrEnum):
     BLACKOUT = "blackout"
 
 
+class SolutionType(StrEnum):
+    EXACT = "exact"
+    STRATEGY = "strategy"
+    NONE = "none"
+
+
+class LeaderboardScope(StrEnum):
+    DAILY = "daily"
+    ALL_TIME = "all_time"
+
+
 class LinkedTile(BaseModel):
     """Minimal tile summary embedded in a MapNode response.
 
@@ -150,3 +161,41 @@ class VisitNodeRequest(BaseModel):
 class VisitNodeResponse(BaseModel):
     node: MapNode
     tile_completions: list[TileCompletionResult]
+
+
+class PuzzleChallenge(BaseModel):
+    id: UUID
+    puzzle_id: UUID
+    label: str
+    target_time_seconds: int | None = Field(default=None, gt=0)
+    solution_type: SolutionType
+    # hint_tier_3 holds the full solution ('exact') or complete strategy
+    # explanation ('strategy'). All three are null for 'none' puzzles
+    # (Big Mystery Maze) -- the frontend hides the hint button entirely then.
+    hint_tier_1: str | None = None
+    hint_tier_2: str | None = None
+    hint_tier_3: str | None = None
+
+
+class Puzzle(BaseModel):
+    id: UUID
+    name: str
+    rules_text: str
+    challenges: list[PuzzleChallenge] = Field(default_factory=list)
+
+
+class PuzzleAttempt(BaseModel):
+    id: UUID
+    challenge_id: UUID
+    elapsed_seconds: int = Field(gt=0)
+    created_at: datetime
+
+
+class RecordAttemptRequest(BaseModel):
+    elapsed_seconds: int = Field(gt=0)
+
+
+class LeaderboardEntry(BaseModel):
+    rank: int
+    elapsed_seconds: int
+    created_at: datetime

@@ -73,3 +73,51 @@ create table if not exists minigames (
     target_duration_seconds  integer not null default 30,
     phase                    integer not null check (phase in (1, 2))
 );
+
+-- ---------------------------------------------------------------------------
+-- puzzles / puzzle_challenges / puzzle_attempts (Puzzle Solving Timer, plan 2.3)
+-- ---------------------------------------------------------------------------
+create table if not exists puzzles (
+    id          uuid primary key default gen_random_uuid(),
+    name        text not null unique,
+    rules_text  text not null default '',
+    -- Optional link back to the physical attraction's map_nodes row (5 of the
+    -- 6 puzzles already exist there as sub-games of Ground Games; Big Mystery
+    -- Maze links to the existing "Mystery Maze" node). Nullable/set-null, same
+    -- pattern as bingo_tiles.linked_map_node_id -- this table is the FK side,
+    -- not a mirrored name/description, to avoid a sync-drift bug.
+    map_node_id uuid references map_nodes(id) on delete set null,
+    created_at  timestamptz not null default now()
+);
+
+create table if not exists puzzle_challenges (
+    id                   uuid primary key default gen_random_uuid(),
+    puzzle_id            uuid not null references puzzles(id) on delete cascade,
+    -- e.g. "Reach the Top" for multi-challenge puzzles, or "Default" for the
+    -- 4 puzzles that only have one objective.
+    label                text not null,
+    sort_order           integer not null default 0,
+    -- Not all challenges have an official target time yet (Plan.md 2.3 open
+    -- item) -- nullable rather than a placeholder 0/-1.
+    target_time_seconds  integer check (target_time_seconds is null or target_time_seconds > 0),
+    solution_type        text not null check (solution_type in ('exact', 'strategy', 'none')),
+    -- hint_tier_3 holds the full solution ('exact') or complete strategy
+    -- explanation ('strategy'). All three are null for 'none' puzzles
+    -- (Big Mystery Maze), which get a timer/leaderboard but no hint button.
+    hint_tier_1          text,
+    hint_tier_2          text,
+    hint_tier_3          text,
+    created_at           timestamptz not null default now(),
+    unique (puzzle_id, label)
+);
+
+create index if not exists puzzle_challenges_puzzle_id_idx on puzzle_challenges(puzzle_id);
+
+create table if not exists puzzle_attempts (
+    id              uuid primary key default gen_random_uuid(),
+    challenge_id    uuid not null references puzzle_challenges(id) on delete cascade,
+    elapsed_seconds integer not null check (elapsed_seconds > 0),
+    created_at      timestamptz not null default now()
+);
+
+create index if not exists puzzle_attempts_challenge_id_idx on puzzle_attempts(challenge_id);

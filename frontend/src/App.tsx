@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { api, type BingoCard, type MapNode, type Minigame, type MilestoneEvent, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { api, type BingoCard, type MapNode, type Minigame, type MilestoneEvent, type Puzzle, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { BingoScreen } from './components/BingoScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
+import { PuzzleScreen } from './components/PuzzleScreen'
 import { ToastStack, type ToastItem } from './components/ToastStack'
 import './components/shared.css'
 import './App.css'
 
-type Tab = 'map' | 'bingo'
+type Tab = 'map' | 'bingo' | 'puzzles'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('map')
@@ -18,6 +19,9 @@ function App() {
   const [cardId, setCardId] = useState<string | null>(null)
   const [card, setCard] = useState<BingoCard | null>(null)
   const [cardError, setCardError] = useState<string | null>(null)
+
+  const [puzzles, setPuzzles] = useState<Puzzle[] | null>(null)
+  const [puzzlesError, setPuzzlesError] = useState<string | null>(null)
 
   const [milestoneQueue, setMilestoneQueue] = useState<MilestoneEvent[]>([])
   const [minigameQueue, setMinigameQueue] = useState<Minigame[]>([])
@@ -34,8 +38,14 @@ function App() {
     api.getBingoCard(id).then(setCard).catch((err) => setCardError(String(err)))
   }
 
+  const reloadPuzzles = () => {
+    setPuzzlesError(null)
+    api.listPuzzles().then(setPuzzles).catch((err) => setPuzzlesError(String(err)))
+  }
+
   useEffect(() => {
     reloadNodes()
+    reloadPuzzles()
     api
       .listBingoCards()
       .then((summaries) => {
@@ -107,13 +117,21 @@ function App() {
           >
             Bingo Card
           </button>
+          <button
+            type="button"
+            className={`app-tab ${activeTab === 'puzzles' ? 'app-tab-active' : ''}`}
+            onClick={() => setActiveTab('puzzles')}
+          >
+            Puzzles
+          </button>
         </nav>
       </header>
 
       <main className="app-main">
-        {activeTab === 'map' ? (
+        {activeTab === 'map' && (
           <MapScreen nodes={nodes} error={nodesError} onReload={reloadNodes} onVisitResult={handleVisitResult} />
-        ) : (
+        )}
+        {activeTab === 'bingo' && (
           <BingoScreen
             card={card}
             error={cardError}
@@ -122,6 +140,9 @@ function App() {
             milestoneQueue={milestoneQueue}
             onMilestoneShown={() => setMilestoneQueue((q) => q.slice(1))}
           />
+        )}
+        {activeTab === 'puzzles' && (
+          <PuzzleScreen puzzles={puzzles} error={puzzlesError} onReload={reloadPuzzles} />
         )}
       </main>
 
