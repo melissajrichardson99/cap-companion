@@ -107,12 +107,15 @@ insert into minigames (name, engine_group, theme, target_duration_seconds, phase
 on conflict (name) do nothing;
 
 -- ---------------------------------------------------------------------------
--- minigames — Phase 2 pool (2 of 5 built so far; not yet in the live draw
--- pool — map_bingo.CURRENT_MINIGAME_PHASE stays at 1 until all 5 ship)
+-- minigames — Phase 2 pool (all 5 built — map_bingo.CURRENT_MINIGAME_PHASE
+-- bumped to 2, so these are now in the live draw pool alongside Phase 1)
 -- ---------------------------------------------------------------------------
 insert into minigames (name, engine_group, theme, target_duration_seconds, phase) values
-    ('Mini Platformer', 'standalone',  'kangaroo', 30, 2),
-    ('Obstacle Dodge',  'auto_scroll', 'alpaca',   30, 2)
+    ('Mini Platformer',   'standalone',  'kangaroo', 30, 2),
+    ('Obstacle Dodge',    'auto_scroll', 'alpaca',   30, 2),
+    ('Digital Ring Toss', 'standalone',  'none',     30, 2),
+    ('Bug Net Swipe',     'standalone',  'none',     30, 2),
+    ('Sort the Species',  'auto_scroll', 'none',     30, 2)
 on conflict (name) do nothing;
 
 -- ---------------------------------------------------------------------------

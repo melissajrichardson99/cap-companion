@@ -1,0 +1,116 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="SpawnTimer" type="Timer" parent="."]
+wait_time = 2.6
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="TopBar" type="Control" parent="UI"]
+mouse_filter = 2
+offset_right = 400.0
+offset_bottom = 60.0
+
+[node name="CorrectLabel" type="Label" parent="UI/TopBar"]
+offset_left = 8.0
+offset_top = 16.0
+offset_right = 130.0
+offset_bottom = 44.0
+text = "Correct: 0"
+
+[node name="MissedLabel" type="Label" parent="UI/TopBar"]
+offset_left = 130.0
+offset_top = 16.0
+offset_right = 250.0
+offset_bottom = 44.0
+text = "Missed: 0 / 4"
+
+[node name="StatusLabel" type="Label" parent="UI/TopBar"]
+offset_left = 250.0
+offset_top = 16.0
+offset_right = 354.0
+offset_bottom = 44.0
+horizontal_alignment = 1
+text = "Ready?"
+
+[node name="ExitButton" type="Button" parent="UI/TopBar"]
+offset_left = 354.0
+offset_top = 10.0
+offset_right = 400.0
+offset_bottom = 42.0
+text = "X"
+
+[node name="Bins" type="Control" parent="UI"]
+mouse_filter = 2
+offset_top = 500.0
+offset_right = 400.0
+offset_bottom = 600.0
+
+[node name="BinLabel0" type="Label" parent="UI/Bins"]
+offset_left = 0.0
+offset_top = 58.0
+offset_right = 133.333
+offset_bottom = 100.0
+horizontal_alignment = 1
+autowrap_mode = 2
+text = "Capybara"
+
+[node name="BinLabel1" type="Label" parent="UI/Bins"]
+offset_left = 133.333
+offset_top = 58.0
+offset_right = 266.667
+offset_bottom = 100.0
+horizontal_alignment = 1
+autowrap_mode = 2
+text = "Alpaca"
+
+[node name="BinLabel2" type="Label" parent="UI/Bins"]
+offset_left = 266.667
+offset_top = 58.0
+offset_right = 400.0
+offset_bottom = 100.0
+horizontal_alignment = 1
+autowrap_mode = 2
+text = "Chicken"
+
+[node name="GameOverLayer" type="Control" parent="UI"]
+visible = false
+offset_right = 400.0
+offset_bottom = 600.0
+
+[node name="Dim" type="ColorRect" parent="UI/GameOverLayer"]
+offset_right = 400.0
+offset_bottom = 600.0
+color = Color(0, 0, 0, 0.6)
+
+[node name="ResultLabel" type="Label" parent="UI/GameOverLayer"]
+offset_top = 220.0
+offset_right = 400.0
+offset_bottom = 260.0
+horizontal_alignment = 1
+text = "Game Over"
+
+[node name="ScoreResultLabel" type="Label" parent="UI/GameOverLayer"]
+offset_top = 270.0
+offset_right = 400.0
+offset_bottom = 300.0
+horizontal_alignment = 1
+text = ""
+
+[node name="RestartButton" type="Button" parent="UI/GameOverLayer"]
+offset_left = 140.0
+offset_top = 330.0
+offset_right = 260.0
+offset_bottom = 370.0
+text = "Play Again"
+
+[node name="ExitButton" type="Button" parent="UI/GameOverLayer"]
+offset_left = 140.0
+offset_top = 380.0
+offset_right = 260.0
+offset_bottom = 420.0
+text = "Exit"

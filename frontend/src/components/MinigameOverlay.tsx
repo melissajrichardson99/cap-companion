@@ -13,6 +13,9 @@ const GAME_SLUGS: Record<string, string> = {
   'Mini Maze': 'mini_maze',
   'Mini Platformer': 'mini_platformer',
   'Obstacle Dodge': 'obstacle_dodge',
+  'Digital Ring Toss': 'digital_ring_toss',
+  'Bug Net Swipe': 'bug_net_swipe',
+  'Sort the Species': 'sort_the_species',
 }
 
 export function getMinigameSlug(game: Minigame): string | null {

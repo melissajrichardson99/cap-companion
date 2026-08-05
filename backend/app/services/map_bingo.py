@@ -30,7 +30,7 @@ from app.services import milestone as milestone_service
 from app.services import minigame_draw as draw_service
 from app.supabase_client import get_supabase_client
 
-CURRENT_MINIGAME_PHASE = 1  # Phase 1 pool = 5 games; bump once Phase 2 ships (4.1).
+CURRENT_MINIGAME_PHASE = 2  # All 10 minigames shipped (Phase 1 + Phase 2, per 4.1).
 
 # Process-local "last played" pointer for the optional back-to-back-repeat
 # guard in 4.1. A POC-scale single-process concern; would move to per-card
@@ -146,8 +146,11 @@ def get_bingo_card(card_id: UUID) -> BingoCard:
 
 
 def _minigame_pool() -> list[Minigame]:
+    # Cumulative, not exact-match: per tech spec 4.1 the pool "grows to 10
+    # once Phase 2 ships" — it's every game shipped so far, not just the
+    # games belonging to the current phase number.
     client = get_supabase_client()
-    rows = client.table("minigames").select("*").eq("phase", CURRENT_MINIGAME_PHASE).execute().data
+    rows = client.table("minigames").select("*").lte("phase", CURRENT_MINIGAME_PHASE).execute().data
     if not rows:
         raise RuntimeError("No minigames available in the current phase pool.")
     return [Minigame(**r) for r in rows]
