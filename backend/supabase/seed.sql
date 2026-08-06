@@ -548,3 +548,48 @@ on conflict (character_id, order_index) do nothing;
 insert into hunt_progress (character_id)
 select c.id from hunt_characters c
 on conflict (character_id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- encyclopedia_entries / scannable_codes (QR scanning).
+-- Matches the live-DB state after migration 009_scan_codes.sql (which is
+-- what actually applies this to the live database -- same seed.sql-vs-live-DB
+-- gotcha as every table above). 5 stub Encyclopedia entries, distinct from
+-- the 5 hunt characters so a scanned sign never doubles as a hunt spoiler.
+-- ---------------------------------------------------------------------------
+insert into encyclopedia_entries (animal_name, status) values
+    ('Red Panda', 'placeholder'),
+    ('Flamingo',  'placeholder'),
+    ('Meerkat',   'placeholder'),
+    ('Otter',     'placeholder'),
+    ('Peacock',   'placeholder')
+on conflict (animal_name) do nothing;
+
+insert into scannable_codes (code, hunt_character_id)
+select v.code, c.id
+from hunt_characters c
+join (values
+    ('brave-otter',  'Kangaroo'),
+    ('happy-panda',  'Pig'),
+    ('calm-turtle',  'Capybara'),
+    ('quick-falcon', 'Snake'),
+    ('sleepy-koala', 'Sloth')
+) as v(code, name) on v.name = c.name
+on conflict (code) do nothing;
+
+insert into scannable_codes (code, encyclopedia_entry_id)
+select v.code, e.id
+from encyclopedia_entries e
+join (values
+    ('jolly-zebra',   'Red Panda'),
+    ('silly-badger',  'Flamingo'),
+    ('sunny-beaver',  'Meerkat'),
+    ('lucky-giraffe', 'Otter'),
+    ('proud-eagle',   'Peacock')
+) as v(code, animal_name) on v.animal_name = e.animal_name
+on conflict (code) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- staff_requests (Contact Staff) -- intentionally no seed rows. It is
+-- runtime guest-generated data (see migration 010_contact_staff.sql), not
+-- fixture content -- a fresh install starts with zero requests.
+-- ---------------------------------------------------------------------------

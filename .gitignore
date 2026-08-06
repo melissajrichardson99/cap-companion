@@ -152,6 +152,9 @@ venv/
 # --- Godot build output (already copied into frontend/public/games/) ---
 /minigames/*/export_web/
 
+# --- Generated QR signage PNGs (backend/scripts/generate_qr_codes.py) ---
+/backend/scripts/output/
+
 # --- Playwright test artifacts ---
 test-results/
 playwright-report/

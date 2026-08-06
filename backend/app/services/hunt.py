@@ -62,6 +62,19 @@ def list_characters() -> list[HuntCharacter]:
     ]
 
 
+def get_character(character_id: UUID | str) -> HuntCharacter:
+    client = get_supabase_client()
+
+    char_rows = client.table("hunt_characters").select("*").eq("id", str(character_id)).execute().data
+    if not char_rows:
+        raise NotFoundError(f"Hunt character {character_id} not found")
+
+    challenge_rows = client.table("hunt_challenges").select("*").eq("character_id", str(character_id)).execute().data
+    progress_rows = client.table("hunt_progress").select("*").eq("character_id", str(character_id)).execute().data
+
+    return _character_from_rows(char_rows[0], challenge_rows, progress_rows[0] if progress_rows else None)
+
+
 def complete_challenge(challenge_id: UUID) -> HuntCharacter:
     client = get_supabase_client()
 

@@ -212,6 +212,31 @@ export interface HuntCharacter {
   completed_at: string | null
 }
 
+export type EncyclopediaStatus = 'placeholder' | 'published'
+
+export interface EncyclopediaEntry {
+  id: string
+  animal_name: string
+  status: EncyclopediaStatus
+}
+
+export type ScanResult =
+  | { type: 'hunt_character'; target: HuntCharacter }
+  | { type: 'encyclopedia_entry'; target: EncyclopediaEntry }
+
+export type StaffRequestType = 'question' | 'emergency'
+export type StaffRequestStatus = 'open' | 'acknowledged' | 'resolved'
+
+export interface StaffRequest {
+  id: string
+  type: StaffRequestType
+  location_node_id: string | null
+  location_name: string | null
+  status: StaffRequestStatus
+  created_at: string
+  resolved_at: string | null
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -259,4 +284,15 @@ export const api = {
   listHuntCharacters: () => request<HuntCharacter[]>('/hunt/characters'),
   completeHuntChallenge: (challengeId: string) =>
     request<HuntCharacter>(`/hunt/challenges/${challengeId}/complete`, { method: 'POST' }),
+  resolveScanCode: (code: string) => request<ScanResult>(`/scan/${encodeURIComponent(code)}`),
+  createStaffRequest: (type: StaffRequestType, locationNodeId: string | null) =>
+    request<StaffRequest>('/staff-requests', {
+      method: 'POST',
+      body: JSON.stringify({ type, location_node_id: locationNodeId }),
+    }),
+  listStaffRequests: () => request<StaffRequest[]>('/staff-requests'),
+  acknowledgeStaffRequest: (requestId: string) =>
+    request<StaffRequest>(`/staff-requests/${requestId}/acknowledge`, { method: 'POST' }),
+  resolveStaffRequest: (requestId: string) =>
+    request<StaffRequest>(`/staff-requests/${requestId}/resolve`, { method: 'POST' }),
 }

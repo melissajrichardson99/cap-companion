@@ -1,0 +1,108 @@
+.staff-requests-screen {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.staff-requests-loading {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.staff-requests-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.staff-requests-title {
+  font-size: 24px;
+  margin: 0;
+}
+
+.staff-requests-empty {
+  color: var(--text);
+}
+
+.staff-requests-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.staff-request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.staff-request-emergency {
+  border-color: var(--state-closed);
+  background: var(--state-closed-bg);
+}
+
+.staff-request-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.staff-request-type-badge {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: var(--text-h);
+}
+
+.staff-request-type-badge-emergency {
+  background: var(--state-closed);
+  color: #fff;
+}
+
+.staff-request-location {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.staff-request-time {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.staff-request-status-badge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--state-not-visited-bg);
+  color: var(--state-not-visited);
+}
+
+.staff-request-status-badge-acknowledged {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.staff-request-status-badge-resolved {
+  background: var(--state-visited-bg);
+  color: var(--state-visited);
+}
+
+.staff-request-actions {
+  display: flex;
+  gap: 8px;
+}

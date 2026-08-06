@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { api, type BingoCard, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { BingoScreen } from './components/BingoScreen'
+import { ContactStaffModal } from './components/ContactStaffModal'
 import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
 import { PuzzleScreen } from './components/PuzzleScreen'
+import { ScanEntryModal } from './components/ScanEntryModal'
+import { ScanScreen } from './components/ScanScreen'
 import { ScoringScreen } from './components/ScoringScreen'
+import { StaffRequestsScreen } from './components/StaffRequestsScreen'
 import { ToastStack, type ToastItem } from './components/ToastStack'
 import './components/shared.css'
 import './App.css'
@@ -14,6 +18,29 @@ type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('map')
+
+  // Hand-rolled routing (no router lib elsewhere in this app): the only real
+  // URL route is /scan/:code, which must work as a hard deep link (someone
+  // else's camera app opening a printed sign's URL fresh) as well as via
+  // in-app navigation from ScanEntryModal -- both funnel through the same
+  // `path` state and ScanScreen below.
+  const [path, setPath] = useState(() => window.location.pathname)
+  const [showScanEntry, setShowScanEntry] = useState(false)
+  const [showContactStaff, setShowContactStaff] = useState(false)
+
+  useEffect(() => {
+    const onPopState = () => setPath(window.location.pathname)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  const navigate = (nextPath: string) => {
+    window.history.pushState({}, '', nextPath)
+    setPath(nextPath)
+  }
+
+  const scanMatch = path.match(/^\/scan\/([^/]+)$/)
+  const isStaffView = path === '/staff'
 
   const [nodes, setNodes] = useState<MapNode[] | null>(null)
   const [nodesError, setNodesError] = useState<string | null>(null)
@@ -159,6 +186,34 @@ function App() {
     }
   }
 
+  if (isStaffView) {
+    // Lightweight, separate view (Plan.md 2.10) -- no shared header/nav with
+    // the guest-facing app, no login/auth (same no-auth POC scope as the
+    // rest of the app). Staff reach it by navigating straight to /staff.
+    return <StaffRequestsScreen />
+  }
+
+  if (scanMatch) {
+    const code = decodeURIComponent(scanMatch[1])
+    return (
+      <div id="app-root">
+        <header className="app-header">
+          <h1 className="app-title">Cobb's Adventure Park</h1>
+        </header>
+        <main className="app-main">
+          <ScanScreen
+            code={code}
+            onCompleteChallenge={completeHuntChallenge}
+            onPlayMinigame={handlePlayHuntMinigame}
+            onClose={() => navigate('/')}
+          />
+        </main>
+        <ToastStack toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
+        {activeMinigame && <MinigameOverlay game={activeMinigame} onClose={handleMinigameOverlayClose} />}
+      </div>
+    )
+  }
+
   return (
     <div id="app-root">
       <header className="app-header">
@@ -200,6 +255,14 @@ function App() {
             Scavenger Hunt
           </button>
         </nav>
+        <div className="app-header-actions">
+          <button type="button" className="btn btn-secondary" onClick={() => setShowScanEntry(true)}>
+            Scan QR
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => setShowContactStaff(true)}>
+            Contact Staff
+          </button>
+        </div>
       </header>
 
       <main className="app-main">
@@ -236,6 +299,18 @@ function App() {
       <ToastStack toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
 
       {activeMinigame && <MinigameOverlay game={activeMinigame} onClose={handleMinigameOverlayClose} />}
+
+      {showScanEntry && (
+        <ScanEntryModal
+          onClose={() => setShowScanEntry(false)}
+          onCodeSubmitted={(code) => {
+            setShowScanEntry(false)
+            navigate(`/scan/${encodeURIComponent(code)}`)
+          }}
+        />
+      )}
+
+      {showContactStaff && <ContactStaffModal nodes={nodes} onClose={() => setShowContactStaff(false)} />}
     </div>
   )
 }

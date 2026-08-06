@@ -303,3 +303,56 @@ class HuntCharacter(BaseModel):
     # BingoCard.milestones_achieved -- order_index values (1-3) completed.
     challenges_completed: list[int] = Field(default_factory=list)
     completed_at: datetime | None = None
+
+
+class EncyclopediaStatus(StrEnum):
+    PLACEHOLDER = "placeholder"
+    PUBLISHED = "published"
+
+
+class EncyclopediaEntry(BaseModel):
+    """Minimal stub -- just enough to be a real scan target with a "Coming
+    soon" page. The full card-based Encyclopedia (Plan.md 2.5/5) is later."""
+
+    id: UUID
+    animal_name: str
+    status: EncyclopediaStatus = EncyclopediaStatus.PLACEHOLDER
+
+
+class ScanResultType(StrEnum):
+    HUNT_CHARACTER = "hunt_character"
+    ENCYCLOPEDIA_ENTRY = "encyclopedia_entry"
+
+
+class ScanResult(BaseModel):
+    type: ScanResultType
+    target: HuntCharacter | EncyclopediaEntry
+
+
+class StaffRequestType(StrEnum):
+    QUESTION = "question"
+    EMERGENCY = "emergency"
+
+
+class StaffRequestStatus(StrEnum):
+    OPEN = "open"
+    ACKNOWLEDGED = "acknowledged"
+    RESOLVED = "resolved"
+
+
+class StaffRequest(BaseModel):
+    id: UUID
+    type: StaffRequestType
+    location_node_id: UUID | None = None
+    # Denormalized from map_nodes so the staff view can render a location
+    # name without a second round trip -- same embedding pattern as
+    # BingoTile/LinkedTile.
+    location_name: str | None = None
+    status: StaffRequestStatus = StaffRequestStatus.OPEN
+    created_at: datetime
+    resolved_at: datetime | None = None
+
+
+class CreateStaffRequestRequest(BaseModel):
+    type: StaffRequestType
+    location_node_id: UUID | None = None

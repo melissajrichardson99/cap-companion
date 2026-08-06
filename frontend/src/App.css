@@ -49,3 +49,8 @@
 .app-main {
   padding-bottom: 60px;
 }
+
+.app-header-actions {
+  display: flex;
+  gap: 8px;
+}

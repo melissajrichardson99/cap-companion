@@ -19,6 +19,8 @@ Resets:
     there's no in-app UI for it in this POC)
   - every hunt_progress row: challenges_completed = [], completed_at = null,
     so the Scavenger Hunt specs start with every character un-started
+  - every staff_requests row deleted, so the Contact Staff specs start with
+    an empty staff view each run
 """
 
 from __future__ import annotations
@@ -93,6 +95,16 @@ def reset_demo_data() -> None:
         .data
     )
     print(f"Reset {len(progress_rows)} hunt progress row(s).")
+
+    # Same "no bare filterless delete" PostgREST rule as puzzle_attempts above.
+    staff_request_rows = (
+        client.table("staff_requests")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+        .execute()
+        .data
+    )
+    print(f"Deleted {len(staff_request_rows)} staff request(s).")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,24 @@
+.encyclopedia-entry-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 480px;
+  margin: 40px auto;
+  text-align: center;
+}
+
+.encyclopedia-entry-title {
+  font-size: 24px;
+  margin: 0;
+}
+
+.encyclopedia-coming-soon {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0;
+}
+
+.encyclopedia-entry-screen .btn {
+  align-self: center;
+}

@@ -1,0 +1,16 @@
+.scan-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 480px;
+  margin: 40px auto;
+  text-align: center;
+}
+
+.scan-loading {
+  padding: 40px 0;
+}
+
+.scan-screen .btn {
+  align-self: center;
+}
