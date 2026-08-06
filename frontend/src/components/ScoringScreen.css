@@ -1,0 +1,45 @@
+.scoring-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scoring-loading {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.scoring-game-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.scoring-game-card {
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scoring-game-name {
+  font-size: 17px;
+  margin: 0;
+}
+
+.scoring-game-rules {
+  font-size: 14px;
+  line-height: 145%;
+  margin: 0;
+}
+
+.scoring-game-win-condition {
+  font-size: 13px;
+  line-height: 145%;
+  margin: 0;
+  color: var(--accent);
+  font-weight: 600;
+}

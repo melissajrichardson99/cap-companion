@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routers import bingo, map as map_router, puzzles
+from app.routers import bingo, map as map_router, puzzles, scoring
 
 logger = logging.getLogger("app")
 
@@ -39,6 +39,7 @@ app.add_middleware(
 app.include_router(map_router.router)
 app.include_router(bingo.router)
 app.include_router(puzzles.router)
+app.include_router(scoring.router)
 
 
 @app.get("/health")

@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
-import { api, type BingoCard, type MapNode, type Minigame, type MilestoneEvent, type Puzzle, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { api, type BingoCard, type MapNode, type Minigame, type MilestoneEvent, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { BingoScreen } from './components/BingoScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
 import { PuzzleScreen } from './components/PuzzleScreen'
+import { ScoringScreen } from './components/ScoringScreen'
 import { ToastStack, type ToastItem } from './components/ToastStack'
 import './components/shared.css'
 import './App.css'
 
-type Tab = 'map' | 'bingo' | 'puzzles'
+type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('map')
@@ -22,6 +23,9 @@ function App() {
 
   const [puzzles, setPuzzles] = useState<Puzzle[] | null>(null)
   const [puzzlesError, setPuzzlesError] = useState<string | null>(null)
+
+  const [scoringGames, setScoringGames] = useState<ScoringGame[] | null>(null)
+  const [scoringGamesError, setScoringGamesError] = useState<string | null>(null)
 
   const [milestoneQueue, setMilestoneQueue] = useState<MilestoneEvent[]>([])
   const [minigameQueue, setMinigameQueue] = useState<Minigame[]>([])
@@ -43,9 +47,15 @@ function App() {
     api.listPuzzles().then(setPuzzles).catch((err) => setPuzzlesError(String(err)))
   }
 
+  const reloadScoringGames = () => {
+    setScoringGamesError(null)
+    api.listScoringGames().then(setScoringGames).catch((err) => setScoringGamesError(String(err)))
+  }
+
   useEffect(() => {
     reloadNodes()
     reloadPuzzles()
+    reloadScoringGames()
     api
       .listBingoCards()
       .then((summaries) => {
@@ -124,6 +134,13 @@ function App() {
           >
             Puzzles
           </button>
+          <button
+            type="button"
+            className={`app-tab ${activeTab === 'scoring' ? 'app-tab-active' : ''}`}
+            onClick={() => setActiveTab('scoring')}
+          >
+            Scoring Sheet
+          </button>
         </nav>
       </header>
 
@@ -143,6 +160,9 @@ function App() {
         )}
         {activeTab === 'puzzles' && (
           <PuzzleScreen puzzles={puzzles} error={puzzlesError} onReload={reloadPuzzles} />
+        )}
+        {activeTab === 'scoring' && (
+          <ScoringScreen games={scoringGames} error={scoringGamesError} onReload={reloadScoringGames} />
         )}
       </main>
 

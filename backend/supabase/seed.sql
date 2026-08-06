@@ -339,3 +339,106 @@ select p.id, 'Standard', 1, 'none', 'Find your way through the maze to the centr
 from puzzles p
 where p.name = 'Big Mystery Maze'
 on conflict (puzzle_id, label) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- scoring_games / game_score_events (Scoring Sheet, plan 2.2)
+-- Mini Golf and Archery deliberately excluded — no confirmed rules yet.
+-- ---------------------------------------------------------------------------
+insert into scoring_games (name, rules_text, win_condition_text, win_condition_type, win_threshold, throws_per_round) values
+    (
+        'Farm Toss',
+        'Ring toss at animal targets around the farm.',
+        'First to 21 wins.',
+        'first_to',
+        21,
+        null
+    ),
+    (
+        'Horse Hoops',
+        'Team play. Toss a hoop onto the horse or around its neck.',
+        'First to 10 wins. If teams are tied at or above 10, play continues in a bonus round until one team pulls ahead.',
+        'first_to_bonus_round',
+        10,
+        null
+    ),
+    (
+        'Cornhole',
+        'Innings-based -- each player pitches all 4 bags per inning.',
+        'First to 21 wins.',
+        'first_to',
+        21,
+        null
+    ),
+    (
+        'Cornhole Extreme',
+        'Three-hole variant of Cornhole -- each player pitches all 4 bags per inning.',
+        'First to 21 wins.',
+        'first_to',
+        21,
+        null
+    ),
+    (
+        'Tiki Toss / Ring & Hook',
+        '10 throws per round.',
+        'First to 100 wins. If multiple players reach 100 in the same round, the highest score wins. A tie for highest continues into further rounds until someone wins a round outright.',
+        'first_to_round_tiebreak',
+        100,
+        10
+    )
+on conflict (name) do nothing;
+
+insert into game_score_events (game_id, label, point_value, sort_order)
+select g.id, e.label, e.point_value, e.sort_order
+from scoring_games g,
+(values
+    ('2-Point Ring', 2, 1),
+    ('3-Point Ring', 3, 2),
+    ('6-Point Ring', 6, 3)
+) as e(label, point_value, sort_order)
+where g.name = 'Farm Toss'
+on conflict (game_id, label) do nothing;
+
+insert into game_score_events (game_id, label, point_value, sort_order)
+select g.id, e.label, e.point_value, e.sort_order
+from scoring_games g,
+(values
+    ('Hit Horse', 1, 1),
+    ('Blue Horse Neck', 2, 2),
+    ('Yellow Horse Neck', 3, 3),
+    ('Red Horse Neck', 4, 4)
+) as e(label, point_value, sort_order)
+where g.name = 'Horse Hoops'
+on conflict (game_id, label) do nothing;
+
+insert into game_score_events (game_id, label, point_value, sort_order)
+select g.id, e.label, e.point_value, e.sort_order
+from scoring_games g,
+(values
+    ('Woody', 1, 1),
+    ('Cornhole', 3, 2)
+) as e(label, point_value, sort_order)
+where g.name = 'Cornhole'
+on conflict (game_id, label) do nothing;
+
+insert into game_score_events (game_id, label, point_value, sort_order)
+select g.id, e.label, e.point_value, e.sort_order
+from scoring_games g,
+(values
+    ('Woody', 1, 1),
+    ('First Hole', 2, 2),
+    ('Second Hole', 3, 3),
+    ('Third Hole', 4, 4)
+) as e(label, point_value, sort_order)
+where g.name = 'Cornhole Extreme'
+on conflict (game_id, label) do nothing;
+
+insert into game_score_events (game_id, label, point_value, sort_order)
+select g.id, e.label, e.point_value, e.sort_order
+from scoring_games g,
+(values
+    ('Ting', 1, 1),
+    ('Nassau', 3, 2),
+    ('Bimini', 5, 3)
+) as e(label, point_value, sort_order)
+where g.name = 'Tiki Toss / Ring & Hook'
+on conflict (game_id, label) do nothing;

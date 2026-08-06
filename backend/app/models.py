@@ -42,6 +42,21 @@ class SolutionType(StrEnum):
     NONE = "none"
 
 
+class WinConditionType(StrEnum):
+    FIRST_TO = "first_to"
+    FIRST_TO_BONUS_ROUND = "first_to_bonus_round"
+    FIRST_TO_ROUND_TIEBREAK = "first_to_round_tiebreak"
+
+
+class ScoreStatus(StrEnum):
+    """Values match app.services.scoring's STATUS_* constants exactly."""
+
+    IN_PROGRESS = "in_progress"
+    WON = "won"
+    TIE_BONUS_ROUND = "tie_bonus_round"
+    TIE_ROUND_PENDING = "tie_round_pending"
+
+
 class LinkedTile(BaseModel):
     """Minimal tile summary embedded in a MapNode response.
 
@@ -191,3 +206,61 @@ class PuzzleAttempt(BaseModel):
 class RecordAttemptRequest(BaseModel):
     elapsed_seconds: int = Field(gt=0)
     hints_used: int = Field(ge=0, le=3)
+
+
+class GameScoreEvent(BaseModel):
+    id: UUID
+    game_id: UUID
+    label: str
+    point_value: int = Field(gt=0)
+
+
+class ScoringGame(BaseModel):
+    id: UUID
+    name: str
+    rules_text: str
+    win_condition_text: str
+    win_condition_type: WinConditionType
+    win_threshold: int = Field(gt=0)
+    # Only set for round-based games (Tiki Toss: 10 throws/round).
+    throws_per_round: int | None = Field(default=None, gt=0)
+    score_events: list[GameScoreEvent] = Field(default_factory=list)
+
+
+class ScoreEntry(BaseModel):
+    id: UUID
+    session_id: UUID
+    player_name: str
+    score_event_id: UUID
+    # Denormalized from game_score_events so the frontend can render an
+    # entry's label/points without a second lookup -- same pattern as
+    # BingoTile/LinkedTile embedding.
+    label: str
+    point_value: int
+    created_at: datetime
+
+
+class ScoreSheetSession(BaseModel):
+    id: UUID
+    game_id: UUID
+    players: list[str]
+    created_at: datetime
+    completed_at: datetime | None = None
+    winner: str | None = None
+    status: ScoreStatus = ScoreStatus.IN_PROGRESS
+    totals: dict[str, int] = Field(default_factory=dict)
+    entries: list[ScoreEntry] = Field(default_factory=list)
+    # Only populated when status is a tie state.
+    tied_players: list[str] = Field(default_factory=list)
+    # Only meaningful for round-based games (Tiki Toss).
+    round_number: int | None = None
+
+
+class CreateSessionRequest(BaseModel):
+    game_id: UUID
+    players: list[str] = Field(min_length=1)
+
+
+class RecordScoreEntryRequest(BaseModel):
+    player_name: str
+    score_event_id: UUID

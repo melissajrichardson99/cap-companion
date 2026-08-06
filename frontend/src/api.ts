@@ -114,6 +114,51 @@ export interface PuzzleAttempt {
   created_at: string
 }
 
+export type WinConditionType = 'first_to' | 'first_to_bonus_round' | 'first_to_round_tiebreak'
+export type ScoreStatus = 'in_progress' | 'won' | 'tie_bonus_round' | 'tie_round_pending'
+
+export interface GameScoreEvent {
+  id: string
+  game_id: string
+  label: string
+  point_value: number
+}
+
+export interface ScoringGame {
+  id: string
+  name: string
+  rules_text: string
+  win_condition_text: string
+  win_condition_type: WinConditionType
+  win_threshold: number
+  throws_per_round: number | null
+  score_events: GameScoreEvent[]
+}
+
+export interface ScoreEntry {
+  id: string
+  session_id: string
+  player_name: string
+  score_event_id: string
+  label: string
+  point_value: number
+  created_at: string
+}
+
+export interface ScoreSheetSession {
+  id: string
+  game_id: string
+  players: string[]
+  created_at: string
+  completed_at: string | null
+  winner: string | null
+  status: ScoreStatus
+  totals: Record<string, number>
+  entries: ScoreEntry[]
+  tied_players: string[]
+  round_number: number | null
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -143,4 +188,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ elapsed_seconds: elapsedSeconds, hints_used: hintsUsed }),
     }),
+  listScoringGames: () => request<ScoringGame[]>('/scoring/games'),
+  createScoreSheetSession: (gameId: string, players: string[]) =>
+    request<ScoreSheetSession>('/scoring/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ game_id: gameId, players }),
+    }),
+  getScoreSheetSession: (sessionId: string) => request<ScoreSheetSession>(`/scoring/sessions/${sessionId}`),
+  recordScoreEntry: (sessionId: string, playerName: string, scoreEventId: string) =>
+    request<ScoreSheetSession>(`/scoring/sessions/${sessionId}/entries`, {
+      method: 'POST',
+      body: JSON.stringify({ player_name: playerName, score_event_id: scoreEventId }),
+    }),
+  finishScoreSheetSession: (sessionId: string) =>
+    request<ScoreSheetSession>(`/scoring/sessions/${sessionId}/finish`, { method: 'POST' }),
 }

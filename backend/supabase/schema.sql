@@ -121,3 +121,60 @@ create table if not exists puzzle_attempts (
 );
 
 create index if not exists puzzle_attempts_challenge_id_idx on puzzle_attempts(challenge_id);
+
+-- ---------------------------------------------------------------------------
+-- scoring_games / game_score_events / score_sheet_sessions / score_entries
+-- (Scoring Sheet, plan 2.2)
+-- ---------------------------------------------------------------------------
+create table if not exists scoring_games (
+    id                  uuid primary key default gen_random_uuid(),
+    name                text not null unique,
+    rules_text          text not null default '',
+    win_condition_text  text not null default '',
+    -- Machine-readable win condition, since automatic detection needs exact
+    -- threshold/tie-rule math, not text parsing. Maps 1:1 to the three pure
+    -- functions in app/services/scoring.py: 'first_to' (first player past
+    -- the threshold wins outright), 'first_to_bonus_round' (first past the
+    -- threshold wins unless tied with the leader, in which case play
+    -- continues sudden-death until someone pulls ahead -- Horse Hoops), and
+    -- 'first_to_round_tiebreak' (win condition only checked at
+    -- throws_per_round boundaries, highest of those clearing the threshold
+    -- wins, ties continue into further rounds -- Tiki Toss).
+    win_condition_type  text not null check (win_condition_type in ('first_to', 'first_to_bonus_round', 'first_to_round_tiebreak')),
+    win_threshold       integer not null check (win_threshold > 0),
+    throws_per_round    integer check (throws_per_round is null or throws_per_round > 0),
+    created_at          timestamptz not null default now()
+);
+
+create table if not exists game_score_events (
+    id          uuid primary key default gen_random_uuid(),
+    game_id     uuid not null references scoring_games(id) on delete cascade,
+    label       text not null,
+    point_value integer not null check (point_value > 0),
+    sort_order  integer not null default 0,
+    created_at  timestamptz not null default now(),
+    unique (game_id, label)
+);
+
+create index if not exists game_score_events_game_id_idx on game_score_events(game_id);
+
+create table if not exists score_sheet_sessions (
+    id            uuid primary key default gen_random_uuid(),
+    game_id       uuid not null references scoring_games(id) on delete cascade,
+    players       text[] not null,
+    winner        text,
+    completed_at  timestamptz,
+    created_at    timestamptz not null default now()
+);
+
+create index if not exists score_sheet_sessions_game_id_idx on score_sheet_sessions(game_id);
+
+create table if not exists score_entries (
+    id             uuid primary key default gen_random_uuid(),
+    session_id     uuid not null references score_sheet_sessions(id) on delete cascade,
+    player_name    text not null,
+    score_event_id uuid not null references game_score_events(id) on delete restrict,
+    created_at     timestamptz not null default now()
+);
+
+create index if not exists score_entries_session_id_idx on score_entries(session_id);
