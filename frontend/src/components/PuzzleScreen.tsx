@@ -49,11 +49,6 @@ export function PuzzleScreen({ puzzles, error, onReload }: PuzzleScreenProps) {
                   onClick={() => setActive({ puzzle, challenge })}
                 >
                   <span className="puzzle-challenge-label">{challenge.label}</span>
-                  {challenge.target_time_seconds !== null && (
-                    <span className="puzzle-challenge-target">
-                      Target {formatSeconds(challenge.target_time_seconds)}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>

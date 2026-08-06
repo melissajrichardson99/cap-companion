@@ -164,9 +164,11 @@ from new_card nc,
 
 -- ---------------------------------------------------------------------------
 -- puzzles + puzzle_challenges — Puzzle Solving Timer (Plan.md 2.3), 6 puzzles.
--- Kept byte-for-byte identical to migration 005_puzzle_timer.sql's inserts —
--- that migration is what actually applies this to the live database (the
--- known seed.sql-vs-live-DB gotcha applies here too), this file is the local
+-- Matches the live-DB state after migrations 005_puzzle_timer.sql and
+-- 006_puzzle_staff_time_and_labels.sql (labels/descriptions baked in
+-- directly here rather than replayed as a separate rename step) — those
+-- migrations are what actually apply this to the live database (the known
+-- seed.sql-vs-live-DB gotcha applies here too), this file is the local
 -- fresh-install / documentation copy.
 -- ---------------------------------------------------------------------------
 insert into puzzles (name, rules_text, map_node_id) values
@@ -202,30 +204,33 @@ insert into puzzles (name, rules_text, map_node_id) values
     )
 on conflict (name) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, c.label, c.sort_order, c.solution_type, c.hint_tier_1, c.hint_tier_2, c.hint_tier_3
+insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, c.label, c.sort_order, c.solution_type, c.description, c.hint_tier_1, c.hint_tier_2, c.hint_tier_3
 from puzzles p,
 (values
     (
-        'Reach the Top',
+        'Challenge 1',
         1,
         'exact',
+        'Get to the top.',
         'White tiles are the only ones where you choose your own direction — everywhere else the color decides for you.',
         'Start by turning right, then look for a white tile to redirect yourself toward the center.',
         'Enter facing North. Red tile: turn right (now facing East). Move to a white tile: choose West. Red tile: turn right (now facing North). Move to a white tile: choose North. Blue tile: turn left (now facing West). Move to a white tile: choose East. Blue tile: turn left (now facing North) into the CENTER.'
     ),
     (
-        'Reach the Top, Then Exit From Start',
+        'Challenge 2',
         2,
         'exact',
+        'Get to the top, then leave from the starting block.',
         'Same tile rules as before — white tiles are your only free choices, and you''ll need to leave the center the way you came to head back toward the exit.',
         'Reach the center exactly as in "Reach the Top", then keep following the color rules back down toward the Start block — look for another white tile partway down to redirect yourself toward the exit.',
         'Reach the center exactly as in "Reach the Top": enter facing North, red (turn right), white (choose West), red (turn right), white (choose North), blue (turn left), white (choose East), blue (turn left) into CENTER. Then continue: blue, turn left (now facing South). White tile: choose East. Red tile: turn right (facing South). White tile: choose West. Red tile: turn right (facing South). White tile: choose East. Red tile: turn right, and exit south through Start.'
     ),
     (
-        'All 4 Corners + Center, Then Exit',
+        'Challenge 3',
         3,
         'exact',
+        'Visit all four corners and the centre, then leave from the starting block.',
         'White tiles are the only ones where you choose your own direction — everywhere else the color decides for you.',
         'Start by turning right, then use white tiles to steer yourself toward each corner in turn before finishing at the center and heading back out through Start.',
         'Enter grid at (6,3) facing N [red]
@@ -271,12 +276,13 @@ from puzzles p,
 → (6,3) facing E [red]
 → EXIT via Start block (facing S) — COMPLETE'
     )
-) as c(label, sort_order, solution_type, hint_tier_1, hint_tier_2, hint_tier_3)
+) as c(label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
 where p.name = 'Pyramid Puzzler'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, 'Default', 1, 'exact',
+insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, 'Standard', 1, 'exact',
+    'Navigate from the start square to the finish square, moving in a straight line the number of tiles marked on your current tile.',
     'You can move in any of the 4 directions from a tile, not just where its arrow happens to point.',
     'The first move is up 1, then left 1.',
     'Up 1, left 1, up 2, up 2, down 1, right 3, left 2, down 1 — Finish (8 moves total).'
@@ -284,30 +290,33 @@ from puzzles p
 where p.name = 'Math Maze'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, c.label, c.sort_order, 'strategy', c.hint_tier_1, c.hint_tier_2, c.hint_tier_3
+insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, c.label, c.sort_order, 'strategy', c.description, c.hint_tier_1, c.hint_tier_2, c.hint_tier_3
 from puzzles p,
 (values
     (
-        'Corner to Corner and Back',
+        'Challenge 1',
         1,
+        'Start on any corner red dot, reach the red dot in the opposite corner, then return to start.',
         'Remember the order — red, blue, yellow, always cycling.',
         'Plan your color cycle backward from the opposite corner too, so your return trip lands on the right color without breaking the pattern.',
         'There''s no single fixed path here — as long as every hop follows red, blue, yellow in order (cycling) both there and back, you''ve solved it. Focus on reaching the opposite corner on a red dot, then reverse the pattern to return.'
     ),
     (
-        'Visit All Corners',
+        'Challenge 2',
         2,
+        'Start on any corner red dot, visit all other corner dots clockwise or counter-clockwise, then return to start.',
         'Remember the order — red, blue, yellow, always cycling.',
         'Pick one rotational direction (clockwise or counter-clockwise) and stick with it all the way around the corners before heading back.',
         'Many valid solutions exist — the key constraint is the color cycle, not the exact tiles. Starting from any red corner, work your way around the other corners in one consistent rotational direction, keeping every hop on the red-blue-yellow cycle, then return to start the same way.'
     )
-) as c(label, sort_order, hint_tier_1, hint_tier_2, hint_tier_3)
+) as c(label, sort_order, description, hint_tier_1, hint_tier_2, hint_tier_3)
 where p.name = 'Hop Dots'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, 'Default', 1, 'strategy',
+insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, 'Standard', 1, 'strategy',
+    'Get to the centre of the maze without taking any left turns.',
     'This works like every no-left-turn maze — try right first, then straight, and only go left if nothing else is open.',
     'At every junction, check your options in this order: right turn, then straight, then left — take the first one that''s actually open. This "keep a hand on the right-hand wall" approach solves any maze without shortcuts, including this one.',
     'Follow the right-hand rule the whole way: at each junction, always take the right-most open path before considering straight. Left turns aren''t allowed here anyway, so in practice that means take right whenever it''s open, otherwise go straight. Keep going without ever turning around, and you''ll reach the center in 20 turns.'
@@ -315,8 +324,9 @@ from puzzles p
 where p.name = 'Right Turn Only'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, 'Default', 1, 'strategy',
+insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, 'Standard', 1, 'strategy',
+    'Enter on the red tile at the bottom, exit on the blue tile at the top, alternating between red and blue tiles along the way.',
     'You can''t hit two reds or two blues back to back.',
     'The board''s own hint is the real secret — a straight run through won''t work.',
     'You''ll need to walk part of the maze, then retrace your steps back over the same tiles to keep the red/blue pattern legal, rather than trying to find one continuous forward path.'
@@ -324,8 +334,8 @@ from puzzles p
 where p.name = 'Red White and Blue'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type)
-select p.id, 'Default', 1, 'none'
+insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description)
+select p.id, 'Standard', 1, 'none', 'Find your way through the maze to the centre.'
 from puzzles p
 where p.name = 'Big Mystery Maze'
 on conflict (puzzle_id, label) do nothing;

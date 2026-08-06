@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, type LeaderboardEntry, type LeaderboardScope, type Puzzle, type PuzzleChallenge } from '../api'
+import { api, type Puzzle, type PuzzleAttempt, type PuzzleChallenge } from '../api'
 import { Modal } from './Modal'
 import { formatSeconds } from './PuzzleScreen'
 import './PuzzleChallengeModal.css'
 
-type TimerState = 'idle' | 'running' | 'stopped'
+type TimerState = 'idle' | 'running' | 'confirming' | 'result'
 
 interface PuzzleChallengeModalProps {
   puzzle: Puzzle
@@ -14,19 +14,24 @@ interface PuzzleChallengeModalProps {
 
 const HINT_TIERS = ['hint_tier_1', 'hint_tier_2', 'hint_tier_3'] as const
 
+function compareToStaffTime(elapsedSeconds: number, staffTimeSeconds: number): string {
+  const diff = staffTimeSeconds - elapsedSeconds
+  if (diff === 0) return 'Matched the staff time exactly.'
+  const abs = Math.abs(diff)
+  const unit = abs === 1 ? 'second' : 'seconds'
+  return `${abs} ${unit} ${diff > 0 ? 'faster' : 'slower'} than staff time.`
+}
+
 export function PuzzleChallengeModal({ puzzle, challenge, onClose }: PuzzleChallengeModalProps) {
   const [timerState, setTimerState] = useState<TimerState>('idle')
   const [elapsedMs, setElapsedMs] = useState(0)
+  const [finalElapsedSeconds, setFinalElapsedSeconds] = useState(0)
   const startedAtRef = useRef(0)
 
   const [hintsRevealed, setHintsRevealed] = useState(0)
   const [attemptError, setAttemptError] = useState<string | null>(null)
   const [recording, setRecording] = useState(false)
-
-  const [scope, setScope] = useState<LeaderboardScope>('all_time')
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null)
-  const [leaderboardError, setLeaderboardError] = useState<string | null>(null)
-  const [refreshTick, setRefreshTick] = useState(0)
+  const [resultAttempt, setResultAttempt] = useState<PuzzleAttempt | null>(null)
 
   useEffect(() => {
     if (timerState !== 'running') return
@@ -34,28 +39,38 @@ export function PuzzleChallengeModal({ puzzle, challenge, onClose }: PuzzleChall
     return () => clearInterval(id)
   }, [timerState])
 
-  useEffect(() => {
-    setLeaderboardError(null)
-    api
-      .getPuzzleLeaderboard(challenge.id, scope)
-      .then(setLeaderboard)
-      .catch((err) => setLeaderboardError(String(err)))
-  }, [challenge.id, scope, refreshTick])
-
   const start = () => {
     startedAtRef.current = Date.now()
     setElapsedMs(0)
+    setHintsRevealed(0)
     setAttemptError(null)
     setTimerState('running')
   }
 
-  const stop = async () => {
-    setTimerState('stopped')
-    const elapsedSeconds = Math.max(1, Math.round(elapsedMs / 1000))
+  const stop = () => {
+    setFinalElapsedSeconds(Math.max(1, Math.round(elapsedMs / 1000)))
+    setTimerState('confirming')
+  }
+
+  const backToStart = () => {
+    setTimerState('idle')
+    setElapsedMs(0)
+    setHintsRevealed(0)
+    setAttemptError(null)
+    setResultAttempt(null)
+  }
+
+  const answerCompleted = async (didComplete: boolean) => {
+    if (!didComplete) {
+      backToStart()
+      return
+    }
     setRecording(true)
+    setAttemptError(null)
     try {
-      await api.recordPuzzleAttempt(challenge.id, elapsedSeconds)
-      setRefreshTick((t) => t + 1)
+      const attempt = await api.recordPuzzleAttempt(challenge.id, finalElapsedSeconds, hintsRevealed)
+      setResultAttempt(attempt)
+      setTimerState('result')
     } catch (err) {
       setAttemptError(String(err))
     } finally {
@@ -63,15 +78,55 @@ export function PuzzleChallengeModal({ puzzle, challenge, onClose }: PuzzleChall
     }
   }
 
-  const reset = () => {
-    setTimerState('idle')
-    setElapsedMs(0)
-    setAttemptError(null)
-  }
-
   const hintText = (tier: (typeof HINT_TIERS)[number]) => challenge[tier]
   const hasHints = challenge.solution_type !== 'none'
   const finalTierLabel = challenge.solution_type === 'exact' ? 'Full Solution' : 'Full Strategy'
+
+  if (timerState === 'confirming') {
+    return (
+      <Modal onClose={onClose} labelledBy="puzzle-challenge-title">
+        <h2 id="puzzle-challenge-title" className="puzzle-modal-title">
+          {puzzle.name} — {challenge.label}
+        </h2>
+        <p className="puzzle-confirm-question">Did you complete the puzzle?</p>
+        <div className="puzzle-modal-actions">
+          <button type="button" className="btn btn-secondary" disabled={recording} onClick={() => answerCompleted(false)}>
+            No
+          </button>
+          <button type="button" className="btn btn-primary" disabled={recording} onClick={() => answerCompleted(true)}>
+            Yes
+          </button>
+        </div>
+        {recording && <p className="puzzle-timer-status">Saving…</p>}
+        {attemptError && <p className="screen-error">Couldn't save that attempt: {attemptError}</p>}
+      </Modal>
+    )
+  }
+
+  if (timerState === 'result' && resultAttempt) {
+    const staffTime = challenge.staff_time_seconds
+    return (
+      <Modal onClose={onClose} labelledBy="puzzle-challenge-title">
+        <h2 id="puzzle-challenge-title" className="puzzle-modal-title">
+          {puzzle.name} — {challenge.label}
+        </h2>
+        <div className="puzzle-result">
+          <span className="puzzle-result-time">{formatSeconds(resultAttempt.elapsed_seconds)}</span>
+          {staffTime !== null ? (
+            <p className="puzzle-result-comparison">{compareToStaffTime(resultAttempt.elapsed_seconds, staffTime)}</p>
+          ) : (
+            <p className="puzzle-result-no-staff-time">No staff time set for this one yet.</p>
+          )}
+          <p className="puzzle-result-hints">Hints used: {resultAttempt.hints_used}/3</p>
+        </div>
+        <div className="puzzle-modal-actions">
+          <button type="button" className="btn btn-primary" onClick={backToStart}>
+            Try Again
+          </button>
+        </div>
+      </Modal>
+    )
+  }
 
   return (
     <Modal onClose={onClose} labelledBy="puzzle-challenge-title">
@@ -79,33 +134,24 @@ export function PuzzleChallengeModal({ puzzle, challenge, onClose }: PuzzleChall
         {puzzle.name} — {challenge.label}
       </h2>
       <p className="puzzle-modal-rules">{puzzle.rules_text}</p>
-      {challenge.target_time_seconds !== null && (
-        <p className="puzzle-modal-target">Target time: {formatSeconds(challenge.target_time_seconds)}</p>
-      )}
+      {timerState === 'idle' && <p className="puzzle-modal-description">{challenge.description}</p>}
 
       <div className="puzzle-timer">
         <span className="puzzle-timer-display">{formatSeconds(Math.round(elapsedMs / 1000))}</span>
         <div className="puzzle-timer-controls">
           {timerState !== 'running' ? (
             <button type="button" className="btn btn-primary" onClick={start}>
-              {timerState === 'stopped' ? 'Restart' : 'Start'}
+              Start
             </button>
           ) : (
             <button type="button" className="btn btn-primary" onClick={stop}>
               Stop
             </button>
           )}
-          {timerState === 'stopped' && (
-            <button type="button" className="btn btn-secondary" onClick={reset}>
-              Reset
-            </button>
-          )}
         </div>
-        {recording && <p className="puzzle-timer-status">Saving time…</p>}
-        {attemptError && <p className="screen-error">Couldn't save that attempt: {attemptError}</p>}
       </div>
 
-      {hasHints && (
+      {hasHints && timerState === 'running' && (
         <div className="puzzle-hints">
           <h3 className="puzzle-section-title">Hints</h3>
           {HINT_TIERS.slice(0, hintsRevealed).map((tier, i) => (
@@ -124,44 +170,6 @@ export function PuzzleChallengeModal({ puzzle, challenge, onClose }: PuzzleChall
           )}
         </div>
       )}
-
-      <div className="puzzle-leaderboard">
-        <div className="puzzle-leaderboard-header">
-          <h3 className="puzzle-section-title">Leaderboard</h3>
-          <div className="puzzle-leaderboard-toggle">
-            <button
-              type="button"
-              className={`btn puzzle-scope-btn ${scope === 'daily' ? 'puzzle-scope-btn-active' : ''}`}
-              onClick={() => setScope('daily')}
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              className={`btn puzzle-scope-btn ${scope === 'all_time' ? 'puzzle-scope-btn-active' : ''}`}
-              onClick={() => setScope('all_time')}
-            >
-              All-Time
-            </button>
-          </div>
-        </div>
-
-        {leaderboardError && <p className="screen-error">Couldn't load the leaderboard: {leaderboardError}</p>}
-        {!leaderboardError && leaderboard === null && <p className="puzzle-leaderboard-empty">Loading…</p>}
-        {leaderboard && leaderboard.length === 0 && (
-          <p className="puzzle-leaderboard-empty">No times recorded yet — be the first!</p>
-        )}
-        {leaderboard && leaderboard.length > 0 && (
-          <ol className="puzzle-leaderboard-list">
-            {leaderboard.map((entry) => (
-              <li key={`${entry.rank}-${entry.created_at}`} className="puzzle-leaderboard-entry">
-                <span className="puzzle-leaderboard-rank">#{entry.rank}</span>
-                <span className="puzzle-leaderboard-time">{formatSeconds(entry.elapsed_seconds)}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
     </Modal>
   )
 }

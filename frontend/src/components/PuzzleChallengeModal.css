@@ -9,11 +9,63 @@
   margin: 0 0 4px;
 }
 
-.puzzle-modal-target {
-  font-size: 13px;
+.puzzle-modal-description {
+  font-size: 14px;
   font-weight: 600;
   color: var(--accent);
   margin: 0 0 16px;
+}
+
+.puzzle-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.puzzle-confirm-question {
+  font-size: 17px;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.puzzle-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin: 12px 0;
+  text-align: center;
+}
+
+.puzzle-result-time {
+  font-family: var(--mono);
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--text-h);
+  letter-spacing: -1px;
+}
+
+.puzzle-result-comparison {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0;
+}
+
+.puzzle-result-no-staff-time {
+  font-size: 14px;
+  margin: 0;
+  opacity: 0.75;
+}
+
+.puzzle-result-hints {
+  font-size: 13px;
+  margin: 4px 0 0;
+  opacity: 0.85;
 }
 
 .puzzle-timer {
@@ -67,72 +119,3 @@
   white-space: pre-line;
 }
 
-.puzzle-leaderboard {
-  margin-top: 16px;
-}
-
-.puzzle-leaderboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.puzzle-leaderboard-toggle {
-  display: flex;
-  gap: 4px;
-  background: var(--code-bg);
-  border-radius: 8px;
-  padding: 3px;
-}
-
-.puzzle-scope-btn {
-  font-size: 12px;
-  padding: 5px 10px;
-  border: none;
-  background: transparent;
-}
-
-.puzzle-scope-btn-active {
-  background: var(--accent);
-  color: #fff;
-}
-
-.puzzle-leaderboard-empty {
-  font-size: 13px;
-  margin: 0;
-}
-
-.puzzle-leaderboard-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.puzzle-leaderboard-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 14px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: var(--code-bg);
-}
-
-.puzzle-leaderboard-entry:first-child {
-  background: var(--state-visited-bg);
-  color: var(--state-visited);
-  font-weight: 700;
-}
-
-.puzzle-leaderboard-rank {
-  font-weight: 700;
-}
-
-.puzzle-leaderboard-time {
-  font-family: var(--mono);
-}

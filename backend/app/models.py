@@ -42,11 +42,6 @@ class SolutionType(StrEnum):
     NONE = "none"
 
 
-class LeaderboardScope(StrEnum):
-    DAILY = "daily"
-    ALL_TIME = "all_time"
-
-
 class LinkedTile(BaseModel):
     """Minimal tile summary embedded in a MapNode response.
 
@@ -167,7 +162,8 @@ class PuzzleChallenge(BaseModel):
     id: UUID
     puzzle_id: UUID
     label: str
-    target_time_seconds: int | None = Field(default=None, gt=0)
+    description: str
+    staff_time_seconds: int | None = Field(default=None, gt=0)
     solution_type: SolutionType
     # hint_tier_3 holds the full solution ('exact') or complete strategy
     # explanation ('strategy'). All three are null for 'none' puzzles
@@ -188,14 +184,10 @@ class PuzzleAttempt(BaseModel):
     id: UUID
     challenge_id: UUID
     elapsed_seconds: int = Field(gt=0)
+    hints_used: int = Field(ge=0, le=3)
     created_at: datetime
 
 
 class RecordAttemptRequest(BaseModel):
     elapsed_seconds: int = Field(gt=0)
-
-
-class LeaderboardEntry(BaseModel):
-    rank: int
-    elapsed_seconds: int
-    created_at: datetime
+    hints_used: int = Field(ge=0, le=3)

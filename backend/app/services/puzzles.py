@@ -1,23 +1,21 @@
 """Orchestration for the Puzzle Solving Timer endpoints (Plan.md 2.3).
 
-Wires the pure ranking logic in puzzle_leaderboard.py up to Supabase. Timer
-start/stop and hint-tier progression are pure client-side UI state (the
+Timer start/stop and hint-tier progression are pure client-side UI state (the
 challenge row already carries all 3 hint tiers, and there's no server-side
 anti-cheat layer in this POC) -- the only thing that hits the database here
-is fetching puzzles/challenges and recording/ranking attempts.
+is fetching puzzles/challenges and recording attempts (elapsed time + hints
+used). The result screen compares elapsed_seconds against the challenge's
+staff_time_seconds client-side; there's no leaderboard/ranking anymore.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
 from app.errors import NotFoundError
-from app.models import LeaderboardEntry, Puzzle, PuzzleAttempt, PuzzleChallenge
-from app.services import puzzle_leaderboard
+from app.models import Puzzle, PuzzleAttempt, PuzzleChallenge
 from app.supabase_client import get_supabase_client
-
-LEADERBOARD_LIMIT = 10
 
 
 def _row_to_challenge(row: dict) -> PuzzleChallenge:
@@ -25,7 +23,8 @@ def _row_to_challenge(row: dict) -> PuzzleChallenge:
         id=row["id"],
         puzzle_id=row["puzzle_id"],
         label=row["label"],
-        target_time_seconds=row["target_time_seconds"],
+        description=row["description"],
+        staff_time_seconds=row["staff_time_seconds"],
         solution_type=row["solution_type"],
         hint_tier_1=row["hint_tier_1"],
         hint_tier_2=row["hint_tier_2"],
@@ -57,7 +56,7 @@ def list_puzzles() -> list[Puzzle]:
     ]
 
 
-def record_attempt(challenge_id: UUID, elapsed_seconds: int) -> PuzzleAttempt:
+def record_attempt(challenge_id: UUID, elapsed_seconds: int, hints_used: int) -> PuzzleAttempt:
     client = get_supabase_client()
 
     challenge_rows = client.table("puzzle_challenges").select("id").eq("id", str(challenge_id)).execute().data
@@ -66,7 +65,7 @@ def record_attempt(challenge_id: UUID, elapsed_seconds: int) -> PuzzleAttempt:
 
     row = (
         client.table("puzzle_attempts")
-        .insert({"challenge_id": str(challenge_id), "elapsed_seconds": elapsed_seconds})
+        .insert({"challenge_id": str(challenge_id), "elapsed_seconds": elapsed_seconds, "hints_used": hints_used})
         .execute()
         .data[0]
     )
@@ -74,31 +73,6 @@ def record_attempt(challenge_id: UUID, elapsed_seconds: int) -> PuzzleAttempt:
         id=row["id"],
         challenge_id=row["challenge_id"],
         elapsed_seconds=row["elapsed_seconds"],
+        hints_used=row["hints_used"],
         created_at=_parse_timestamptz(row["created_at"]),
     )
-
-
-def get_leaderboard(challenge_id: UUID, scope: str) -> list[LeaderboardEntry]:
-    client = get_supabase_client()
-    rows = (
-        client.table("puzzle_attempts")
-        .select("id,elapsed_seconds,created_at")
-        .eq("challenge_id", str(challenge_id))
-        .execute()
-        .data
-    )
-    attempts = [
-        puzzle_leaderboard.AttemptRecord(
-            id=r["id"],
-            elapsed_seconds=r["elapsed_seconds"],
-            created_at=_parse_timestamptz(r["created_at"]),
-        )
-        for r in rows
-    ]
-    ranked = puzzle_leaderboard.rank_attempts(
-        attempts, scope=scope, now=datetime.now(timezone.utc), limit=LEADERBOARD_LIMIT
-    )
-    return [
-        LeaderboardEntry(rank=i + 1, elapsed_seconds=a.elapsed_seconds, created_at=a.created_at)
-        for i, a in enumerate(ranked)
-    ]

@@ -11,8 +11,12 @@ Resets:
     completed_at = null
   - that card's milestone_lines/milestone_x/milestone_blackout back to none
   - every map_nodes row (all cards share the same map): state = 'not_visited'
-  - every puzzle_attempts row deleted, so the Puzzle Timer leaderboard specs
-    start from an empty leaderboard each run
+  - every puzzle_attempts row deleted, so the Puzzle Timer specs start from
+    a clean slate (no prior attempts) each run
+  - Math Maze's "Standard" challenge pinned to staff_time_seconds = 2, so the
+    e2e specs have a deterministic value to compare elapsed time against
+    (real staff times otherwise get set directly in the DB by park staff --
+    there's no in-app UI for it in this POC)
 """
 
 from __future__ import annotations
@@ -69,6 +73,14 @@ def reset_demo_data() -> None:
         .data
     )
     print(f"Deleted {len(attempt_rows)} puzzle attempt(s).")
+
+    math_maze_rows = client.table("puzzles").select("id").eq("name", "Math Maze").execute().data
+    if not math_maze_rows:
+        raise RuntimeError('No puzzle found named "Math Maze"')
+    client.table("puzzle_challenges").update({"staff_time_seconds": 2}).eq(
+        "puzzle_id", math_maze_rows[0]["id"]
+    ).eq("label", "Standard").execute()
+    print('Pinned Math Maze "Standard" staff_time_seconds to 2.')
 
 
 if __name__ == "__main__":

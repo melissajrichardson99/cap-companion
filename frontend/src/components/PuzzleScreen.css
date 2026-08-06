@@ -58,9 +58,3 @@
 .puzzle-challenge-label {
   font-weight: 600;
 }
-
-.puzzle-challenge-target {
-  font-size: 12px;
-  color: var(--text);
-  white-space: nowrap;
-}

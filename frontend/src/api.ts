@@ -86,13 +86,13 @@ export interface VisitNodeResponse {
 }
 
 export type SolutionType = 'exact' | 'strategy' | 'none'
-export type LeaderboardScope = 'daily' | 'all_time'
 
 export interface PuzzleChallenge {
   id: string
   puzzle_id: string
   label: string
-  target_time_seconds: number | null
+  description: string
+  staff_time_seconds: number | null
   solution_type: SolutionType
   hint_tier_1: string | null
   hint_tier_2: string | null
@@ -110,12 +110,7 @@ export interface PuzzleAttempt {
   id: string
   challenge_id: string
   elapsed_seconds: number
-  created_at: string
-}
-
-export interface LeaderboardEntry {
-  rank: number
-  elapsed_seconds: number
+  hints_used: number
   created_at: string
 }
 
@@ -143,11 +138,9 @@ export const api = {
   completeTile: (tileId: string) =>
     request<TileCompletionResult>(`/bingo/tiles/${tileId}/complete`, { method: 'POST' }),
   listPuzzles: () => request<Puzzle[]>('/puzzles'),
-  recordPuzzleAttempt: (challengeId: string, elapsedSeconds: number) =>
+  recordPuzzleAttempt: (challengeId: string, elapsedSeconds: number, hintsUsed: number) =>
     request<PuzzleAttempt>(`/puzzles/challenges/${challengeId}/attempts`, {
       method: 'POST',
-      body: JSON.stringify({ elapsed_seconds: elapsedSeconds }),
+      body: JSON.stringify({ elapsed_seconds: elapsedSeconds, hints_used: hintsUsed }),
     }),
-  getPuzzleLeaderboard: (challengeId: string, scope: LeaderboardScope) =>
-    request<LeaderboardEntry[]>(`/puzzles/challenges/${challengeId}/leaderboard?scope=${scope}`),
 }
