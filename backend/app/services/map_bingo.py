@@ -156,6 +156,16 @@ def _minigame_pool() -> list[Minigame]:
     return [Minigame(**r) for r in rows]
 
 
+def list_minigames() -> list[Minigame]:
+    """Every minigame currently in the live draw pool.
+
+    Public wrapper around _minigame_pool() -- also used by GET /bingo/minigames,
+    which the Scavenger Hunt frontend calls to resolve a character's
+    minigame_slug to the full Minigame row MinigameOverlay needs.
+    """
+    return _minigame_pool()
+
+
 def complete_tile(tile_id: UUID) -> TileCompletionResult:
     """Mark one bingo tile completed and run everything it triggers (4.1 + 4.2).
 

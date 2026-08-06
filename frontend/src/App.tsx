@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api, type BingoCard, type MapNode, type Minigame, type MilestoneEvent, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { api, type BingoCard, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { BingoScreen } from './components/BingoScreen'
+import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
 import { PuzzleScreen } from './components/PuzzleScreen'
@@ -9,7 +10,7 @@ import { ToastStack, type ToastItem } from './components/ToastStack'
 import './components/shared.css'
 import './App.css'
 
-type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring'
+type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('map')
@@ -27,10 +28,19 @@ function App() {
   const [scoringGames, setScoringGames] = useState<ScoringGame[] | null>(null)
   const [scoringGamesError, setScoringGamesError] = useState<string | null>(null)
 
+  const [huntCharacters, setHuntCharacters] = useState<HuntCharacter[] | null>(null)
+  const [huntError, setHuntError] = useState<string | null>(null)
+
+  const [minigames, setMinigames] = useState<Minigame[] | null>(null)
+
   const [milestoneQueue, setMilestoneQueue] = useState<MilestoneEvent[]>([])
   const [minigameQueue, setMinigameQueue] = useState<Minigame[]>([])
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const activeMinigame = minigameQueue[0] ?? null
+  // Set while a Scavenger Hunt Challenge 3 minigame is in the queue, so the
+  // overlay's onClose knows to also mark that hunt challenge complete --
+  // the overlay itself stays generic/unaware of Hunt.
+  const [huntPendingChallengeId, setHuntPendingChallengeId] = useState<string | null>(null)
 
   const reloadNodes = () => {
     setNodesError(null)
@@ -52,10 +62,24 @@ function App() {
     api.listScoringGames().then(setScoringGames).catch((err) => setScoringGamesError(String(err)))
   }
 
+  const reloadHuntCharacters = () => {
+    setHuntError(null)
+    api.listHuntCharacters().then(setHuntCharacters).catch((err) => setHuntError(String(err)))
+  }
+
+  const reloadMinigames = () => {
+    api
+      .listMinigames()
+      .then(setMinigames)
+      .catch((err) => setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `Couldn't load minigames: ${err}` }]))
+  }
+
   useEffect(() => {
     reloadNodes()
     reloadPuzzles()
     reloadScoringGames()
+    reloadHuntCharacters()
+    reloadMinigames()
     api
       .listBingoCards()
       .then((summaries) => {
@@ -108,6 +132,33 @@ function App() {
     enqueueMilestones(result.tile_completions.flatMap((tc) => tc.milestones))
   }
 
+  const completeHuntChallenge = (challengeId: string): Promise<HuntCharacter> =>
+    api.completeHuntChallenge(challengeId).then((updated) => {
+      setHuntCharacters((prev) => (prev ? prev.map((c) => (c.id === updated.id ? updated : c)) : prev))
+      return updated
+    })
+
+  const handlePlayHuntMinigame = (challengeId: string, minigameSlug: string) => {
+    const game = minigames?.find((m) => getMinigameSlug(m) === minigameSlug)
+    if (!game) {
+      setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `\u{1F3AE} That minigame isn't available yet.` }])
+      return
+    }
+    setMinigameQueue((prev) => [...prev, game])
+    setHuntPendingChallengeId(challengeId)
+  }
+
+  const handleMinigameOverlayClose = () => {
+    setMinigameQueue((q) => q.slice(1))
+    if (huntPendingChallengeId) {
+      const challengeId = huntPendingChallengeId
+      setHuntPendingChallengeId(null)
+      completeHuntChallenge(challengeId).catch((err) =>
+        setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `Couldn't save hunt progress: ${err}` }]),
+      )
+    }
+  }
+
   return (
     <div id="app-root">
       <header className="app-header">
@@ -141,6 +192,13 @@ function App() {
           >
             Scoring Sheet
           </button>
+          <button
+            type="button"
+            className={`app-tab ${activeTab === 'hunt' ? 'app-tab-active' : ''}`}
+            onClick={() => setActiveTab('hunt')}
+          >
+            Scavenger Hunt
+          </button>
         </nav>
       </header>
 
@@ -164,13 +222,20 @@ function App() {
         {activeTab === 'scoring' && (
           <ScoringScreen games={scoringGames} error={scoringGamesError} onReload={reloadScoringGames} />
         )}
+        {activeTab === 'hunt' && (
+          <HuntScreen
+            characters={huntCharacters}
+            error={huntError}
+            onReload={reloadHuntCharacters}
+            onCompleteChallenge={completeHuntChallenge}
+            onPlayMinigame={handlePlayHuntMinigame}
+          />
+        )}
       </main>
 
       <ToastStack toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
 
-      {activeMinigame && (
-        <MinigameOverlay game={activeMinigame} onClose={() => setMinigameQueue((q) => q.slice(1))} />
-      )}
+      {activeMinigame && <MinigameOverlay game={activeMinigame} onClose={handleMinigameOverlayClose} />}
     </div>
   )
 }

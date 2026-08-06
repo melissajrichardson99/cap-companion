@@ -1,0 +1,155 @@
+.hunt-modal-title {
+  font-size: 19px;
+  margin: 0 0 16px;
+}
+
+.hunt-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.hunt-question {
+  font-size: 16px;
+  line-height: 145%;
+  margin: 0 0 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.hunt-feedback {
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+
+.hunt-feedback-wrong {
+  color: var(--state-closed);
+}
+
+.hunt-complete-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin: 12px 0;
+  text-align: center;
+}
+
+.hunt-complete-check {
+  font-size: 32px;
+  color: var(--state-visited);
+}
+
+/* Multiple-choice (mc, and the reveal step of image_mc) */
+.hunt-mc-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hunt-mc-option {
+  text-align: left;
+}
+
+.hunt-option-correct {
+  border-color: var(--state-visited);
+  background: var(--state-visited-bg);
+}
+
+.hunt-option-wrong {
+  border-color: var(--state-closed);
+  background: var(--state-closed-bg);
+}
+
+/* Matching */
+.hunt-matching-columns {
+  display: flex;
+  gap: 12px;
+}
+
+.hunt-matching-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hunt-matching-item {
+  text-align: left;
+  font-size: 14px;
+}
+
+.hunt-matching-selected {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+/* True/False set */
+.hunt-tf-progress {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  margin: 0 0 6px;
+}
+
+.hunt-tf-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.hunt-tf-button {
+  flex: 1;
+}
+
+/* Image + unscramble */
+.hunt-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  background: var(--code-bg);
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.hunt-scrambled {
+  font-family: var(--mono);
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+.hunt-unscramble-row {
+  display: flex;
+  gap: 8px;
+}
+
+.hunt-unscramble-input {
+  font: inherit;
+  font-size: 15px;
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+/* Minigame step */
+.hunt-minigame-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  text-align: center;
+}

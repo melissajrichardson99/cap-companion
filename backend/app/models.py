@@ -48,6 +48,20 @@ class WinConditionType(StrEnum):
     FIRST_TO_ROUND_TIEBREAK = "first_to_round_tiebreak"
 
 
+class HuntSpeciesCategory(StrEnum):
+    MARSUPIAL = "marsupial"
+    RODENT = "rodent"
+    OTHER = "other"
+
+
+class HuntChallengeType(StrEnum):
+    MC = "mc"
+    MATCHING = "matching"
+    TRUE_FALSE_SET = "true_false_set"
+    IMAGE_MC = "image_mc"
+    MINIGAME = "minigame"
+
+
 class ScoreStatus(StrEnum):
     """Values match app.services.scoring's STATUS_* constants exactly."""
 
@@ -264,3 +278,28 @@ class CreateSessionRequest(BaseModel):
 class RecordScoreEntryRequest(BaseModel):
     player_name: str
     score_event_id: UUID
+
+
+class HuntChallenge(BaseModel):
+    id: UUID
+    character_id: UUID
+    order_index: int = Field(ge=1, le=3)
+    type: HuntChallengeType
+    # Shape varies by type: question/options/answer_index (mc), pairs
+    # (matching), statements (true_false_set), scrambled/unscrambled +
+    # question/options/answer_index (image_mc), or minigame_slug (minigame).
+    # The frontend narrows on `type` to interpret it -- see api.ts.
+    content: dict = Field(default_factory=dict)
+    metadata: dict = Field(default_factory=dict)
+
+
+class HuntCharacter(BaseModel):
+    id: UUID
+    name: str
+    species_category: HuntSpeciesCategory
+    minigame_slug: str
+    challenges: list[HuntChallenge] = Field(default_factory=list)
+    # Denormalized from hunt_progress, same embedding pattern as
+    # BingoCard.milestones_achieved -- order_index values (1-3) completed.
+    challenges_completed: list[int] = Field(default_factory=list)
+    completed_at: datetime | None = None

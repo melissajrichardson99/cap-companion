@@ -442,3 +442,109 @@ from scoring_games g,
 ) as e(label, point_value, sort_order)
 where g.name = 'Tiki Toss / Ring & Hook'
 on conflict (game_id, label) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- hunt_characters / hunt_challenges / hunt_progress (Scavenger Hunt).
+-- Matches the live-DB state after migration 008_scavenger_hunt.sql (which is
+-- what actually applies this to the live database -- the known
+-- seed.sql-vs-live-DB gotcha applies here too, this file is the local
+-- fresh-install / documentation copy). Capybara's content is
+-- source: 'park_verified' in metadata; the other four are
+-- source: 'placeholder_general_knowledge', pending a real fact-check pass.
+-- ---------------------------------------------------------------------------
+insert into hunt_characters (name, species_category, minigame_slug, sort_order) values
+    ('Kangaroo', 'marsupial', 'mini_platformer', 1),
+    ('Pig',      'other',     'pattern_repeat',  2),
+    ('Capybara', 'rodent',    'whack_a_capybara',3),
+    ('Snake',    'other',     'mini_snake',      4),
+    ('Sloth',    'other',     'mini_maze',       5)
+on conflict (name) do nothing;
+
+insert into hunt_challenges (character_id, order_index, type, content, metadata)
+select c.id, v.order_index, v.type, v.content::jsonb, v.metadata::jsonb
+from hunt_characters c,
+(values
+    (1, 'mc',
+     '{"question":"What do you call a group of kangaroos?","options":["A mob","A pack","A herd","A troop"],"answer_index":0}',
+     '{"source":"placeholder_general_knowledge"}'),
+    (2, 'matching',
+     '{"pairs":[{"left":"Joey","right":"a baby kangaroo"},{"left":"Pouch","right":"where a joey grows"},{"left":"Marsupial","right":"the mammal group kangaroos belong to"},{"left":"Mob","right":"a group of kangaroos"},{"left":"Boomer","right":"a large male kangaroo"}]}',
+     '{"source":"placeholder_general_knowledge"}'),
+    (3, 'minigame',
+     '{"minigame_slug":"mini_platformer"}',
+     '{"source":"placeholder_general_knowledge"}')
+) as v(order_index, type, content, metadata)
+where c.name = 'Kangaroo'
+on conflict (character_id, order_index) do nothing;
+
+insert into hunt_challenges (character_id, order_index, type, content, metadata)
+select c.id, v.order_index, v.type, v.content::jsonb, v.metadata::jsonb
+from hunt_characters c,
+(values
+    (1, 'mc',
+     '{"question":"How do pigs cool themselves down, since they barely sweat?","options":["Rolling in mud","Panting like a dog","Hiding in shade only","They don''t need to"],"answer_index":0}',
+     '{"source":"placeholder_general_knowledge"}'),
+    (2, 'mc',
+     '{"question":"Pigs are considered one of the smartest animals alive. Studies often compare their intelligence to which animals?","options":["Goldfish","Dolphins and primates","Reptiles","Dogs only"],"answer_index":1}',
+     '{"source":"placeholder_general_knowledge"}'),
+    (3, 'minigame',
+     '{"minigame_slug":"pattern_repeat"}',
+     '{"source":"placeholder_general_knowledge"}')
+) as v(order_index, type, content, metadata)
+where c.name = 'Pig'
+on conflict (character_id, order_index) do nothing;
+
+insert into hunt_challenges (character_id, order_index, type, content, metadata)
+select c.id, v.order_index, v.type, v.content::jsonb, v.metadata::jsonb
+from hunt_characters c,
+(values
+    (1, 'mc',
+     '{"question":"What is a group of capybaras called?","options":["A herd","A pack","A colony","A raft"],"answer_index":0}',
+     '{"source":"park_verified"}'),
+    (2, 'true_false_set',
+     '{"statements":[{"text":"Capybaras can stay underwater up to five minutes","answer":true},{"text":"Capybaras are the smallest rodent in the world","answer":false},{"text":"Capybaras are native to Central and South America","answer":true}]}',
+     '{"source":"park_verified"}'),
+    (3, 'minigame',
+     '{"minigame_slug":"whack_a_capybara"}',
+     '{"source":"park_verified"}')
+) as v(order_index, type, content, metadata)
+where c.name = 'Capybara'
+on conflict (character_id, order_index) do nothing;
+
+insert into hunt_challenges (character_id, order_index, type, content, metadata)
+select c.id, v.order_index, v.type, v.content::jsonb, v.metadata::jsonb
+from hunt_characters c,
+(values
+    (1, 'mc',
+     '{"question":"How do snakes primarily sense their surroundings, beyond sight?","options":["By smelling with their tongue","Whiskers","Ears","Their tail"],"answer_index":0}',
+     '{"source":"placeholder_general_knowledge"}'),
+    (2, 'image_mc',
+     '{"scrambled":"CSLAE","unscrambled":"SCALE","image_alt":"Close-up photo of snake scale texture","question":"What covers a snake''s body?","options":["Scale","Fur","Feather","Shell"],"answer_index":0}',
+     '{"source":"placeholder_general_knowledge"}'),
+    (3, 'minigame',
+     '{"minigame_slug":"mini_snake"}',
+     '{"source":"placeholder_general_knowledge"}')
+) as v(order_index, type, content, metadata)
+where c.name = 'Snake'
+on conflict (character_id, order_index) do nothing;
+
+insert into hunt_challenges (character_id, order_index, type, content, metadata)
+select c.id, v.order_index, v.type, v.content::jsonb, v.metadata::jsonb
+from hunt_characters c,
+(values
+    (1, 'mc',
+     '{"question":"About how many hours a day do sloths typically sleep?","options":["4-6","8-10","10-15","20+"],"answer_index":2}',
+     '{"source":"placeholder_general_knowledge"}'),
+    (2, 'true_false_set',
+     '{"statements":[{"text":"Sloths are excellent swimmers","answer":true},{"text":"Sloths spend most of their lives upside down in trees","answer":true},{"text":"Sloths are fast runners on the ground","answer":false}]}',
+     '{"source":"placeholder_general_knowledge"}'),
+    (3, 'minigame',
+     '{"minigame_slug":"mini_maze"}',
+     '{"source":"placeholder_general_knowledge"}')
+) as v(order_index, type, content, metadata)
+where c.name = 'Sloth'
+on conflict (character_id, order_index) do nothing;
+
+insert into hunt_progress (character_id)
+select c.id from hunt_characters c
+on conflict (character_id) do nothing;

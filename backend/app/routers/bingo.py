@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from app.errors import NotFoundError
-from app.models import BingoCard, BingoCardSummary, TileCompletionResult
+from app.models import BingoCard, BingoCardSummary, Minigame, TileCompletionResult
 from app.services import map_bingo
 
 router = APIRouter(prefix="/bingo", tags=["bingo"])
@@ -12,6 +12,14 @@ router = APIRouter(prefix="/bingo", tags=["bingo"])
 @router.get("/cards", response_model=list[BingoCardSummary])
 def list_cards() -> list[BingoCardSummary]:
     return map_bingo.list_bingo_cards()
+
+
+@router.get("/minigames", response_model=list[Minigame])
+def list_minigames() -> list[Minigame]:
+    # Lives under /bingo since map_bingo.py already owns the minigames table
+    # (the draw pool). Also used by the Scavenger Hunt frontend to resolve a
+    # character's minigame_slug to the full Minigame row.
+    return map_bingo.list_minigames()
 
 
 @router.get("/card/{card_id}", response_model=BingoCard)

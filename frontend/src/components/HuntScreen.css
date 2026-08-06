@@ -1,0 +1,68 @@
+.hunt-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hunt-loading {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.hunt-intro {
+  font-size: 14px;
+  margin: 0;
+}
+
+.hunt-character-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.hunt-character-card {
+  font: inherit;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.1s ease, border-color 0.15s ease;
+}
+
+.hunt-character-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+
+.hunt-character-complete {
+  border-color: var(--state-visited);
+  background: var(--state-visited-bg);
+}
+
+.hunt-character-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.hunt-character-species {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+.hunt-character-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.hunt-character-complete .hunt-character-status {
+  color: var(--state-visited);
+}

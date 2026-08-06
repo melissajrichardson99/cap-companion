@@ -178,3 +178,46 @@ create table if not exists score_entries (
 );
 
 create index if not exists score_entries_session_id_idx on score_entries(session_id);
+
+-- ---------------------------------------------------------------------------
+-- hunt_characters / hunt_challenges / hunt_progress (Scavenger Hunt)
+-- ---------------------------------------------------------------------------
+create table if not exists hunt_characters (
+    id               uuid primary key default gen_random_uuid(),
+    name             text not null unique,
+    species_category text not null check (species_category in ('marsupial', 'rodent', 'other')),
+    -- Matches a key in GAME_SLUGS (frontend/src/components/MinigameOverlay.tsx).
+    minigame_slug    text not null,
+    sort_order       integer not null default 0,
+    created_at       timestamptz not null default now()
+);
+
+create table if not exists hunt_challenges (
+    id            uuid primary key default gen_random_uuid(),
+    character_id  uuid not null references hunt_characters(id) on delete cascade,
+    order_index   integer not null check (order_index between 1 and 3),
+    type          text not null check (type in ('mc', 'matching', 'true_false_set', 'image_mc', 'minigame')),
+    -- jsonb, not the usual array-over-JSON convention: content genuinely
+    -- varies in shape per type (MC question+options, matching pairs, T/F
+    -- statement list, or scrambled-word+question), which a native array
+    -- can't represent.
+    content       jsonb not null default '{}'::jsonb,
+    -- metadata.source flags placeholder trivia ('placeholder_general_knowledge')
+    -- vs. park-verified content ('park_verified') so it can be found and
+    -- replaced later without re-auditing every character.
+    metadata      jsonb not null default '{}'::jsonb,
+    created_at    timestamptz not null default now(),
+    unique (character_id, order_index)
+);
+
+create index if not exists hunt_challenges_character_id_idx on hunt_challenges(character_id);
+
+create table if not exists hunt_progress (
+    id                    uuid primary key default gen_random_uuid(),
+    character_id          uuid not null unique references hunt_characters(id) on delete cascade,
+    -- order_index values (1-3) completed so far. completed_at is set once
+    -- this reaches all 3, monotonically -- never re-derived/unset.
+    challenges_completed  integer[] not null default '{}',
+    completed_at          timestamptz,
+    created_at            timestamptz not null default now()
+);

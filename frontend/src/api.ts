@@ -159,6 +159,59 @@ export interface ScoreSheetSession {
   round_number: number | null
 }
 
+export type HuntSpeciesCategory = 'marsupial' | 'rodent' | 'other'
+
+export interface HuntMcContent {
+  question: string
+  options: string[]
+  answer_index: number
+}
+
+export interface HuntMatchingContent {
+  pairs: { left: string; right: string }[]
+}
+
+export interface HuntTrueFalseSetContent {
+  statements: { text: string; answer: boolean }[]
+}
+
+export interface HuntImageMcContent {
+  scrambled: string
+  unscrambled: string
+  image_alt: string
+  question: string
+  options: string[]
+  answer_index: number
+}
+
+export interface HuntMinigameContent {
+  minigame_slug: string
+}
+
+export type HuntChallenge =
+  | { id: string; character_id: string; order_index: number; type: 'mc'; content: HuntMcContent; metadata: Record<string, unknown> }
+  | { id: string; character_id: string; order_index: number; type: 'matching'; content: HuntMatchingContent; metadata: Record<string, unknown> }
+  | {
+      id: string
+      character_id: string
+      order_index: number
+      type: 'true_false_set'
+      content: HuntTrueFalseSetContent
+      metadata: Record<string, unknown>
+    }
+  | { id: string; character_id: string; order_index: number; type: 'image_mc'; content: HuntImageMcContent; metadata: Record<string, unknown> }
+  | { id: string; character_id: string; order_index: number; type: 'minigame'; content: HuntMinigameContent; metadata: Record<string, unknown> }
+
+export interface HuntCharacter {
+  id: string
+  name: string
+  species_category: HuntSpeciesCategory
+  minigame_slug: string
+  challenges: HuntChallenge[]
+  challenges_completed: number[]
+  completed_at: string | null
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -202,4 +255,8 @@ export const api = {
     }),
   finishScoreSheetSession: (sessionId: string) =>
     request<ScoreSheetSession>(`/scoring/sessions/${sessionId}/finish`, { method: 'POST' }),
+  listMinigames: () => request<Minigame[]>('/bingo/minigames'),
+  listHuntCharacters: () => request<HuntCharacter[]>('/hunt/characters'),
+  completeHuntChallenge: (challengeId: string) =>
+    request<HuntCharacter>(`/hunt/challenges/${challengeId}/complete`, { method: 'POST' }),
 }

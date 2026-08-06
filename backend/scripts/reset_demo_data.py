@@ -17,6 +17,8 @@ Resets:
     e2e specs have a deterministic value to compare elapsed time against
     (real staff times otherwise get set directly in the DB by park staff --
     there's no in-app UI for it in this POC)
+  - every hunt_progress row: challenges_completed = [], completed_at = null,
+    so the Scavenger Hunt specs start with every character un-started
 """
 
 from __future__ import annotations
@@ -81,6 +83,16 @@ def reset_demo_data() -> None:
         "puzzle_id", math_maze_rows[0]["id"]
     ).eq("label", "Standard").execute()
     print('Pinned Math Maze "Standard" staff_time_seconds to 2.')
+
+    # Same "no bare filterless update" PostgREST rule as map_nodes above.
+    progress_rows = (
+        client.table("hunt_progress")
+        .update({"challenges_completed": [], "completed_at": None})
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+        .execute()
+        .data
+    )
+    print(f"Reset {len(progress_rows)} hunt progress row(s).")
 
 
 if __name__ == "__main__":
