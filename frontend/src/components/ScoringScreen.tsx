@@ -7,9 +7,10 @@ interface ScoringScreenProps {
   games: ScoringGame[] | null
   error: string | null
   onReload: () => void
+  onCoinsChanged: () => void
 }
 
-export function ScoringScreen({ games, error, onReload }: ScoringScreenProps) {
+export function ScoringScreen({ games, error, onReload, onCoinsChanged }: ScoringScreenProps) {
   const [activeGame, setActiveGame] = useState<ScoringGame | null>(null)
 
   if (error) {
@@ -42,7 +43,9 @@ export function ScoringScreen({ games, error, onReload }: ScoringScreenProps) {
         ))}
       </div>
 
-      {activeGame && <ScoringSessionModal game={activeGame} onClose={() => setActiveGame(null)} />}
+      {activeGame && (
+        <ScoringSessionModal game={activeGame} onClose={() => setActiveGame(null)} onCoinsChanged={onCoinsChanged} />
+      )}
     </div>
   )
 }

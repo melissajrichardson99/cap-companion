@@ -14,7 +14,8 @@ from datetime import datetime
 from uuid import UUID
 
 from app.errors import NotFoundError
-from app.models import Puzzle, PuzzleAttempt, PuzzleChallenge
+from app.models import CoinSourceType, Puzzle, PuzzleAttempt, PuzzleChallenge
+from app.services import coins as coins_service
 from app.supabase_client import get_supabase_client
 
 
@@ -68,6 +69,9 @@ def record_attempt(challenge_id: UUID, elapsed_seconds: int, hints_used: int) ->
         .insert({"challenge_id": str(challenge_id), "elapsed_seconds": elapsed_seconds, "hints_used": hints_used})
         .execute()
         .data[0]
+    )
+    coins_service.award_coins(
+        CoinSourceType.PUZZLE_TIMER, UUID(row["id"]), coins_service.puzzle_timer_amount(hints_used)
     )
     return PuzzleAttempt(
         id=row["id"],

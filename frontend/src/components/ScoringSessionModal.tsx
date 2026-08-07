@@ -8,6 +8,7 @@ type ModalState = 'setup' | 'playing' | 'finished'
 interface ScoringSessionModalProps {
   game: ScoringGame
   onClose: () => void
+  onCoinsChanged: () => void
 }
 
 function buildSummaryText(game: ScoringGame, session: ScoreSheetSession): string {
@@ -73,7 +74,7 @@ function tieBannerText(session: ScoreSheetSession): string | null {
   return null
 }
 
-export function ScoringSessionModal({ game, onClose }: ScoringSessionModalProps) {
+export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSessionModalProps) {
   const [modalState, setModalState] = useState<ModalState>('setup')
   const [playerInputs, setPlayerInputs] = useState<string[]>(['', ''])
   const [session, setSession] = useState<ScoreSheetSession | null>(null)
@@ -126,7 +127,10 @@ export function ScoringSessionModal({ game, onClose }: ScoringSessionModalProps)
       const updated = await api.recordScoreEntry(session.id, playerName, event.id)
       setSession(updated)
       setLastEntryMessage(`+${event.point_value} for ${playerName} — ${event.label}`)
-      if (updated.status === 'won' && autoFinishesOnWin(game)) setModalState('finished')
+      if (updated.status === 'won' && autoFinishesOnWin(game)) {
+        setModalState('finished')
+        onCoinsChanged()
+      }
     } catch (err) {
       setEntryError(String(err))
     } finally {
@@ -142,6 +146,7 @@ export function ScoringSessionModal({ game, onClose }: ScoringSessionModalProps)
       const finished = await api.finishScoreSheetSession(session.id)
       setSession(finished)
       setModalState('finished')
+      onCoinsChanged()
     } catch (err) {
       setEntryError(String(err))
     } finally {

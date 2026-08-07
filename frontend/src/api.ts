@@ -237,6 +237,21 @@ export interface StaffRequest {
   resolved_at: string | null
 }
 
+export type CoinSourceType = 'scavenger_hunt' | 'puzzle_timer' | 'scoring_sheet_win' | 'bingo_tile'
+
+export interface Collectible {
+  id: string
+  name: string
+  icon: string
+  unlock_threshold: number
+  unlocked: boolean
+}
+
+export interface CoinsSummary {
+  total: number
+  collectibles: Collectible[]
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -295,4 +310,5 @@ export const api = {
     request<StaffRequest>(`/staff-requests/${requestId}/acknowledge`, { method: 'POST' }),
   resolveStaffRequest: (requestId: string) =>
     request<StaffRequest>(`/staff-requests/${requestId}/resolve`, { method: 'POST' }),
+  getCoinsSummary: () => request<CoinsSummary>('/coins/summary'),
 }

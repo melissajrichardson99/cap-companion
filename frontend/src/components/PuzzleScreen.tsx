@@ -7,6 +7,7 @@ interface PuzzleScreenProps {
   puzzles: Puzzle[] | null
   error: string | null
   onReload: () => void
+  onCoinsChanged: () => void
 }
 
 export function formatSeconds(totalSeconds: number): string {
@@ -15,7 +16,7 @@ export function formatSeconds(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function PuzzleScreen({ puzzles, error, onReload }: PuzzleScreenProps) {
+export function PuzzleScreen({ puzzles, error, onReload, onCoinsChanged }: PuzzleScreenProps) {
   const [active, setActive] = useState<{ puzzle: Puzzle; challenge: PuzzleChallenge } | null>(null)
 
   if (error) {
@@ -61,6 +62,7 @@ export function PuzzleScreen({ puzzles, error, onReload }: PuzzleScreenProps) {
           puzzle={active.puzzle}
           challenge={active.challenge}
           onClose={() => setActive(null)}
+          onCoinsChanged={onCoinsChanged}
         />
       )}
     </div>

@@ -1,0 +1,74 @@
+.collectibles-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.collectibles-loading {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.collectibles-intro {
+  font-size: 14px;
+  margin: 0;
+}
+
+.collectibles-total {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.collectibles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.collectible-card {
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 16px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.collectible-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.collectible-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.collectible-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.collectible-locked {
+  opacity: 0.6;
+}
+
+.collectible-locked .collectible-status {
+  color: var(--text);
+  opacity: 0.75;
+}
+
+.collectible-unlocked {
+  border-color: var(--state-visited);
+  background: var(--state-visited-bg);
+}
+
+.collectible-unlocked .collectible-status {
+  color: var(--state-visited);
+}

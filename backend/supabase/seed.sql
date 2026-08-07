@@ -589,6 +589,26 @@ join (values
 on conflict (code) do nothing;
 
 -- ---------------------------------------------------------------------------
+-- collectibles (Cobb Coins) -- fixture content. Thresholds are cumulative
+-- totals across every award source (bingo tiles, puzzle completions, hunt
+-- characters, scoring sheet wins all feed the same running total), tuned to
+-- be reachable through normal play rather than deliberately grindy.
+-- ---------------------------------------------------------------------------
+insert into collectibles (name, icon, unlock_threshold) values
+    ('Bronze Explorer',   '🥉', 10),
+    ('Silver Adventurer', '🥈', 30),
+    ('Gold Champion',     '🥇', 60),
+    ('Cobb''s Legend',    '🏆', 100)
+on conflict (name) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- coin_awards (Cobb Coins ledger) -- intentionally no seed rows, same as
+-- staff_requests below. It is runtime guest-generated data (see migration
+-- 011_cobb_coins.sql), not fixture content -- a fresh install starts with
+-- zero coins earned.
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
 -- staff_requests (Contact Staff) -- intentionally no seed rows. It is
 -- runtime guest-generated data (see migration 010_contact_staff.sql), not
 -- fixture content -- a fresh install starts with zero requests.

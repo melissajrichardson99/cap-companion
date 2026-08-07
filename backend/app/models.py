@@ -356,3 +356,33 @@ class StaffRequest(BaseModel):
 class CreateStaffRequestRequest(BaseModel):
     type: StaffRequestType
     location_node_id: UUID | None = None
+
+
+class CoinSourceType(StrEnum):
+    SCAVENGER_HUNT = "scavenger_hunt"
+    PUZZLE_TIMER = "puzzle_timer"
+    SCORING_SHEET_WIN = "scoring_sheet_win"
+    BINGO_TILE = "bingo_tile"
+
+
+class CoinAward(BaseModel):
+    id: UUID
+    source_type: CoinSourceType
+    source_id: UUID
+    amount: int = Field(gt=0)
+    created_at: datetime
+
+
+class Collectible(BaseModel):
+    id: UUID
+    name: str
+    icon: str
+    unlock_threshold: int = Field(gt=0)
+    # Computed at read time (total >= unlock_threshold), never stored -- see
+    # app/services/coins.py -- so it can't drift out of sync with the ledger.
+    unlocked: bool = False
+
+
+class CoinsSummary(BaseModel):
+    total: int = Field(ge=0)
+    collectibles: list[Collectible] = Field(default_factory=list)

@@ -21,6 +21,8 @@ Resets:
     so the Scavenger Hunt specs start with every character un-started
   - every staff_requests row deleted, so the Contact Staff specs start with
     an empty staff view each run
+  - every coin_awards row deleted, so the Cobb Coins specs start from a
+    running total of 0 each run
 """
 
 from __future__ import annotations
@@ -105,6 +107,16 @@ def reset_demo_data() -> None:
         .data
     )
     print(f"Deleted {len(staff_request_rows)} staff request(s).")
+
+    # Same "no bare filterless delete" PostgREST rule as staff_requests above.
+    coin_award_rows = (
+        client.table("coin_awards")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+        .execute()
+        .data
+    )
+    print(f"Deleted {len(coin_award_rows)} coin award(s).")
 
 
 if __name__ == "__main__":

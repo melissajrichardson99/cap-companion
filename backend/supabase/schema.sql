@@ -272,3 +272,33 @@ create table if not exists staff_requests (
 
 create index if not exists staff_requests_status_idx on staff_requests(status);
 create index if not exists staff_requests_location_node_id_idx on staff_requests(location_node_id);
+
+-- ---------------------------------------------------------------------------
+-- coin_awards / collectibles (Cobb Coins -- POC scope, no redemption)
+-- ---------------------------------------------------------------------------
+create table if not exists coin_awards (
+    id          uuid primary key default gen_random_uuid(),
+    source_type text not null check (source_type in ('scavenger_hunt', 'puzzle_timer', 'scoring_sheet_win', 'bingo_tile')),
+    -- Id of the row that triggered this award (hunt_characters.id,
+    -- puzzle_attempts.id, score_sheet_sessions.id, or bingo_tiles.id
+    -- depending on source_type) -- a plain uuid, not an FK, since it's
+    -- polymorphic across 4 tables (same tradeoff as scannable_codes' typed
+    -- pair, minus the exactly-one-of constraint since the type tag alone
+    -- already disambiguates the table). This is an append-only ledger, not
+    -- a mutable balance column -- the running total is always derived by
+    -- summing it (app/services/coins.py's get_total()).
+    source_id   uuid not null,
+    amount      integer not null check (amount > 0),
+    created_at  timestamptz not null default now()
+);
+
+create index if not exists coin_awards_source_type_idx on coin_awards(source_type);
+
+create table if not exists collectibles (
+    id                uuid primary key default gen_random_uuid(),
+    name              text not null unique,
+    -- Emoji/icon reference, not an uploaded image -- POC scope.
+    icon              text not null,
+    unlock_threshold  integer not null check (unlock_threshold > 0),
+    created_at        timestamptz not null default now()
+);

@@ -13,7 +13,8 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from app.errors import NotFoundError
-from app.models import HuntCharacter, HuntChallenge
+from app.models import CoinSourceType, HuntCharacter, HuntChallenge
+from app.services import coins as coins_service
 from app.supabase_client import get_supabase_client
 
 
@@ -93,6 +94,9 @@ def complete_challenge(challenge_id: UUID) -> HuntCharacter:
     update = {"challenges_completed": sorted(completed)}
     if {1, 2, 3}.issubset(completed) and progress_row["completed_at"] is None:
         update["completed_at"] = datetime.now(timezone.utc).isoformat()
+        coins_service.award_coins(
+            CoinSourceType.SCAVENGER_HUNT, UUID(character_id), coins_service.SCAVENGER_HUNT_CHARACTER_AMOUNT
+        )
 
     client.table("hunt_progress").update(update).eq("character_id", character_id).execute()
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api, type BingoCard, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { api, type BingoCard, type CoinsSummary, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { BingoScreen } from './components/BingoScreen'
+import { CollectiblesScreen } from './components/CollectiblesScreen'
 import { ContactStaffModal } from './components/ContactStaffModal'
 import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
@@ -14,7 +15,7 @@ import { ToastStack, type ToastItem } from './components/ToastStack'
 import './components/shared.css'
 import './App.css'
 
-type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt'
+type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'collectibles'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('map')
@@ -60,6 +61,9 @@ function App() {
 
   const [minigames, setMinigames] = useState<Minigame[] | null>(null)
 
+  const [coinsSummary, setCoinsSummary] = useState<CoinsSummary | null>(null)
+  const [coinsError, setCoinsError] = useState<string | null>(null)
+
   const [milestoneQueue, setMilestoneQueue] = useState<MilestoneEvent[]>([])
   const [minigameQueue, setMinigameQueue] = useState<Minigame[]>([])
   const [toasts, setToasts] = useState<ToastItem[]>([])
@@ -101,12 +105,18 @@ function App() {
       .catch((err) => setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `Couldn't load minigames: ${err}` }]))
   }
 
+  const reloadCoins = () => {
+    setCoinsError(null)
+    api.getCoinsSummary().then(setCoinsSummary).catch((err) => setCoinsError(String(err)))
+  }
+
   useEffect(() => {
     reloadNodes()
     reloadPuzzles()
     reloadScoringGames()
     reloadHuntCharacters()
     reloadMinigames()
+    reloadCoins()
     api
       .listBingoCards()
       .then((summaries) => {
@@ -146,6 +156,7 @@ function App() {
   const handleTileResult = (result: TileCompletionResult) => {
     if (cardId) reloadCard(cardId)
     reloadNodes()
+    reloadCoins()
     enqueueMinigames(result.minigames_drawn)
     enqueueMilestones(result.milestones)
   }
@@ -153,6 +164,7 @@ function App() {
   const handleVisitResult = (result: VisitNodeResponse) => {
     if (cardId) reloadCard(cardId)
     reloadNodes()
+    if (result.tile_completions.length > 0) reloadCoins()
     for (const tc of result.tile_completions) {
       enqueueMinigames(tc.minigames_drawn)
     }
@@ -162,6 +174,7 @@ function App() {
   const completeHuntChallenge = (challengeId: string): Promise<HuntCharacter> =>
     api.completeHuntChallenge(challengeId).then((updated) => {
       setHuntCharacters((prev) => (prev ? prev.map((c) => (c.id === updated.id ? updated : c)) : prev))
+      reloadCoins()
       return updated
     })
 
@@ -254,8 +267,18 @@ function App() {
           >
             Scavenger Hunt
           </button>
+          <button
+            type="button"
+            className={`app-tab ${activeTab === 'collectibles' ? 'app-tab-active' : ''}`}
+            onClick={() => setActiveTab('collectibles')}
+          >
+            Collectibles
+          </button>
         </nav>
         <div className="app-header-actions">
+          <span className="app-coin-total" title="Cobb Coins earned">
+            🪙 {coinsSummary?.total ?? 0}
+          </span>
           <button type="button" className="btn btn-secondary" onClick={() => setShowScanEntry(true)}>
             Scan QR
           </button>
@@ -280,10 +303,15 @@ function App() {
           />
         )}
         {activeTab === 'puzzles' && (
-          <PuzzleScreen puzzles={puzzles} error={puzzlesError} onReload={reloadPuzzles} />
+          <PuzzleScreen puzzles={puzzles} error={puzzlesError} onReload={reloadPuzzles} onCoinsChanged={reloadCoins} />
         )}
         {activeTab === 'scoring' && (
-          <ScoringScreen games={scoringGames} error={scoringGamesError} onReload={reloadScoringGames} />
+          <ScoringScreen
+            games={scoringGames}
+            error={scoringGamesError}
+            onReload={reloadScoringGames}
+            onCoinsChanged={reloadCoins}
+          />
         )}
         {activeTab === 'hunt' && (
           <HuntScreen
@@ -293,6 +321,9 @@ function App() {
             onCompleteChallenge={completeHuntChallenge}
             onPlayMinigame={handlePlayHuntMinigame}
           />
+        )}
+        {activeTab === 'collectibles' && (
+          <CollectiblesScreen summary={coinsSummary} error={coinsError} onReload={reloadCoins} />
         )}
       </main>
 

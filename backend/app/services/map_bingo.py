@@ -18,6 +18,7 @@ from app.models import (
     BingoCardSummary,
     BingoTile,
     ChildNode,
+    CoinSourceType,
     LinkedTile,
     MapNode,
     MilestoneEvent,
@@ -26,6 +27,7 @@ from app.models import (
     TileCompletionResult,
     VisitNodeResponse,
 )
+from app.services import coins as coins_service
 from app.services import milestone as milestone_service
 from app.services import minigame_draw as draw_service
 from app.supabase_client import get_supabase_client
@@ -204,6 +206,7 @@ def complete_tile(tile_id: UUID) -> TileCompletionResult:
         .data[0]
     )
     tile = _row_to_bingo_tile(updated_tile_row)
+    coins_service.award_coins(CoinSourceType.BINGO_TILE, tile.id, coins_service.BINGO_TILE_AMOUNT)
 
     card_rows = client.table("bingo_cards").select("*").eq("id", str(tile.card_id)).execute().data
     card_row = card_rows[0]

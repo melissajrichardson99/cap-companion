@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from app.errors import ConflictError, NotFoundError
-from app.models import GameScoreEvent, ScoreEntry, ScoreSheetSession, ScoringGame
+from app.models import CoinSourceType, GameScoreEvent, ScoreEntry, ScoreSheetSession, ScoringGame
+from app.services import coins as coins_service
 from app.services import scoring as scoring_service
 from app.supabase_client import get_supabase_client
 
@@ -139,6 +140,9 @@ def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
             .execute()
             .data[0]
         )
+        coins_service.award_coins(
+            CoinSourceType.SCORING_SHEET_WIN, UUID(session_row["id"]), coins_service.SCORING_SHEET_WIN_AMOUNT
+        )
 
     return ScoreSheetSession(
         id=session_row["id"],
@@ -195,6 +199,7 @@ def finish_session(session_id: UUID) -> ScoreSheetSession:
     client.table("score_sheet_sessions").update({"completed_at": now, "winner": session.winner}).eq(
         "id", str(session_id)
     ).execute()
+    coins_service.award_coins(CoinSourceType.SCORING_SHEET_WIN, session_id, coins_service.SCORING_SHEET_WIN_AMOUNT)
 
     return get_session(session_id)
 

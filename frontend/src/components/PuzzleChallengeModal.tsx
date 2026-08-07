@@ -10,6 +10,7 @@ interface PuzzleChallengeModalProps {
   puzzle: Puzzle
   challenge: PuzzleChallenge
   onClose: () => void
+  onCoinsChanged: () => void
 }
 
 const HINT_TIERS = ['hint_tier_1', 'hint_tier_2', 'hint_tier_3'] as const
@@ -22,7 +23,7 @@ function compareToStaffTime(elapsedSeconds: number, staffTimeSeconds: number): s
   return `${abs} ${unit} ${diff > 0 ? 'faster' : 'slower'} than staff time.`
 }
 
-export function PuzzleChallengeModal({ puzzle, challenge, onClose }: PuzzleChallengeModalProps) {
+export function PuzzleChallengeModal({ puzzle, challenge, onClose, onCoinsChanged }: PuzzleChallengeModalProps) {
   const [timerState, setTimerState] = useState<TimerState>('idle')
   const [elapsedMs, setElapsedMs] = useState(0)
   const [finalElapsedSeconds, setFinalElapsedSeconds] = useState(0)
@@ -71,6 +72,7 @@ export function PuzzleChallengeModal({ puzzle, challenge, onClose }: PuzzleChall
       const attempt = await api.recordPuzzleAttempt(challenge.id, finalElapsedSeconds, hintsRevealed)
       setResultAttempt(attempt)
       setTimerState('result')
+      onCoinsChanged()
     } catch (err) {
       setAttemptError(String(err))
     } finally {
