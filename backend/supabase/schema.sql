@@ -302,3 +302,66 @@ create table if not exists collectibles (
     unlock_threshold  integer not null check (unlock_threshold > 0),
     created_at        timestamptz not null default now()
 );
+
+-- ---------------------------------------------------------------------------
+-- photo_submissions / photo_votes (Favorite Photo -- Plan.md 2.14, POC scope:
+-- single ongoing voting period, no day/week/month cycling yet)
+-- ---------------------------------------------------------------------------
+create table if not exists photo_submissions (
+    id            uuid primary key default gen_random_uuid(),
+    guest_label   text,
+    -- Supabase Storage object key in the 'favorite-photos' bucket -- the
+    -- actual image bytes live in Storage, not the DB. photo_url is derived
+    -- at read time from this path (app/services/photos.py), never stored,
+    -- same "derive, don't duplicate" discipline as coin_awards -> CoinsSummary.
+    storage_path  text not null,
+    submitted_at  timestamptz not null default now(),
+    -- One-way: pending_review -> shortlisted or pending_review -> rejected.
+    -- See app/services/photos.py's _curate for the allowed-from check. Only
+    -- shortlisted photos are ever shown to guests for voting.
+    status        text not null default 'pending_review' check (status in ('pending_review', 'shortlisted', 'rejected'))
+);
+
+create index if not exists photo_submissions_status_idx on photo_submissions(status);
+
+create table if not exists photo_votes (
+    id                uuid primary key default gen_random_uuid(),
+    submission_id     uuid not null references photo_submissions(id) on delete cascade,
+    -- Client-generated id stored in localStorage, not real auth -- just
+    -- enough to stop trivial double-voting from the same device/browser.
+    voter_session_id  text not null,
+    created_at        timestamptz not null default now(),
+    unique (submission_id, voter_session_id)
+);
+
+create index if not exists photo_votes_submission_id_idx on photo_votes(submission_id);
+
+-- Public so guest devices can load gallery images directly with no
+-- signed-URL round trip -- fine for a POC with no PII in guest uploads.
+insert into storage.buckets (id, name, public)
+values ('favorite-photos', 'favorite-photos', true)
+on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- passport_sessions (Family Passport -- Plan.md 2.8, POC scope)
+-- ---------------------------------------------------------------------------
+create table if not exists passport_sessions (
+    id                  uuid primary key default gen_random_uuid(),
+    family_label        text not null,
+    -- Supabase Storage object key in the 'family-passport-photos' bucket --
+    -- nullable, since the group photo prompt is optional.
+    photo_storage_path  text,
+    generated_at        timestamptz not null default now(),
+    -- JSON snapshot computed once at generation time (app/services/passport.py)
+    -- and frozen here -- deliberately NOT re-derived on read, unlike every
+    -- other "derive, don't duplicate" spot in this schema, because a
+    -- passport is a one-time end-of-visit keepsake whose numbers must not
+    -- drift if the family keeps playing afterward.
+    stats               jsonb not null
+);
+
+create index if not exists passport_sessions_generated_at_idx on passport_sessions(generated_at);
+
+insert into storage.buckets (id, name, public)
+values ('family-passport-photos', 'family-passport-photos', true)
+on conflict (id) do nothing;

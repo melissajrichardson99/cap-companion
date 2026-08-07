@@ -252,6 +252,38 @@ export interface CoinsSummary {
   collectibles: Collectible[]
 }
 
+export type PhotoStatus = 'pending_review' | 'shortlisted' | 'rejected'
+
+export interface PhotoSubmission {
+  id: string
+  guest_label: string | null
+  photo_url: string
+  submitted_at: string
+  status: PhotoStatus
+  vote_count: number
+  voted_by_me: boolean
+}
+
+export interface PassportStats {
+  scavenger_hunt_characters_completed: number
+  scavenger_hunt_characters_total: number
+  bingo_tiles_completed: number
+  bingo_tiles_total: number
+  bingo_milestones: MilestonesAchieved
+  scoring_sheet_games_won: number
+  puzzle_challenges_completed: number
+  total_cobb_coins: number
+  title: string
+}
+
+export interface PassportSession {
+  id: string
+  family_label: string
+  photo_url: string | null
+  generated_at: string
+  stats: PassportStats
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -311,4 +343,43 @@ export const api = {
   resolveStaffRequest: (requestId: string) =>
     request<StaffRequest>(`/staff-requests/${requestId}/resolve`, { method: 'POST' }),
   getCoinsSummary: () => request<CoinsSummary>('/coins/summary'),
+  submitPhoto: async (file: File, guestLabel: string | null) => {
+    const body = new FormData()
+    body.append('file', file)
+    if (guestLabel) body.append('guest_label', guestLabel)
+    // Not routed through request(): that helper always sets a JSON
+    // Content-Type header, which would stop the browser from adding the
+    // multipart boundary this upload needs.
+    const res = await fetch(`${API_BASE_URL}/photos/submit`, { method: 'POST', body })
+    if (!res.ok) {
+      const responseBody = await res.text()
+      throw new Error(`POST /photos/submit -> ${res.status}: ${responseBody}`)
+    }
+    return res.json() as Promise<PhotoSubmission>
+  },
+  listPendingPhotos: () => request<PhotoSubmission[]>('/photos/pending'),
+  shortlistPhoto: (submissionId: string) =>
+    request<PhotoSubmission>(`/photos/${submissionId}/shortlist`, { method: 'POST' }),
+  rejectPhoto: (submissionId: string) =>
+    request<PhotoSubmission>(`/photos/${submissionId}/reject`, { method: 'POST' }),
+  listPhotoGallery: (voterSessionId: string) =>
+    request<PhotoSubmission[]>(`/photos/gallery?voter_session_id=${encodeURIComponent(voterSessionId)}`),
+  votePhoto: (submissionId: string, voterSessionId: string) =>
+    request<PhotoSubmission>(`/photos/${submissionId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ voter_session_id: voterSessionId }),
+    }),
+  generatePassport: async (familyLabel: string, file: File | null) => {
+    const body = new FormData()
+    body.append('family_label', familyLabel)
+    if (file) body.append('file', file)
+    // Not routed through request(): same multipart-vs-JSON-Content-Type
+    // reasoning as submitPhoto above.
+    const res = await fetch(`${API_BASE_URL}/passport/generate`, { method: 'POST', body })
+    if (!res.ok) {
+      const responseBody = await res.text()
+      throw new Error(`POST /passport/generate -> ${res.status}: ${responseBody}`)
+    }
+    return res.json() as Promise<PassportSession>
+  },
 }

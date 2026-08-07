@@ -1,21 +1,24 @@
 import { useEffect, useState } from 'react'
-import { api, type BingoCard, type CoinsSummary, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { api, type BingoCard, type CoinsSummary, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { BingoScreen } from './components/BingoScreen'
 import { CollectiblesScreen } from './components/CollectiblesScreen'
 import { ContactStaffModal } from './components/ContactStaffModal'
 import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
+import { PassportModal } from './components/PassportModal'
+import { PhotoScreen } from './components/PhotoScreen'
 import { PuzzleScreen } from './components/PuzzleScreen'
 import { ScanEntryModal } from './components/ScanEntryModal'
 import { ScanScreen } from './components/ScanScreen'
 import { ScoringScreen } from './components/ScoringScreen'
 import { StaffRequestsScreen } from './components/StaffRequestsScreen'
 import { ToastStack, type ToastItem } from './components/ToastStack'
+import { getVoterSessionId } from './voterSession'
 import './components/shared.css'
 import './App.css'
 
-type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'collectibles'
+type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'collectibles' | 'photos'
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('map')
@@ -28,6 +31,7 @@ function App() {
   const [path, setPath] = useState(() => window.location.pathname)
   const [showScanEntry, setShowScanEntry] = useState(false)
   const [showContactStaff, setShowContactStaff] = useState(false)
+  const [showPassport, setShowPassport] = useState(false)
 
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname)
@@ -63,6 +67,9 @@ function App() {
 
   const [coinsSummary, setCoinsSummary] = useState<CoinsSummary | null>(null)
   const [coinsError, setCoinsError] = useState<string | null>(null)
+
+  const [photoGallery, setPhotoGallery] = useState<PhotoSubmission[] | null>(null)
+  const [photoGalleryError, setPhotoGalleryError] = useState<string | null>(null)
 
   const [milestoneQueue, setMilestoneQueue] = useState<MilestoneEvent[]>([])
   const [minigameQueue, setMinigameQueue] = useState<Minigame[]>([])
@@ -110,6 +117,14 @@ function App() {
     api.getCoinsSummary().then(setCoinsSummary).catch((err) => setCoinsError(String(err)))
   }
 
+  const reloadPhotoGallery = () => {
+    setPhotoGalleryError(null)
+    api
+      .listPhotoGallery(getVoterSessionId())
+      .then(setPhotoGallery)
+      .catch((err) => setPhotoGalleryError(String(err)))
+  }
+
   useEffect(() => {
     reloadNodes()
     reloadPuzzles()
@@ -117,6 +132,7 @@ function App() {
     reloadHuntCharacters()
     reloadMinigames()
     reloadCoins()
+    reloadPhotoGallery()
     api
       .listBingoCards()
       .then((summaries) => {
@@ -274,6 +290,13 @@ function App() {
           >
             Collectibles
           </button>
+          <button
+            type="button"
+            className={`app-tab ${activeTab === 'photos' ? 'app-tab-active' : ''}`}
+            onClick={() => setActiveTab('photos')}
+          >
+            Favorite Photo
+          </button>
         </nav>
         <div className="app-header-actions">
           <span className="app-coin-total" title="Cobb Coins earned">
@@ -281,6 +304,9 @@ function App() {
           </span>
           <button type="button" className="btn btn-secondary" onClick={() => setShowScanEntry(true)}>
             Scan QR
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => setShowPassport(true)}>
+            Generate Passport
           </button>
           <button type="button" className="btn btn-primary" onClick={() => setShowContactStaff(true)}>
             Contact Staff
@@ -325,6 +351,9 @@ function App() {
         {activeTab === 'collectibles' && (
           <CollectiblesScreen summary={coinsSummary} error={coinsError} onReload={reloadCoins} />
         )}
+        {activeTab === 'photos' && (
+          <PhotoScreen gallery={photoGallery} error={photoGalleryError} onReload={reloadPhotoGallery} />
+        )}
       </main>
 
       <ToastStack toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
@@ -342,6 +371,8 @@ function App() {
       )}
 
       {showContactStaff && <ContactStaffModal nodes={nodes} onClose={() => setShowContactStaff(false)} />}
+
+      {showPassport && <PassportModal onClose={() => setShowPassport(false)} />}
     </div>
   )
 }

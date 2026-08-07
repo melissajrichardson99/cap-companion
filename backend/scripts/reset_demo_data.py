@@ -23,6 +23,13 @@ Resets:
     an empty staff view each run
   - every coin_awards row deleted, so the Cobb Coins specs start from a
     running total of 0 each run
+  - every photo_submissions row (and its photo_votes, via cascade) deleted,
+    plus the matching objects removed from Storage -- so the Favorite Photo
+    specs start with an empty queue/gallery and the bucket doesn't
+    accumulate test uploads across runs
+  - every passport_sessions row deleted, plus any matching group-photo
+    objects removed from Storage -- same reasoning as photo_submissions
+    above, applied to the Family Passport bucket
 """
 
 from __future__ import annotations
@@ -32,6 +39,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.services.passport import BUCKET as PASSPORT_BUCKET  # noqa: E402
+from app.services.photos import BUCKET  # noqa: E402
 from app.supabase_client import get_supabase_client  # noqa: E402
 
 DEMO_CARD_OWNER_LABEL = "Demo Family"
@@ -117,6 +126,36 @@ def reset_demo_data() -> None:
         .data
     )
     print(f"Deleted {len(coin_award_rows)} coin award(s).")
+
+    # Photo rows first (need their storage_path values before they're gone),
+    # then the Storage objects, then the rows themselves -- photo_votes cascades
+    # with its parent photo_submissions row, same as bingo_tiles/card above.
+    photo_rows = client.table("photo_submissions").select("id,storage_path").execute().data
+    if photo_rows:
+        client.storage.from_(BUCKET).remove([r["storage_path"] for r in photo_rows])
+    deleted_photo_rows = (
+        client.table("photo_submissions")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+        .execute()
+        .data
+    )
+    print(f"Deleted {len(deleted_photo_rows)} photo submission(s) and their storage object(s).")
+
+    # Same "photo rows first, then Storage objects, then the rows themselves"
+    # ordering as photo_submissions above.
+    passport_rows = client.table("passport_sessions").select("id,photo_storage_path").execute().data
+    passport_photo_paths = [r["photo_storage_path"] for r in passport_rows if r["photo_storage_path"]]
+    if passport_photo_paths:
+        client.storage.from_(PASSPORT_BUCKET).remove(passport_photo_paths)
+    deleted_passport_rows = (
+        client.table("passport_sessions")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+        .execute()
+        .data
+    )
+    print(f"Deleted {len(deleted_passport_rows)} passport session(s) and their storage object(s).")
 
 
 if __name__ == "__main__":

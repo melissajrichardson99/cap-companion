@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, type StaffRequest } from '../api'
+import { api, type PhotoSubmission, type StaffRequest } from '../api'
 import './StaffRequestsScreen.css'
 
 // Simple polling refresh rather than websockets -- fine for a POC-scale
@@ -23,6 +23,10 @@ export function StaffRequestsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
 
+  const [pendingPhotos, setPendingPhotos] = useState<PhotoSubmission[] | null>(null)
+  const [photosError, setPhotosError] = useState<string | null>(null)
+  const [pendingPhotoActionId, setPendingPhotoActionId] = useState<string | null>(null)
+
   const reload = () => {
     api
       .listStaffRequests()
@@ -33,9 +37,24 @@ export function StaffRequestsScreen() {
       .catch((err) => setError(String(err)))
   }
 
-  useEffect(() => {
+  const reloadPhotos = () => {
+    api
+      .listPendingPhotos()
+      .then((rows) => {
+        setPendingPhotos(rows)
+        setPhotosError(null)
+      })
+      .catch((err) => setPhotosError(String(err)))
+  }
+
+  const reloadAll = () => {
     reload()
-    const interval = setInterval(reload, POLL_INTERVAL_MS)
+    reloadPhotos()
+  }
+
+  useEffect(() => {
+    reloadAll()
+    const interval = setInterval(reloadAll, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -46,6 +65,14 @@ export function StaffRequestsScreen() {
       .then(reload)
       .catch((err) => setError(String(err)))
       .finally(() => setPendingActionId(null))
+  }
+
+  const runPhotoAction = (submissionId: string, action: (id: string) => Promise<PhotoSubmission>) => {
+    setPendingPhotoActionId(submissionId)
+    action(submissionId)
+      .then(reloadPhotos)
+      .catch((err) => setPhotosError(String(err)))
+      .finally(() => setPendingPhotoActionId(null))
   }
 
   if (error) {
@@ -67,10 +94,47 @@ export function StaffRequestsScreen() {
     <div className="staff-requests-screen">
       <div className="staff-requests-header">
         <h1 className="staff-requests-title">Staff Requests</h1>
-        <button type="button" className="btn btn-secondary" onClick={reload}>
+        <button type="button" className="btn btn-secondary" onClick={reloadAll}>
           Refresh
         </button>
       </div>
+
+      <section className="staff-photos-section">
+        <h2 className="staff-photos-title">Pending Photo Submissions</h2>
+        {photosError && <p className="screen-error">Couldn't load photo submissions: {photosError}</p>}
+        {pendingPhotos === null ? (
+          <p className="staff-photos-loading">Loading submissions…</p>
+        ) : pendingPhotos.length === 0 ? (
+          <p className="staff-photos-empty">No photos waiting for review.</p>
+        ) : (
+          <ul className="staff-photos-list">
+            {pendingPhotos.map((photo) => (
+              <li key={photo.id} className="staff-photo-row">
+                <img src={photo.photo_url} alt={photo.guest_label ?? 'Guest submitted photo'} className="staff-photo-thumb" />
+                <span className="staff-photo-label">{photo.guest_label ?? 'A guest'}</span>
+                <div className="staff-photo-actions">
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={pendingPhotoActionId === photo.id}
+                    onClick={() => runPhotoAction(photo.id, api.shortlistPhoto)}
+                  >
+                    Shortlist
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={pendingPhotoActionId === photo.id}
+                    onClick={() => runPhotoAction(photo.id, api.rejectPhoto)}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {requests.length === 0 ? (
         <p className="staff-requests-empty">No open requests right now.</p>

@@ -35,12 +35,18 @@ test.describe('Cobb Coins', () => {
 
     // Bingo Tile: completing any open tile -> +2 coins. Also draws a
     // minigame (tech spec 4.1's "always 1 draw per completion"), which pops
-    // an overlay unrelated to this test -- dismiss it the same way as the
-    // puzzle dialog above.
+    // an overlay unrelated to this test -- dismiss it via its own close
+    // button, not Escape: the Godot iframe grabs keyboard focus once
+    // loaded, so an Escape keypress from here can land on the iframe's own
+    // document instead of the parent page's listener, leaving the overlay
+    // stuck open and blocking every click underneath it for the rest of the
+    // test (intermittent, since it depends on how quickly that game's
+    // engine finishes loading and grabs focus).
     await page.getByRole('button', { name: 'Bingo Card' }).click()
     await page.locator('.bingo-tile-open').first().click()
     await expect(page.locator('.app-coin-total')).toHaveText('🪙 14')
-    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Close minigame' }).click()
+    await expect(page.locator('.minigame-overlay')).toHaveCount(0)
 
     // Collectibles screen: Bronze Explorer's threshold (10) is now crossed
     // by the combined 14, Silver Adventurer's (30) is not.

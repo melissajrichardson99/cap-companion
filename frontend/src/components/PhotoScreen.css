@@ -1,0 +1,90 @@
+.photo-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.photo-section-title {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+.photo-section-desc {
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+
+.photo-submit {
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 16px;
+  background: var(--bg);
+}
+
+.photo-submitted-msg {
+  color: var(--state-visited);
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.photo-submit-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.photo-guest-label-input {
+  font: inherit;
+  font-size: 15px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  flex: 1 1 200px;
+}
+
+.photo-gallery-loading,
+.photo-gallery-empty {
+  padding: 20px 0;
+}
+
+.photo-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.photo-card {
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.photo-card-image {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.photo-card-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

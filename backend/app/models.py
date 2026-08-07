@@ -386,3 +386,59 @@ class Collectible(BaseModel):
 class CoinsSummary(BaseModel):
     total: int = Field(ge=0)
     collectibles: list[Collectible] = Field(default_factory=list)
+
+
+class PhotoStatus(StrEnum):
+    PENDING_REVIEW = "pending_review"
+    SHORTLISTED = "shortlisted"
+    REJECTED = "rejected"
+
+
+class PhotoSubmission(BaseModel):
+    id: UUID
+    guest_label: str | None = None
+    # Derived from storage_path via the Storage API at read time, never
+    # stored -- see app/services/photos.py.
+    photo_url: str
+    submitted_at: datetime
+    status: PhotoStatus = PhotoStatus.PENDING_REVIEW
+    # Only meaningful once shortlisted -- 0/false on pending_review/rejected rows.
+    vote_count: int = 0
+    voted_by_me: bool = False
+
+
+class CreateVoteRequest(BaseModel):
+    voter_session_id: str = Field(min_length=1)
+
+
+class PassportStats(BaseModel):
+    """Snapshot of cross-feature progress at the moment a passport was generated.
+
+    Totals are included alongside each numerator (not just the fixed "out of
+    5"/"out of 25" the guest sees today) so a frozen snapshot stays
+    self-describing even if the seeded content those numbers are drawn from
+    changes later -- see app/services/passport.py.
+    """
+
+    scavenger_hunt_characters_completed: int = Field(ge=0)
+    scavenger_hunt_characters_total: int = Field(gt=0)
+    bingo_tiles_completed: int = Field(ge=0)
+    bingo_tiles_total: int = Field(gt=0)
+    bingo_milestones: MilestonesAchieved
+    scoring_sheet_games_won: int = Field(ge=0)
+    puzzle_challenges_completed: int = Field(ge=0)
+    total_cobb_coins: int = Field(ge=0)
+    # Auto-generated from whichever category the family is strongest in --
+    # see app/services/passport.py's _pick_title for the thresholds/logic.
+    title: str
+
+
+class PassportSession(BaseModel):
+    id: UUID
+    family_label: str
+    # Derived from photo_storage_path via the Storage API at read time, never
+    # stored -- same pattern as PhotoSubmission.photo_url. Null when the
+    # guest skipped the optional group photo.
+    photo_url: str | None = None
+    generated_at: datetime
+    stats: PassportStats
