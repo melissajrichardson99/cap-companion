@@ -231,14 +231,21 @@ def complete_tile(tile_id: UUID) -> TileCompletionResult:
         achieved_blackout=card_row["milestone_blackout"],
     )
 
-    milestone_events = [
-        MilestoneEvent(
-            type=hit.type,
-            message=hit.message,
-            tile_ids=[index_to_tile_id[i] for i in hit.tile_indices],
-        )
-        for hit in hits
-    ]
+    # Only the single highest-priority hit is ever reported to the frontend
+    # for animation -- achieved-lines/x/blackout bookkeeping below still
+    # covers every hit in `hits`, regardless of which one (if any) is shown.
+    display_hit = milestone_service.select_display_milestone(hits)
+    milestone_events = (
+        [
+            MilestoneEvent(
+                type=display_hit.type,
+                message=display_hit.message,
+                tile_ids=[index_to_tile_id[i] for i in display_hit.tile_indices],
+            )
+        ]
+        if display_hit
+        else []
+    )
 
     if hits:
         new_achieved_lines = achieved_lines | {h.line_index for h in hits if h.line_index is not None}

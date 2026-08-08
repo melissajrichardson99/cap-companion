@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Modal } from './Modal'
+import { CameraIcon } from './NavIcons'
 import './ScanEntryModal.css'
 
 interface ScanEntryModalProps {
@@ -104,29 +105,39 @@ export function ScanEntryModal({ onClose, onCodeSubmitted }: ScanEntryModalProps
   }
 
   return (
-    <Modal onClose={onClose} labelledBy="scan-entry-title">
+    <Modal onClose={onClose} labelledBy="scan-entry-title" className="scan-entry-modal-frame">
       <h2 id="scan-entry-title" className="scan-entry-title">
-        Scan a code
+        Scan a Code
       </h2>
 
-      {!cameraActive ? (
-        <button type="button" className="btn btn-primary" onClick={startCamera}>
-          Use Camera
-        </button>
-      ) : (
-        // eslint-disable-next-line jsx-a11y/media-has-caption
-        <video ref={videoRef} className="scan-entry-video" muted playsInline />
-      )}
+      <div className="scan-entry-viewfinder">
+        {!cameraActive ? (
+          <div className="scan-entry-viewfinder-placeholder">
+            <CameraIcon className="scan-entry-camera-icon" />
+            <button type="button" className="btn btn-primary" onClick={startCamera}>
+              Use Camera
+            </button>
+          </div>
+        ) : (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video ref={videoRef} className="scan-entry-video" muted playsInline />
+        )}
+        <span className="scan-entry-corner scan-entry-corner-tl" aria-hidden="true" />
+        <span className="scan-entry-corner scan-entry-corner-tr" aria-hidden="true" />
+        <span className="scan-entry-corner scan-entry-corner-bl" aria-hidden="true" />
+        <span className="scan-entry-corner scan-entry-corner-br" aria-hidden="true" />
+      </div>
       {cameraError && <p className="screen-error">{cameraError}</p>}
 
-      <div className="scan-entry-manual">
-        <label htmlFor="scan-entry-manual-input">Or enter the code from the sign</label>
+      <div className="scan-entry-fallback-bubble">
+        <p className="scan-entry-fallback-text">Or enter the code on the sign</p>
         <div className="scan-entry-manual-row">
           <input
             id="scan-entry-manual-input"
             type="text"
             value={manualCode}
             placeholder="brave-otter"
+            aria-label="Code from the sign"
             onChange={(e) => setManualCode(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submitManual()}
           />

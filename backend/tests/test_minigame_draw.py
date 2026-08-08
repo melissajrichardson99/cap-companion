@@ -26,15 +26,15 @@ def test_base_completion_draws_exactly_one_game():
     assert len(draws) == 1
 
 
-def test_milestone_completion_draws_three_games_total():
+def test_milestone_completion_draws_two_games_total():
     rng = random.Random(1)
     draws = draw_for_tile_completion(POOL, rng, milestone_triggered=True)
-    assert len(draws) == 3
+    assert len(draws) == 2
 
 
 def test_milestone_draws_are_independent_and_may_repeat():
     # With a fixed seed exercised across many milestone completions, at least
-    # one run should repeat a game within its own 3-draw set — proving repeats
+    # one run should repeat a game within its own 2-draw set — proving repeats
     # aren't being filtered out (spec: "repeats allowed").
     rng = random.Random(7)
     saw_a_repeat_within_a_completion = False

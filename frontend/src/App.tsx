@@ -13,6 +13,7 @@ import { CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIc
 import { PassportModal } from './components/PassportModal'
 import { PhotoScreen } from './components/PhotoScreen'
 import { PuzzleScreen } from './components/PuzzleScreen'
+import { ResetSessionModal } from './components/ResetSessionModal'
 import { ScanEntryModal } from './components/ScanEntryModal'
 import { ScanScreen } from './components/ScanScreen'
 import { ScoringScreen } from './components/ScoringScreen'
@@ -46,6 +47,7 @@ function App() {
   const [showScanEntry, setShowScanEntry] = useState(false)
   const [showContactStaff, setShowContactStaff] = useState(false)
   const [showPassport, setShowPassport] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname)
@@ -86,9 +88,25 @@ function App() {
   const [photoGalleryError, setPhotoGalleryError] = useState<string | null>(null)
 
   const [milestoneQueue, setMilestoneQueue] = useState<MilestoneEvent[]>([])
-  const [minigameQueue, setMinigameQueue] = useState<Minigame[]>([])
+  // 'base' = the minigame a tile completion always draws; 'milestone' = the
+  // one extra celebration minigame a milestone-triggering completion draws
+  // (played only once the guest opts in via BingoScreen's prompt, never
+  // auto-queued); 'hunt' = a Scavenger Hunt Challenge 3 minigame. Tagged so
+  // handleMinigameOverlayClose knows what (if anything) to do once the
+  // overlay for it closes.
+  const [minigameQueue, setMinigameQueue] = useState<{ game: Minigame; kind: 'base' | 'milestone' | 'hunt' }[]>([])
+  // The milestones + optional celebration minigame a still-playing 'base'
+  // minigame will unlock once its overlay closes -- one entry per queued
+  // 'base' minigame, in the same order. Kept separate from minigameQueue so
+  // a milestone banner never shows concurrently with its own base minigame.
+  const [baseFollowupQueue, setBaseFollowupQueue] = useState<
+    { milestones: MilestoneEvent[]; extraMinigame: Minigame | null }[]
+  >([])
+  // Celebration minigames unlocked by a milestone, waiting on the guest to
+  // tap BingoScreen's "play it" prompt (shown once milestoneQueue drains).
+  const [pendingMilestoneMinigames, setPendingMilestoneMinigames] = useState<Minigame[]>([])
   const [toasts, setToasts] = useState<ToastItem[]>([])
-  const activeMinigame = minigameQueue[0] ?? null
+  const activeMinigame = minigameQueue[0]?.game ?? null
   // Set while a Scavenger Hunt Challenge 3 minigame is in the queue, so the
   // overlay's onClose knows to also mark that hunt challenge complete --
   // the overlay itself stays generic/unaware of Hunt.
@@ -161,34 +179,76 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const enqueueMinigames = (drawn: TileCompletionResult['minigames_drawn']) => {
-    if (drawn.length === 0) return
-    const playable = drawn.filter((game) => getMinigameSlug(game) !== null)
-    const unbuilt = drawn.filter((game) => getMinigameSlug(game) === null)
-    if (playable.length > 0) {
-      setMinigameQueue((prev) => [...prev, ...playable])
-    }
-    if (unbuilt.length > 0) {
-      const newToasts = unbuilt.map((game) => ({
-        id: crypto.randomUUID(),
-        text: `\u{1F3AE} ${game.name} minigame queued (not built yet — Phase ${game.phase})`,
-      }))
-      setToasts((prev) => [...prev, ...newToasts])
+  const toastUnbuiltMinigame = (game: Minigame) => {
+    setToasts((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), text: `\u{1F3AE} ${game.name} minigame queued (not built yet — Phase ${game.phase})` },
+    ])
+  }
+
+  // What a tile completion's base minigame unlocks once its overlay closes:
+  // any milestone banners it triggered, and (if a milestone was hit) the
+  // celebration minigame those banners lead into. Also the landing spot for
+  // completions whose base minigame never got queued at all (unbuilt).
+  const applyBaseFollowup = (followup: { milestones: MilestoneEvent[]; extraMinigame: Minigame | null }) => {
+    if (followup.milestones.length === 0) return
+    setMilestoneQueue((prev) => [...prev, ...followup.milestones])
+    setActiveTab('bingo')
+    if (followup.extraMinigame) {
+      setPendingMilestoneMinigames((prev) => [...prev, followup.extraMinigame as Minigame])
     }
   }
 
-  const enqueueMilestones = (events: MilestoneEvent[]) => {
-    if (events.length === 0) return
-    setMilestoneQueue((prev) => [...prev, ...events])
-    setActiveTab('bingo')
+  // Tech spec 4.1/4.2 redesign: a tile completion's base minigame (drawn[0])
+  // plays immediately; the milestone celebration minigame (drawn[1], only
+  // present when this completion hit a milestone) is deliberately NOT
+  // auto-queued here -- it's stashed in pendingMilestoneMinigames and only
+  // enters minigameQueue once the guest taps BingoScreen's prompt, which
+  // itself only appears after the milestone banner(s) have shown.
+  const processTileCompletion = (result: TileCompletionResult) => {
+    const [base, extra] = result.minigames_drawn
+    const followup = { milestones: result.milestones, extraMinigame: extra ?? null }
+    if (!base) {
+      applyBaseFollowup(followup)
+      return
+    }
+    if (getMinigameSlug(base)) {
+      setMinigameQueue((prev) => [...prev, { game: base, kind: 'base' as const }])
+      setBaseFollowupQueue((prev) => [...prev, followup])
+    } else {
+      toastUnbuiltMinigame(base)
+      applyBaseFollowup(followup)
+    }
+  }
+
+  const handlePlayMilestoneMinigame = () => {
+    const [game, ...rest] = pendingMilestoneMinigames
+    if (!game) return
+    setPendingMilestoneMinigames(rest)
+    if (getMinigameSlug(game)) {
+      setMinigameQueue((prev) => [...prev, { game, kind: 'milestone' as const }])
+    } else {
+      toastUnbuiltMinigame(game)
+    }
+  }
+
+  const handleResetSession = () => {
+    if (cardId) reloadCard(cardId)
+    reloadNodes()
+    reloadHuntCharacters()
+    // Defensive: any minigame/milestone state left over from before the
+    // reset refers to tiles/nodes that no longer exist in their prior form.
+    setMilestoneQueue([])
+    setMinigameQueue([])
+    setPendingMilestoneMinigames([])
+    setBaseFollowupQueue([])
   }
 
   const handleTileResult = (result: TileCompletionResult) => {
     if (cardId) reloadCard(cardId)
     reloadNodes()
     reloadCoins()
-    enqueueMinigames(result.minigames_drawn)
-    enqueueMilestones(result.milestones)
+    processTileCompletion(result)
   }
 
   const handleVisitResult = (result: VisitNodeResponse) => {
@@ -196,9 +256,8 @@ function App() {
     reloadNodes()
     if (result.tile_completions.length > 0) reloadCoins()
     for (const tc of result.tile_completions) {
-      enqueueMinigames(tc.minigames_drawn)
+      processTileCompletion(tc)
     }
-    enqueueMilestones(result.tile_completions.flatMap((tc) => tc.milestones))
   }
 
   const completeHuntChallenge = (challengeId: string): Promise<HuntCharacter> =>
@@ -214,13 +273,26 @@ function App() {
       setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `\u{1F3AE} That minigame isn't available yet.` }])
       return
     }
-    setMinigameQueue((prev) => [...prev, game])
+    setMinigameQueue((prev) => [...prev, { game, kind: 'hunt' as const }])
     setHuntPendingChallengeId(challengeId)
   }
 
   const handleMinigameOverlayClose = () => {
+    const closed = minigameQueue[0]
     setMinigameQueue((q) => q.slice(1))
-    if (huntPendingChallengeId) {
+    if (closed?.kind === 'base') {
+      // Plain statements, not a setBaseFollowupQueue functional-updater with
+      // applyBaseFollowup nested inside it -- React (StrictMode) invokes
+      // updater functions twice in dev to catch impure ones, and doing the
+      // state-setting side effects (setMilestoneQueue et al, inside
+      // applyBaseFollowup) from within another setState's updater meant they
+      // fired twice per close, double-queuing the milestone banner and the
+      // "Play Bonus Minigame" prompt so it looked stuck after being played once.
+      const [next, ...rest] = baseFollowupQueue
+      setBaseFollowupQueue(rest)
+      if (next) applyBaseFollowup(next)
+    }
+    if (closed?.kind === 'hunt' && huntPendingChallengeId) {
       const challengeId = huntPendingChallengeId
       setHuntPendingChallengeId(null)
       completeHuntChallenge(challengeId).catch((err) =>
@@ -272,6 +344,7 @@ function App() {
             onScanQr={() => setShowScanEntry(true)}
             onGeneratePassport={() => setShowPassport(true)}
             onContactStaff={() => setShowContactStaff(true)}
+            onResetSession={() => setShowResetConfirm(true)}
           />
         </div>
       </header>
@@ -288,6 +361,8 @@ function App() {
             onTileResult={handleTileResult}
             milestoneQueue={milestoneQueue}
             onMilestoneShown={() => setMilestoneQueue((q) => q.slice(1))}
+            pendingMilestoneMinigame={pendingMilestoneMinigames[0] ?? null}
+            onPlayMilestoneMinigame={handlePlayMilestoneMinigame}
           />
         )}
         {activeTab === 'puzzles' && (
@@ -335,6 +410,10 @@ function App() {
       {showContactStaff && <ContactStaffModal nodes={nodes} onClose={() => setShowContactStaff(false)} />}
 
       {showPassport && <PassportModal onClose={() => setShowPassport(false)} />}
+
+      {showResetConfirm && (
+        <ResetSessionModal onClose={() => setShowResetConfirm(false)} onReset={handleResetSession} />
+      )}
     </div>
   )
 }

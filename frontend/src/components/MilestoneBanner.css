@@ -39,6 +39,11 @@
   animation: milestone-pop 0.55s cubic-bezier(0.2, 1.4, 0.4, 1), milestone-shimmer 1.6s ease-in-out infinite 0.6s;
 }
 
+.milestone-banner-double_bingo .milestone-banner-text {
+  color: var(--milestone-double-bingo);
+  -webkit-text-stroke: 2px #fff;
+}
+
 @keyframes milestone-fade-in {
   from {
     opacity: 0;

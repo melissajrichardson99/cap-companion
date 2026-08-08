@@ -88,7 +88,7 @@ Confirmed from official rule signage. Important architecture note: **most of the
 ### 2.6 Bingo Card
 - Randomized bingo card per family member — **25 tiles**.
 - Tiles reference activities from across the app (scavenger hunt completions, puzzle times, general sightseeing) and can auto-mark when completed elsewhere, or be marked directly via the Map interconnectivity flow (section 2.4).
-- Completing a tile triggers **1 random minigame** from the Shared Minigame Library (section 2.13); if the newly filled tile connects to make 5 total filled tiles in a milestone shape, it triggers 2 additional random minigames (3 total for that fill).
+- Tapping an open tile shows its challenge description; tapping "Completed Challenge" marks it complete and triggers **1 random minigame** from the Shared Minigame Library (section 2.13). If the newly filled tile connects to make 5 total filled tiles in a milestone shape, the milestone animation plays after that minigame, followed by a button offering **1 additional** random minigame framed as celebrating the milestone (2 total for that fill).
 - **Milestone animations** — the demo centerpiece for this feature: completing a line, an X, or a full blackout highlights the exact tiles forming that shape, then displays a dedicated message ("BINGO", "X MARKS THE SPOT", "BLACKOUT").
 
 ### 2.7 Home Screen

@@ -4,7 +4,19 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routers import bingo, coins, hunt, map as map_router, passport, photos, puzzles, scan, scoring, staff_requests
+from app.routers import (
+    bingo,
+    coins,
+    hunt,
+    map as map_router,
+    passport,
+    photos,
+    puzzles,
+    scan,
+    scoring,
+    session,
+    staff_requests,
+)
 
 logger = logging.getLogger("app")
 
@@ -46,6 +58,7 @@ app.include_router(staff_requests.router)
 app.include_router(coins.router)
 app.include_router(photos.router)
 app.include_router(passport.router)
+app.include_router(session.router)
 
 
 @app.get("/health")

@@ -1,6 +1,13 @@
 """Unit tests for the milestone math — tech spec section 4.2 / 5."""
 
-from app.services.milestone import DIAGONAL_A, DIAGONAL_B, X_SHAPE, detect_new_milestones
+from app.services.milestone import (
+    DIAGONAL_A,
+    DIAGONAL_B,
+    X_SHAPE,
+    MilestoneHit,
+    detect_new_milestones,
+    select_display_milestone,
+)
 
 
 def _no_prior():
@@ -111,3 +118,99 @@ def test_completing_the_final_tile_can_trigger_every_shape_at_once():
     assert types.count("line") == 10
     assert types.count("x") == 1
     assert types.count("blackout") == 1
+
+
+# select_display_milestone: the priority system that replaces "queue and
+# play every simultaneous hit" -- detect_new_milestones above still reports
+# every hit (for achieved-lines/x/blackout bookkeeping), but only one hit
+# per completion is ever chosen to actually animate for the guest.
+
+
+def test_select_display_milestone_returns_none_for_no_hits():
+    assert select_display_milestone([]) is None
+
+
+def test_select_display_milestone_single_line_passes_through_unchanged():
+    row_0 = MilestoneHit(type="line", message="BINGO", tile_indices=(0, 1, 2, 3, 4), line_index=0)
+    assert select_display_milestone([row_0]) is row_0
+
+
+def test_select_display_milestone_single_x_passes_through_unchanged():
+    x_hit = MilestoneHit(type="x", message="X MARKS THE SPOT", tile_indices=tuple(sorted(X_SHAPE)))
+    assert select_display_milestone([x_hit]) is x_hit
+
+
+def test_select_display_milestone_single_blackout_passes_through_unchanged():
+    blackout_hit = MilestoneHit(type="blackout", message="BLACKOUT", tile_indices=tuple(range(25)))
+    assert select_display_milestone([blackout_hit]) is blackout_hit
+
+
+def test_select_display_milestone_two_simultaneous_lines_collapse_to_double_bingo():
+    # Row 0 and col 0 completed by the same tile (tech spec's shared-tile edge
+    # case) — both real hits come out of detect_new_milestones, but the guest
+    # should see exactly one "Double Bingo" animation, not two Bingo ones.
+    completed = {0, 1, 2, 3, 4, 5, 10, 15, 20}  # row 0 union col 0
+    hits = detect_new_milestones(completed, achieved_lines=set(), achieved_x=False, achieved_blackout=False)
+    assert len(hits) == 2  # sanity: detection itself is unaffected
+
+    display = select_display_milestone(hits)
+
+    assert display is not None
+    assert display.type == "double_bingo"
+    assert display.message == "DOUBLE BINGO"
+    assert set(display.tile_indices) == completed
+
+
+def test_select_display_milestone_three_simultaneous_lines_still_produce_one_double_bingo():
+    row_0 = MilestoneHit(type="line", message="BINGO", tile_indices=(0, 1, 2, 3, 4), line_index=0)
+    row_1 = MilestoneHit(type="line", message="BINGO", tile_indices=(5, 6, 7, 8, 9), line_index=1)
+    row_2 = MilestoneHit(type="line", message="BINGO", tile_indices=(10, 11, 12, 13, 14), line_index=2)
+
+    display = select_display_milestone([row_0, row_1, row_2])
+
+    assert display is not None
+    assert display.type == "double_bingo"
+    assert set(display.tile_indices) == set(range(15))
+
+
+def test_select_display_milestone_x_beats_double_bingo():
+    row_0 = MilestoneHit(type="line", message="BINGO", tile_indices=(0, 1, 2, 3, 4), line_index=0)
+    col_0 = MilestoneHit(type="line", message="BINGO", tile_indices=(0, 5, 10, 15, 20), line_index=5)
+    x_hit = MilestoneHit(type="x", message="X MARKS THE SPOT", tile_indices=tuple(sorted(X_SHAPE)))
+
+    display = select_display_milestone([row_0, col_0, x_hit])
+
+    assert display is x_hit
+
+
+def test_select_display_milestone_x_beats_single_line_too():
+    row_0 = MilestoneHit(type="line", message="BINGO", tile_indices=(0, 1, 2, 3, 4), line_index=0)
+    x_hit = MilestoneHit(type="x", message="X MARKS THE SPOT", tile_indices=tuple(sorted(X_SHAPE)))
+
+    assert select_display_milestone([row_0, x_hit]) is x_hit
+    assert select_display_milestone([x_hit, row_0]) is x_hit  # order-independent
+
+
+def test_select_display_milestone_blackout_beats_everything_simultaneously():
+    # Rare edge case per spec: the final tile can close every row, column, the
+    # X, and the blackout all at once. Blackout must win outright -- the
+    # guest sees one Blackout animation, never a Double Bingo or an X.
+    hits = detect_new_milestones(set(range(25)), achieved_lines=set(), achieved_x=False, achieved_blackout=False)
+    assert len(hits) == 12  # sanity: 10 lines + x + blackout, per the detection test above
+
+    display = select_display_milestone(hits)
+
+    assert display is not None
+    assert display.type == "blackout"
+    assert set(display.tile_indices) == set(range(25))
+
+
+def test_select_display_milestone_never_reports_more_than_one_hit():
+    row_0 = MilestoneHit(type="line", message="BINGO", tile_indices=(0, 1, 2, 3, 4), line_index=0)
+    col_0 = MilestoneHit(type="line", message="BINGO", tile_indices=(0, 5, 10, 15, 20), line_index=5)
+    x_hit = MilestoneHit(type="x", message="X MARKS THE SPOT", tile_indices=tuple(sorted(X_SHAPE)))
+    blackout_hit = MilestoneHit(type="blackout", message="BLACKOUT", tile_indices=tuple(range(25)))
+
+    display = select_display_milestone([row_0, col_0, x_hit, blackout_hit])
+
+    assert display is blackout_hit

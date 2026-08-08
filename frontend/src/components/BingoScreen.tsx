@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { api, type BingoCard, type MilestoneEvent, type TileCompletionResult } from '../api'
+import { api, type BingoCard, type BingoTile, type MilestoneEvent, type Minigame, type TileCompletionResult } from '../api'
+import { BingoTileModal } from './BingoTileModal'
 import { MilestoneBanner } from './MilestoneBanner'
 import { GridIcon } from './NavIcons'
 import './BingoScreen.css'
@@ -11,6 +12,8 @@ interface BingoScreenProps {
   onTileResult: (result: TileCompletionResult) => void
   milestoneQueue: MilestoneEvent[]
   onMilestoneShown: () => void
+  pendingMilestoneMinigame: Minigame | null
+  onPlayMilestoneMinigame: () => void
 }
 
 export function BingoScreen({
@@ -20,8 +23,11 @@ export function BingoScreen({
   onTileResult,
   milestoneQueue,
   onMilestoneShown,
+  pendingMilestoneMinigame,
+  onPlayMilestoneMinigame,
 }: BingoScreenProps) {
-  const [pendingTileIds, setPendingTileIds] = useState<Set<string>>(new Set())
+  const [selectedTile, setSelectedTile] = useState<BingoTile | null>(null)
+  const [completingTileId, setCompletingTileId] = useState<string | null>(null)
 
   if (error) {
     return (
@@ -44,20 +50,17 @@ export function BingoScreen({
 
   const tiles = [...card.tiles].sort((a, b) => a.row * 5 + a.col - (b.row * 5 + b.col))
 
-  const completeTile = async (tileId: string) => {
-    if (pendingTileIds.has(tileId)) return
-    setPendingTileIds((prev) => new Set(prev).add(tileId))
+  const completeChallenge = async (tileId: string) => {
+    if (completingTileId) return
+    setCompletingTileId(tileId)
     try {
       const result = await api.completeTile(tileId)
       onTileResult(result)
+      setSelectedTile(null)
     } catch (err) {
       console.error(err)
     } finally {
-      setPendingTileIds((prev) => {
-        const next = new Set(prev)
-        next.delete(tileId)
-        return next
-      })
+      setCompletingTileId(null)
     }
   }
 
@@ -69,20 +72,6 @@ export function BingoScreen({
       </h1>
 
       <div className="bingo-content">
-        <div className="bingo-header">
-          <div className="bingo-milestone-summary">
-            {card.milestones_achieved.lines.map((lineIdx) => (
-              <span key={lineIdx} className="milestone-chip milestone-chip-line">
-                BINGO
-              </span>
-            ))}
-            {card.milestones_achieved.x && <span className="milestone-chip milestone-chip-x">X</span>}
-            {card.milestones_achieved.blackout && (
-              <span className="milestone-chip milestone-chip-blackout">BLACKOUT</span>
-            )}
-          </div>
-        </div>
-
         <div className="bingo-grid">
           {tiles.map((tile) => {
             const shapeIndex = highlightIndex.get(tile.id)
@@ -97,17 +86,38 @@ export function BingoScreen({
                 key={tile.id}
                 className={classes.join(' ')}
                 style={isHighlighted ? { animationDelay: `${shapeIndex! * 0.05}s` } : undefined}
-                disabled={tile.completed || pendingTileIds.has(tile.id)}
-                onClick={() => completeTile(tile.id)}
+                disabled={tile.completed || completingTileId !== null}
+                onClick={() => setSelectedTile(tile)}
               >
-                <span className="bingo-tile-icon" aria-hidden="true" />
-                {tile.completed && <span className="bingo-tile-stamp" aria-hidden="true">✓</span>}
+                <span className="bingo-tile-icon" aria-hidden="true">
+                  {tile.completed && <span className="bingo-tile-stamp" aria-hidden="true">✓</span>}
+                </span>
                 <span className="bingo-tile-label">{tile.label}</span>
               </button>
             )
           })}
         </div>
+
+        {/* Only offered once no milestone banner is showing -- the banner
+            (below) always takes precedence, so this never competes with it. */}
+        {!activeMilestone && pendingMilestoneMinigame && (
+          <div className="bingo-milestone-prompt">
+            <p className="bingo-milestone-prompt-text">Celebrate your milestone with a bonus minigame!</p>
+            <button type="button" className="btn btn-primary" onClick={onPlayMilestoneMinigame}>
+              Play Bonus Minigame
+            </button>
+          </div>
+        )}
       </div>
+
+      {selectedTile && (
+        <BingoTileModal
+          tile={selectedTile}
+          pending={completingTileId === selectedTile.id}
+          onClose={() => setSelectedTile(null)}
+          onCompleteChallenge={() => completeChallenge(selectedTile.id)}
+        />
+      )}
 
       {activeMilestone && <MilestoneBanner event={activeMilestone} onDone={onMilestoneShown} />}
     </div>

@@ -1,20 +1,134 @@
+/* Rounded dark modal (reference layout: camera viewfinder w/ corner
+   brackets, title top, fallback text bottom) reskinned with this app's own
+   tokens -- the nav dropdown's dark-green panel + sunset-orange accents,
+   parchment for the fallback bubble. */
+.scan-entry-modal-frame {
+  background: var(--cap-color-nav-panel-green);
+  border: var(--cap-outline-width) solid var(--cap-color-outline);
+  border-radius: var(--cap-radius-lg);
+  box-shadow: var(--cap-shadow-pop), var(--cap-shadow-soft);
+  padding: var(--cap-space-5);
+  max-width: 380px;
+}
+
 .scan-entry-title {
-  margin: 0 0 4px;
+  margin: 0 0 var(--cap-space-4);
+  font-family: var(--cap-font-display);
+  font-weight: 700;
   font-size: 20px;
+  text-align: center;
+  color: var(--cap-color-on-header);
+}
+
+.scan-entry-viewfinder {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--cap-radius-md);
+  background: #000;
+  border: 2px solid var(--cap-color-outline);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .scan-entry-video {
   width: 100%;
-  border-radius: 10px;
-  background: #000;
+  height: 100%;
+  object-fit: cover;
 }
 
-.scan-entry-manual {
+.scan-entry-viewfinder-placeholder {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-  font-size: 13px;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+}
+
+.scan-entry-camera-icon {
+  width: 52px;
+  height: 52px;
+  color: var(--cap-color-sunset-orange);
+}
+
+/* Camera-viewfinder corner brackets -- each an "L" made from two sides of a
+   thick square border, the other two sides suppressed. */
+.scan-entry-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 3.5px solid var(--cap-color-sunset-orange);
+  pointer-events: none;
+}
+
+.scan-entry-corner-tl {
+  top: 10px;
+  left: 10px;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 6px;
+}
+
+.scan-entry-corner-tr {
+  top: 10px;
+  right: 10px;
+  border-left: none;
+  border-bottom: none;
+  border-top-right-radius: 6px;
+}
+
+.scan-entry-corner-bl {
+  bottom: 10px;
+  left: 10px;
+  border-right: none;
+  border-top: none;
+  border-bottom-left-radius: 6px;
+}
+
+.scan-entry-corner-br {
+  bottom: 10px;
+  right: 10px;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 6px;
+}
+
+.scan-entry-modal-frame .screen-error {
+  color: #fca5a5;
+  padding: 10px 0 0;
+}
+
+/* Fallback text as a speech/text bubble (not plain underlined text), with a
+   small tail pointing back up at the viewfinder above it. */
+.scan-entry-fallback-bubble {
+  position: relative;
+  margin-top: 22px;
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: var(--cap-radius-md);
+  padding: 14px 16px;
+}
+
+.scan-entry-fallback-bubble::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 32px;
+  width: 16px;
+  height: 16px;
+  background: var(--cap-color-parchment);
+  border-left: 2px solid var(--cap-color-outline);
+  border-top: 2px solid var(--cap-color-outline);
+  transform: rotate(45deg);
+}
+
+.scan-entry-fallback-text {
+  margin: 0 0 10px;
+  font-family: var(--cap-font-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--cap-color-ink);
 }
 
 .scan-entry-manual-row {
@@ -27,8 +141,37 @@
   font: inherit;
   font-size: 15px;
   padding: 9px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+  border-radius: var(--cap-radius-sm);
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--cap-color-ink);
+}
+
+.scan-entry-modal-frame .btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.scan-entry-modal-frame .btn:hover:not(:disabled) {
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+.scan-entry-modal-frame .btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.scan-entry-modal-frame .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+}
+
+.scan-entry-modal-frame .btn-secondary {
+  background: transparent;
+  color: var(--cap-color-ink);
 }

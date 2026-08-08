@@ -34,6 +34,7 @@
   --milestone-line: #3b82f6;
   --milestone-x: #ea580c;
   --milestone-blackout: #eab308;
+  --milestone-double-bingo: #d946ef;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -201,6 +202,7 @@
     --milestone-line: #60a5fa;
     --milestone-x: #fb923c;
     --milestone-blackout: #facc15;
+    --milestone-double-bingo: #e879f9;
 
     /* cap-* brand hues stay fixed (same reasoning as --cat-* above).
        --cap-color-page-bg and --cap-color-surface are deliberately NOT

@@ -34,6 +34,7 @@ class MilestoneType(StrEnum):
     LINE = "line"
     X = "x"
     BLACKOUT = "blackout"
+    DOUBLE_BINGO = "double_bingo"
 
 
 class SolutionType(StrEnum):
@@ -431,6 +432,20 @@ class PassportStats(BaseModel):
     # Auto-generated from whichever category the family is strongest in --
     # see app/services/passport.py's _pick_title for the thresholds/logic.
     title: str
+
+
+class ResetSessionResult(BaseModel):
+    """Result of the guest-facing "Reset Session" action (nav dropdown).
+
+    Narrower than backend/scripts/reset_demo_data.py's dev-only reset: this
+    only clears Bingo tile completion/milestones, Map node visited state, and
+    Scavenger Hunt challenge progress -- Cobb Coins, puzzle attempts, photos,
+    and passports are left untouched.
+    """
+
+    bingo_tiles_reset: int = Field(ge=0)
+    map_nodes_reset: int = Field(ge=0)
+    hunt_characters_reset: int = Field(ge=0)
 
 
 class PassportSession(BaseModel):

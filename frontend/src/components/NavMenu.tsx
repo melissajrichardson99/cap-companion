@@ -16,6 +16,7 @@ interface NavMenuProps<T extends string> {
   onScanQr: () => void
   onGeneratePassport: () => void
   onContactStaff: () => void
+  onResetSession: () => void
 }
 
 // Guest-facing mobile nav: a hamburger toggle that opens a panel anchored to
@@ -31,6 +32,7 @@ export function NavMenu<T extends string>({
   onScanQr,
   onGeneratePassport,
   onContactStaff,
+  onResetSession,
 }: NavMenuProps<T>) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -115,6 +117,12 @@ export function NavMenu<T extends string>({
               </button>
               <button type="button" className="btn btn-danger" onClick={() => runAction(onContactStaff)}>
                 Contact Staff
+              </button>
+            </div>
+
+            <div className="nav-menu-footer">
+              <button type="button" className="nav-menu-reset-link" onClick={() => runAction(onResetSession)}>
+                Reset Session
               </button>
             </div>
           </div>

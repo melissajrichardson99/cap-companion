@@ -232,3 +232,31 @@
   border-color: var(--cap-color-outline);
   color: #fff;
 }
+
+/* A narrow guest-facing reset, distinct from the primary/danger pill
+   buttons above -- underlined text, not its own button chrome, so it reads
+   as a low-emphasis "advanced" action rather than a headline CTA. Actual
+   confirmation happens in ResetSessionModal, opened via onResetSession --
+   this link never resets anything by itself. */
+.nav-menu-footer {
+  padding-top: var(--cap-space-1);
+  display: flex;
+  justify-content: center;
+}
+
+.nav-menu-reset-link {
+  font-family: var(--cap-font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cap-color-on-header-muted);
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.nav-menu-reset-link:hover {
+  color: var(--cap-color-on-header);
+}

@@ -37,41 +37,6 @@
     inset 0 -2px 3px rgba(0, 0, 0, 0.25);
 }
 
-.bingo-header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.bingo-milestone-summary {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.milestone-chip {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 999px;
-  color: #fff;
-}
-
-.milestone-chip-line {
-  background: var(--milestone-line);
-}
-
-.milestone-chip-x {
-  background: var(--milestone-x);
-}
-
-.milestone-chip-blackout {
-  background: var(--milestone-blackout);
-  color: #1a1400;
-}
-
 .bingo-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -119,6 +84,7 @@
 }
 
 .bingo-tile-icon {
+  position: relative;
   width: 18px;
   height: 18px;
   flex-shrink: 0;
@@ -144,10 +110,14 @@
   opacity: 0.7;
 }
 
+/* Centered on top of .bingo-tile-icon (its positioned parent) so the
+   checkmark reads as covering the tan icon circle, not sitting beside it --
+   sized a couple px bigger than the icon so it fully hides the tan ring. */
 .bingo-tile-stamp {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -183,7 +153,8 @@
 
 .bingo-tile-milestone-line,
 .bingo-tile-milestone-x,
-.bingo-tile-milestone-blackout {
+.bingo-tile-milestone-blackout,
+.bingo-tile-milestone-double_bingo {
   animation: tile-sweep 0.4s ease-out forwards;
   z-index: 1;
 }
@@ -201,6 +172,11 @@
 .bingo-tile-milestone-blackout {
   border-color: var(--milestone-blackout);
   box-shadow: 0 0 0 2px var(--milestone-blackout);
+}
+
+.bingo-tile-milestone-double_bingo {
+  border-color: var(--milestone-double-bingo);
+  box-shadow: 0 0 0 2px var(--milestone-double-bingo);
 }
 
 /* Milestone tiles are completed by definition (a line/X/blackout is only
@@ -239,4 +215,61 @@
 .bingo-tile-open.bingo-tile-milestone-blackout {
   background: color-mix(in srgb, var(--milestone-blackout) 40%, var(--cap-color-parchment));
   color: var(--cap-color-nav-panel-green);
+}
+
+.bingo-tile-completed.bingo-tile-milestone-double_bingo {
+  background: color-mix(in srgb, var(--milestone-double-bingo) 35%, var(--cap-color-nav-panel-green));
+  color: #fff;
+}
+
+.bingo-tile-open.bingo-tile-milestone-double_bingo {
+  background: color-mix(in srgb, var(--milestone-double-bingo) 35%, var(--cap-color-parchment));
+  color: var(--cap-color-nav-panel-green);
+}
+
+/* Shown once the milestone banner has finished (see BingoScreen.tsx) --
+   an opt-in prompt for the 1 celebration minigame a milestone completion
+   unlocks, rather than auto-launching it. Parchment card so it reads as
+   content sitting on the wood board, same surface as every other card. */
+.bingo-milestone-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: var(--cap-space-4);
+  margin-top: 4px;
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: var(--cap-radius-md);
+  box-shadow: var(--cap-shadow-pop-sm);
+  text-align: center;
+  animation: bingo-milestone-prompt-in 0.25s ease-out;
+}
+
+.bingo-milestone-prompt-text {
+  font-family: var(--cap-font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--cap-color-ink);
+}
+
+.bingo-milestone-prompt .btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-sunset-orange);
+}
+
+.bingo-milestone-prompt .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+  border-color: var(--cap-color-sunset-orange-deep);
+}
+
+@keyframes bingo-milestone-prompt-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

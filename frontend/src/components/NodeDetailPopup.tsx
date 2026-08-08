@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, type LinkedTile, type MapNode, type VisitNodeResponse } from '../api'
 import { Modal } from './Modal'
+import { MapPinIcon } from './NavIcons'
 import './NodeDetailPopup.css'
 
 const CATEGORY_LABEL: Record<MapNode['category'], string> = {
@@ -79,81 +80,91 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
   const tile = queue[queueIndex]
   if ((step === 'confirming' || step === 'submitting') && tile) {
     return (
-      <Modal onClose={onClose} labelledBy="tile-confirm-heading">
-        <h2 id="tile-confirm-heading" className="popup-heading">
-          {node.name}
-        </h2>
-        <p className="tile-confirm-progress">
-          Tile {queueIndex + 1} of {queue.length}
-        </p>
-        <p className="tile-confirm-question">Did you complete &ldquo;{tile.label}&rdquo; here?</p>
-        <div className="popup-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={step === 'submitting'}
-            onClick={() => answerTile(false)}
-          >
-            No
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={step === 'submitting'}
-            onClick={() => answerTile(true)}
-          >
-            Yes
-          </button>
+      <Modal onClose={onClose} labelledBy="tile-confirm-heading" className="node-detail-modal-frame">
+        <div className="node-detail-modal-inner">
+          <h2 id="tile-confirm-heading" className="node-detail-title">
+            <span className="node-detail-icon-badge" aria-hidden="true">
+              <MapPinIcon />
+            </span>
+            {node.name}
+          </h2>
+          <p className="tile-confirm-progress">
+            Tile {queueIndex + 1} of {queue.length}
+          </p>
+          <p className="tile-confirm-question">Did you complete &ldquo;{tile.label}&rdquo; here?</p>
+          <div className="node-detail-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={step === 'submitting'}
+              onClick={() => answerTile(false)}
+            >
+              No
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={step === 'submitting'}
+              onClick={() => answerTile(true)}
+            >
+              Yes
+            </button>
+          </div>
+          {step === 'submitting' && <p className="node-detail-status">Saving…</p>}
         </div>
-        {step === 'submitting' && <p className="popup-status">Saving…</p>}
       </Modal>
     )
   }
 
   return (
-    <Modal onClose={onClose} labelledBy="node-detail-heading">
-      <div className="popup-header-row">
-        <h2 id="node-detail-heading" className="popup-heading">
-          {node.name}
-        </h2>
-        <span className={`state-pill state-pill-${node.state}`}>{STATE_LABEL[node.state]}</span>
-      </div>
-      <p className="popup-category">{CATEGORY_LABEL[node.category]}</p>
-      <p className="popup-description">{node.description}</p>
+    <Modal onClose={onClose} labelledBy="node-detail-heading" className="node-detail-modal-frame">
+      <div className="node-detail-modal-inner">
+        <div className="node-detail-header-row">
+          <h2 id="node-detail-heading" className="node-detail-title">
+            <span className="node-detail-icon-badge" aria-hidden="true">
+              <MapPinIcon />
+            </span>
+            {node.name}
+          </h2>
+          <span className={`state-pill state-pill-${node.state}`}>{STATE_LABEL[node.state]}</span>
+        </div>
+        <p className="node-detail-category">{CATEGORY_LABEL[node.category]}</p>
+        <p className="node-detail-description">{node.description}</p>
 
-      {node.children.length > 0 && (
-        <p className="popup-children">Games here: {node.children.map((c) => c.name).join(', ')}</p>
-      )}
-
-      {node.linked_tiles.length > 0 && (
-        <p className="popup-tile-count">
-          {uncompletedTiles.length > 0
-            ? `${uncompletedTiles.length} uncompleted Bingo tile${uncompletedTiles.length === 1 ? '' : 's'} linked here`
-            : 'All linked Bingo tiles already completed'}
-        </p>
-      )}
-
-      {error && <p className="popup-error">{error}</p>}
-
-      <div className="popup-actions">
-        <button type="button" className="btn btn-secondary" onClick={onClose} disabled={step === 'submitting'}>
-          Close
-        </button>
-        {node.state === 'not_visited' && (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={startMarkVisited}
-            disabled={step === 'submitting'}
-          >
-            Mark Visited
-          </button>
+        {node.children.length > 0 && (
+          <p className="node-detail-children">Games here: {node.children.map((c) => c.name).join(', ')}</p>
         )}
-        {node.state === 'closed' && <span className="popup-closed-note">Currently closed by park staff.</span>}
+
+        {node.linked_tiles.length > 0 && (
+          <p className="node-detail-tile-count">
+            {uncompletedTiles.length > 0
+              ? `${uncompletedTiles.length} uncompleted Bingo tile${uncompletedTiles.length === 1 ? '' : 's'} linked here`
+              : 'All linked Bingo tiles already completed'}
+          </p>
+        )}
+
+        {error && <p className="screen-error">{error}</p>}
+
+        <div className="node-detail-actions">
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={step === 'submitting'}>
+            Close
+          </button>
+          {node.state === 'not_visited' && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={startMarkVisited}
+              disabled={step === 'submitting'}
+            >
+              Mark Visited
+            </button>
+          )}
+          {node.state === 'closed' && <span className="node-detail-closed-note">Currently closed by park staff.</span>}
+        </div>
+        {/* Only reachable here when there was nothing to confirm (queue stayed
+            empty) -- startMarkVisited went straight to submit(). */}
+        {step === 'submitting' && <p className="node-detail-status">Saving…</p>}
       </div>
-      {/* Only reachable here when there was nothing to confirm (queue stayed
-          empty) -- startMarkVisited went straight to submit(). */}
-      {step === 'submitting' && <p className="popup-status">Saving…</p>}
     </Modal>
   )
 }

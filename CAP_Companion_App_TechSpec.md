@@ -82,7 +82,7 @@ These are written explicitly because they're exactly where the Base44 attempt br
 ### 4.1 Minigame Random Draw
 - Maintain the pool of **currently available** minigames (Phase 1 pool = 5 games; grows to 10 once Phase 2 ships).
 - On tile completion: draw 1 minigame **uniformly at random** from the available pool.
-- If the completion also satisfies the milestone condition (4.2), draw **2 additional** minigames as separate independent draws (repeats allowed, including repeating the game already drawn for the base trigger).
+- If the completion also satisfies the milestone condition (4.2), draw **1 additional** minigame as a separate independent draw (repeats allowed, including repeating the game already drawn for the base trigger). The frontend plays the base draw immediately, then offers the additional draw as an opt-in "celebrate the milestone" minigame after the milestone banner — 2 total minigames for a milestone fill, not 3.
 - Minigame outcome (win/lose/score) **never** affects tile completion state — the tile stays marked complete regardless of how the minigame goes.
 - Optional refinement: avoid repeating the immediately-preceding draw (track a "last played" pointer, re-roll once on a match) to prevent back-to-back repeats feeling stale. Not required, but worth adding if time allows.
 

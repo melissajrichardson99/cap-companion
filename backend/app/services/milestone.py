@@ -30,7 +30,7 @@ BLACKOUT = frozenset(range(TILE_COUNT))
 
 @dataclass(frozen=True)
 class MilestoneHit:
-    type: str  # "line" | "x" | "blackout"
+    type: str  # "line" | "x" | "blackout" | "double_bingo"
     message: str
     tile_indices: tuple[int, ...]
     line_index: int | None = None  # only set for type == "line"
@@ -77,3 +77,33 @@ def detect_new_milestones(
         )
 
     return hits
+
+
+def select_display_milestone(hits: list[MilestoneHit]) -> MilestoneHit | None:
+    """Collapse one completion's simultaneous milestone hits into the single
+    animation to actually show, per the priority system replacing the old
+    "queue and play every hit" behavior.
+
+    Priority, highest wins: Blackout > X > Double Bingo > Bingo. Bookkeeping
+    (which lines/X/blackout are "achieved" on the card) still records every
+    hit in `hits` regardless -- this function only decides what the guest
+    sees animated for this one completion, and always returns at most one
+    hit. Two or more lines closed by the same completion are reported as a
+    single synthesized "double_bingo" hit spanning every tile across those
+    lines, rather than as separate line hits.
+    """
+    for hit in hits:
+        if hit.type == "blackout":
+            return hit
+    for hit in hits:
+        if hit.type == "x":
+            return hit
+
+    line_hits = [h for h in hits if h.type == "line"]
+    if len(line_hits) >= 2:
+        tiles = sorted({i for h in line_hits for i in h.tile_indices})
+        return MilestoneHit(type="double_bingo", message="DOUBLE BINGO", tile_indices=tuple(tiles))
+    if len(line_hits) == 1:
+        return line_hits[0]
+
+    return None

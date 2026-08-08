@@ -44,14 +44,15 @@ def draw_for_tile_completion(
     """Draw the minigame(s) triggered by completing one bingo tile.
 
     Always 1 draw for the base completion. If the completion also satisfies
-    a milestone (4.2), 2 additional independent draws follow — repeats are
-    allowed, including repeating the game already drawn for the base
-    trigger. Minigame outcome never feeds back into tile completion state;
-    that's enforced by callers simply never wiring a result back in, not by
-    anything in this function.
+    a milestone (4.2), exactly 1 additional independent draw follows — a
+    repeat of the base draw is allowed. The frontend plays the base draw
+    immediately, then (after the milestone banner) offers the second draw as
+    an opt-in "celebrate the milestone" minigame, so a milestone completion
+    is 2 total minigames, not 3. Minigame outcome never feeds back into tile
+    completion state; that's enforced by callers simply never wiring a
+    result back in, not by anything in this function.
     """
     draws: list[T] = [draw_one(pool, rng, avoid_id=last_played_id, id_fn=id_fn)]
     if milestone_triggered:
-        draws.append(draw_one(pool, rng, avoid_id=id_fn(draws[-1]), id_fn=id_fn))
         draws.append(draw_one(pool, rng, avoid_id=id_fn(draws[-1]), id_fn=id_fn))
     return draws

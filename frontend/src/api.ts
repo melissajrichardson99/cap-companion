@@ -68,7 +68,7 @@ export interface Minigame {
 }
 
 export interface MilestoneEvent {
-  type: 'line' | 'x' | 'blackout'
+  type: 'line' | 'x' | 'blackout' | 'double_bingo'
   message: string
   tile_ids: string[]
 }
@@ -284,6 +284,12 @@ export interface PassportSession {
   stats: PassportStats
 }
 
+export interface ResetSessionResult {
+  bingo_tiles_reset: number
+  map_nodes_reset: number
+  hunt_characters_reset: number
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -382,4 +388,5 @@ export const api = {
     }
     return res.json() as Promise<PassportSession>
   },
+  resetSession: () => request<ResetSessionResult>('/session/reset', { method: 'POST' }),
 }

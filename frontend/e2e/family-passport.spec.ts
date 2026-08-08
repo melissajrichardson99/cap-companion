@@ -101,6 +101,7 @@ test.describe('Family Passport', () => {
     // approach as cobb-coins.spec.ts -- the exact tile doesn't matter here).
     await page.getByRole('button', { name: 'Bingo Card' }).click()
     await page.locator('.bingo-tile-open').first().click()
+    await page.getByRole('button', { name: 'Completed Challenge' }).click()
     // Completing a tile draws a minigame asynchronously. Dismiss it via the
     // overlay's own close button, not Escape -- the Godot iframe grabs
     // keyboard focus once it loads, so an Escape keypress from here can

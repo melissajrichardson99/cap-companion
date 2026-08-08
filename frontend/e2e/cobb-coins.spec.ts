@@ -44,6 +44,7 @@ test.describe('Cobb Coins', () => {
     // engine finishes loading and grabs focus).
     await page.getByRole('button', { name: 'Bingo Card' }).click()
     await page.locator('.bingo-tile-open').first().click()
+    await page.getByRole('button', { name: 'Completed Challenge' }).click()
     await expect(page.locator('.app-coin-total')).toHaveText('🪙 14')
     await page.getByRole('button', { name: 'Close minigame' }).click()
     await expect(page.locator('.minigame-overlay')).toHaveCount(0)
