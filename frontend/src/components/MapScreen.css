@@ -1,22 +1,124 @@
 .map-screen {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: var(--cap-space-6);
+  font-family: var(--cap-font-body);
+  /* flex:1 (app-main is now a flex column, see App.css) lets the Map
+     screen -- and ONLY the Map screen, since no other tab sets this --
+     claim the app's full remaining height instead of shrinking to its own
+     content, so the trailhead background below reaches the true bottom of
+     the page instead of stopping short and exposing whatever's behind
+     #app-root there.
+     The negative margin cancels out .app-main's own padding on exactly
+     this element, so this background paints edge-to-edge against the
+     navbar above and the app's outer edges left/right/bottom, instead of
+     leaving app-main's padding gutter showing #app-root's page-bg color
+     around it; the matching positive padding keeps every child
+     (.map-scene, the unplaced-locations grid, etc.) at its original inset
+     so nothing else about the layout shifts. */
+  flex: 1;
+  margin: calc(var(--cap-space-5) * -1) calc(var(--cap-space-5) * -1) -60px;
+  padding: var(--cap-space-5) var(--cap-space-5) 60px;
+  background-color: #e8d9bb;
 }
 
 .map-loading,
 .map-error {
   padding: 40px 0;
   text-align: center;
+  color: var(--cap-color-body-text);
+}
+
+/* Scoped override of the shared .btn styles (shared.css) so this brand
+   treatment stays limited to the Map screen -- every other screen's
+   buttons keep using shared.css untouched. */
+.map-screen .btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+}
+
+.map-screen .btn:hover:not(:disabled) {
+  box-shadow: var(--cap-shadow-pop);
+}
+
+/* Flat tan "mat" showing around the wood frame -- previously an illustrated
+   tree/signpost/footprint scene image anchored along the bottom, but that
+   art has a fixed-aspect horizon line that can't tile cleanly across the
+   variable page heights this card renders at (it either left a gap or cut
+   off depending on content height). Flat color underneath sidesteps that
+   instead of patching the image positioning. */
+.map-scene {
+  border-radius: var(--cap-radius-lg);
+  background-color: #e8d9bb;
+  padding: var(--cap-space-5) var(--cap-space-4);
+}
+
+/* Wood sign-board frame around the map. A CSS wood-grain treatment (not a
+   raster crop) so the plank thickness and rounded corners scale cleanly at
+   any card size instead of stretching/tiling a fixed-resolution image --
+   the corner bolts below are the one piece pulled from the real asset,
+   since those are small and fixed-size regardless of frame size. */
+.map-frame {
+  position: relative;
+  border-radius: clamp(16px, 4vw, 30px);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: clamp(12px, 3.2vw, 26px);
+  box-shadow:
+    0 10px 24px rgba(40, 24, 8, 0.35),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.map-frame-bolt {
+  position: absolute;
+  z-index: 2;
+  width: clamp(16px, 3vw, 26px);
+  height: clamp(16px, 3vw, 26px);
+  background-image: url('../assets/map-frame-bolt.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  border-radius: 50%;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.map-frame-bolt-tl {
+  top: clamp(6px, 1.6vw, 13px);
+  left: clamp(6px, 1.6vw, 13px);
+}
+
+.map-frame-bolt-tr {
+  top: clamp(6px, 1.6vw, 13px);
+  right: clamp(6px, 1.6vw, 13px);
+}
+
+.map-frame-bolt-bl {
+  bottom: clamp(6px, 1.6vw, 13px);
+  left: clamp(6px, 1.6vw, 13px);
+}
+
+.map-frame-bolt-br {
+  bottom: clamp(6px, 1.6vw, 13px);
+  right: clamp(6px, 1.6vw, 13px);
 }
 
 .map-image-wrap {
   position: relative;
   width: 100%;
-  border-radius: 12px;
+  border-radius: clamp(10px, 2.4vw, 20px);
   overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--code-bg);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.15);
 }
 
 .map-image {
@@ -96,6 +198,7 @@
 }
 
 .map-pin-shape-text {
+  font-family: var(--cap-font-display);
   font-size: 12px;
   font-weight: 700;
   fill: #fff;
@@ -106,7 +209,7 @@
 /* Legend yellow is very light -- white text (the other shapes' default)
    would be unreadable on it. */
 .map-pin-service .map-pin-shape-text {
-  fill: #1a1a00;
+  fill: var(--cap-color-outline);
 }
 
 .map-pin-visited .map-pin-shape-text {
@@ -125,7 +228,7 @@
   min-width: 15px;
   height: 15px;
   padding: 0 3px;
-  border-radius: 999px;
+  border-radius: var(--cap-radius-pill);
   background: var(--map-pin-badge);
   color: #fff;
   font-size: 9px;
@@ -156,12 +259,12 @@
   transform: translateX(-50%);
   margin-bottom: 4px;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-h);
-  background: var(--bg);
-  padding: 2px 7px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+  font-weight: 700;
+  color: var(--cap-color-ink);
+  background: var(--cap-color-surface);
+  padding: 2px 8px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -174,34 +277,38 @@
 }
 
 .map-unplaced-heading {
-  font-size: 18px;
-  margin: 0 0 12px;
+  font-family: var(--cap-font-display);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--cap-color-ink);
+  margin: 0 0 var(--cap-space-3);
 }
 
 .node-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
+  gap: var(--cap-space-3);
 }
 
 .node-card {
   font: inherit;
   text-align: left;
-  border-radius: 10px;
-  padding: 12px 14px;
+  border-radius: var(--cap-radius-md);
+  padding: var(--cap-space-3) var(--cap-space-4);
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--cap-space-2);
   min-height: 64px;
-  border: 1.5px solid var(--border);
-  background: var(--bg);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-surface);
+  box-shadow: var(--cap-shadow-pop-sm);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 .node-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--cap-shadow-pop);
 }
 
 .node-card-top {
@@ -213,15 +320,15 @@
 
 .node-card-name {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-h);
+  font-weight: 700;
+  color: var(--cap-color-ink);
   line-height: 1.3;
 }
 
 .node-card-state-icon {
   font-size: 13px;
   flex-shrink: 0;
-  border-radius: 999px;
+  border-radius: var(--cap-radius-pill);
   width: 20px;
   height: 20px;
   display: inline-flex;
@@ -230,7 +337,7 @@
 }
 
 .node-card-state-icon-visited {
-  background: var(--state-visited);
+  background: var(--cap-color-adventure-green);
   color: #fff;
 }
 
@@ -242,39 +349,46 @@
 .node-card-tile-badge {
   align-self: flex-start;
   font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--accent-bg);
-  color: var(--accent);
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--cap-radius-pill);
+  /* Solid white chip + outline, not a translucent orange tint -- the tint
+     was designed against a white card. Composited over the card's now-solid
+     orange (--cap-color-surface), a ~14%-alpha orange tint reads as
+     essentially the same orange as the card itself, so the pill's shape and
+     its sunset-orange-deep text both lost contrast. A fixed white chip
+     stays legible regardless of what the card background is. */
+  background: #ffffff;
+  color: var(--cap-color-sunset-orange-deep);
+  border: 2px solid var(--cap-color-outline);
 }
 
 /* Distinct per-state treatment (tech spec 4.3 / plan 2.4) */
 
 .node-card-not_visited {
-  border-color: var(--state-not-visited);
+  border-color: var(--cap-color-outline);
   border-style: dashed;
 }
 
 .node-card-visited {
-  border-color: var(--state-visited);
-  background: var(--state-visited-bg);
+  border-color: var(--cap-color-adventure-green);
+  background: rgba(59, 120, 1, 0.08);
 }
 
 .node-card-closed {
-  border-color: var(--state-closed);
+  border-color: var(--cap-color-adventure-red);
   background: repeating-linear-gradient(
     135deg,
-    var(--state-closed-bg),
-    var(--state-closed-bg) 8px,
+    rgba(255, 0, 0, 0.07),
+    rgba(255, 0, 0, 0.07) 8px,
     transparent 8px,
     transparent 16px
   );
   cursor: pointer;
-  opacity: 0.75;
+  opacity: 0.85;
 }
 
 .node-card-closed .node-card-name {
   text-decoration: line-through;
-  text-decoration-color: var(--state-closed);
+  text-decoration-color: var(--cap-color-adventure-red);
 }

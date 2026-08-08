@@ -39,6 +39,111 @@
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
+  /* ---------------------------------------------------------------------
+     Cobb's Adventure Park brand tokens ("--cap-*").
+     Additive namespace, kept separate from the generic vars above so the
+     rest of the app (still on --bg/--text/--accent/etc.) is unaffected.
+     Scope: currently only consumed by the Home/nav shell (App.css) and the
+     Map screen (MapScreen.css) -- see CLAUDE.md build-priority note.
+     Colors below are matched to the real Cobb's website + physical
+     "How to Play" signage: dark header-green for chrome, sunset-orange for
+     CTAs/active states, a pale wood-plank-blue wash for the page
+     background, and white cards. The rest of the physical signage palette
+     (adventure-red, acid-yellow, trail-tan, the darker food-green) is
+     accent-only and also backs the map's pin-category colors (kept as
+     aliases below so there's one source of truth for e.g. adventure-red).
+     --------------------------------------------------------------------- */
+
+  /* Header/chrome pair -- header-green matches the real Cobb's website
+     header (rgb(20, 79, 5)); sunset-orange matches the real website's CTA
+     orange (rgb(243, 134, 48)) and is used for CTAs/active states/checkmarks. */
+  --cap-color-header-green: #144f05;
+  --cap-color-sunset-orange: #f38630;
+  --cap-color-sunset-orange-deep: #bc6825;
+
+  /* The animal pin category was originally aliased to --cap-color-sunset-orange,
+     but that token now tracks the real-website CTA orange above. Map pin
+     colors are frozen by design (see --cat-* note below), so the animal
+     pin keeps its own fixed value instead of following that change. */
+  --cap-color-pin-orange: #ff7700;
+
+  /* Everything below is fixed real-world signage color (same reasoning as
+     --cat-* below) but ACCENT-ONLY now -- small badges/highlights/icons,
+     never a structural background or chrome surface. adventure-green in
+     particular is the map legend's darker food-pin green, distinct from
+     the header-green chrome above. */
+  --cap-color-adventure-red: #ff0000;
+  --cap-color-wood-plank-blue: #7ba8c4;
+  --cap-color-wood-plank-blue-deep: #5c89a6;
+  --cap-color-trail-tan: #be9d67;
+  --cap-color-adventure-green: #3b7801;
+  --cap-color-acid-yellow: #eaff00;
+
+  /* A distinct dark red for the Contact Staff CTA -- separate from
+     adventure-red (the bright, fixed pin/legend red) so staff contact
+     reads as its own "urgent" action rather than reusing map iconography. */
+  --cap-color-contact-red: #8c1c1c;
+  --cap-color-contact-red-deep: #6e1414;
+
+  /* Nav dropdown panel: a distinct dark green from --cap-color-header-green
+     (its own brand value, not an alias) for the wood-framed panel's fill,
+     plus a mid-brown wood tone for the Cobb Coins sign-board pill. Fixed
+     regardless of theme, same reasoning as the rest of the brand palette. */
+  --cap-color-nav-panel-green: rgb(44, 62, 25);
+  --cap-color-wood-sign: rgb(131, 105, 61);
+
+  /* Neutrals -- a dark warm-teal ink (not stark black) and a pale
+     blue-tinted surface (not cream) so the neutrals sit inside the same
+     family as wood-plank-blue instead of fighting the saturated palette.
+     --cap-color-page-bg is a light wash of wood-plank-blue (not the
+     saturated signage version) and is the app's page background. */
+  --cap-color-ink: #1e2b2e;
+  --cap-color-outline: #14181a;
+  --cap-color-body-text: #45585d;
+  /* Card surface -- fixed CTA orange, replacing the earlier white-card
+     treatment. Aliased to --cap-color-sunset-orange (not a new hex) so
+     there's one source of truth for "the app's orange." Fixed for the same
+     reason as --cap-color-page-bg below: it's brand chrome, not a neutral
+     that should track the OS theme. */
+  --cap-color-surface: var(--cap-color-sunset-orange);
+  --cap-color-surface-sunken: #eaf2f6;
+  --cap-color-page-bg: #eef4f8;
+  /* Text/icon color for content sitting directly on the header-green
+     chrome -- fixed white regardless of theme, same reasoning as the brand
+     hues above. */
+  --cap-color-on-header: #ffffff;
+  --cap-color-on-header-muted: rgba(255, 255, 255, 0.82);
+
+  --cap-font-display: 'Fredoka', var(--sans);
+  --cap-font-body: 'Nunito', var(--sans);
+
+  --cap-space-1: 4px;
+  --cap-space-2: 8px;
+  --cap-space-3: 12px;
+  --cap-space-4: 16px;
+  --cap-space-5: 24px;
+  --cap-space-6: 32px;
+  --cap-space-7: 48px;
+
+  --cap-radius-sm: 8px;
+  --cap-radius-md: 14px;
+  --cap-radius-lg: 22px;
+  --cap-radius-pill: 999px;
+
+  --cap-outline-width: 3px;
+  /* Hard offset "sticker" shadow -- matches the bold-outlined flat-illustration
+     signage style better than a soft/blurred realistic shadow. */
+  --cap-shadow-pop: 3px 3px 0 var(--cap-color-outline);
+  --cap-shadow-pop-sm: 2px 2px 0 var(--cap-color-outline);
+  --cap-shadow-soft: 0 8px 20px rgba(20, 24, 26, 0.16);
+
+  /* One source of truth for the map legend's pin-category colors, matching
+     the brand palette above exactly. */
+  --cat-attraction: var(--cap-color-adventure-red);
+  --cat-animal: var(--cap-color-pin-orange);
+  --cat-service: var(--cap-color-acid-yellow);
+  --cat-food: var(--cap-color-adventure-green);
+
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
   color-scheme: light dark;
@@ -80,6 +185,31 @@
     --milestone-line: #60a5fa;
     --milestone-x: #fb923c;
     --milestone-blackout: #facc15;
+
+    /* cap-* brand hues stay fixed (same reasoning as --cat-* above).
+       --cap-color-page-bg and --cap-color-surface are deliberately NOT
+       redefined here -- they're fixed brand chrome (page wash, card
+       orange), not neutrals that should track system theme. A prior
+       version of this block redefined page-bg to a dark neutral, which
+       silently overrode the fixed value and made the whole page render
+       near-black under dark-mode browsers/OSes -- the same class of bug as
+       the Cobb Coin badge fix (a "neutrals adapt" rule swallowing a token
+       that was supposed to be fixed brand chrome).
+
+       --cap-color-ink and --cap-color-body-text used to flip to light
+       values here too, on the theory that "neutrals adapt so text/surfaces
+       stay legible in dark mode." That only holds if the surfaces they sit
+       on adapt WITH them. Now that every surface they're ever painted onto
+       (page-bg, surface) is fixed-light regardless of theme, an adaptive
+       ink/body-text would flip to near-white in dark mode and go
+       near-invisible against those same fixed-light backgrounds --
+       precisely the bug this comment is about, just on the text side
+       instead of the background side. So these two stay fixed at their
+       light-mode (dark-on-light) values in every theme, matching the
+       backgrounds they're always composited against. --cap-color-outline
+       keeps adapting -- its two values are both near-black, so there's no
+       matching risk. */
+    --cap-color-outline: #0a0d0e;
   }
 
   #social .button-icon {

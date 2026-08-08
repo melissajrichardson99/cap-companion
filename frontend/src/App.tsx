@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { api, type BingoCard, type CoinsSummary, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { BingoScreen } from './components/BingoScreen'
+import { BrandLogo } from './components/BrandLogo'
 import { CollectiblesScreen } from './components/CollectiblesScreen'
 import { ContactStaffModal } from './components/ContactStaffModal'
 import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
+import { NavMenu } from './components/NavMenu'
+import { CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, SearchIcon } from './components/NavIcons'
 import { PassportModal } from './components/PassportModal'
 import { PhotoScreen } from './components/PhotoScreen'
 import { PuzzleScreen } from './components/PuzzleScreen'
@@ -19,6 +23,16 @@ import './components/shared.css'
 import './App.css'
 
 type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'collectibles' | 'photos'
+
+const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
+  { key: 'map', label: 'Map', icon: <MapPinIcon /> },
+  { key: 'bingo', label: 'Bingo Card', icon: <GridIcon /> },
+  { key: 'puzzles', label: 'Puzzles', icon: <PuzzlePieceIcon /> },
+  { key: 'scoring', label: 'Scoring Sheet', icon: <ClipboardIcon /> },
+  { key: 'hunt', label: 'Scavenger Hunt', icon: <SearchIcon /> },
+  { key: 'collectibles', label: 'Collectibles', icon: <PawIcon /> },
+  { key: 'photos', label: 'Favorite Photo', icon: <CameraIcon /> },
+]
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('map')
@@ -227,7 +241,9 @@ function App() {
     return (
       <div id="app-root">
         <header className="app-header">
-          <h1 className="app-title">Cobb's Adventure Park</h1>
+          <div className="app-header-top">
+            <BrandLogo />
+          </div>
         </header>
         <main className="app-main">
           <ScanScreen
@@ -246,71 +262,17 @@ function App() {
   return (
     <div id="app-root">
       <header className="app-header">
-        <h1 className="app-title">Cobb's Adventure Park</h1>
-        <nav className="app-tabs">
-          <button
-            type="button"
-            className={`app-tab ${activeTab === 'map' ? 'app-tab-active' : ''}`}
-            onClick={() => setActiveTab('map')}
-          >
-            Map
-          </button>
-          <button
-            type="button"
-            className={`app-tab ${activeTab === 'bingo' ? 'app-tab-active' : ''}`}
-            onClick={() => setActiveTab('bingo')}
-          >
-            Bingo Card
-          </button>
-          <button
-            type="button"
-            className={`app-tab ${activeTab === 'puzzles' ? 'app-tab-active' : ''}`}
-            onClick={() => setActiveTab('puzzles')}
-          >
-            Puzzles
-          </button>
-          <button
-            type="button"
-            className={`app-tab ${activeTab === 'scoring' ? 'app-tab-active' : ''}`}
-            onClick={() => setActiveTab('scoring')}
-          >
-            Scoring Sheet
-          </button>
-          <button
-            type="button"
-            className={`app-tab ${activeTab === 'hunt' ? 'app-tab-active' : ''}`}
-            onClick={() => setActiveTab('hunt')}
-          >
-            Scavenger Hunt
-          </button>
-          <button
-            type="button"
-            className={`app-tab ${activeTab === 'collectibles' ? 'app-tab-active' : ''}`}
-            onClick={() => setActiveTab('collectibles')}
-          >
-            Collectibles
-          </button>
-          <button
-            type="button"
-            className={`app-tab ${activeTab === 'photos' ? 'app-tab-active' : ''}`}
-            onClick={() => setActiveTab('photos')}
-          >
-            Favorite Photo
-          </button>
-        </nav>
-        <div className="app-header-actions">
-          <span className="app-coin-total" title="Cobb Coins earned">
-            🪙 {coinsSummary?.total ?? 0}
-          </span>
-          <button type="button" className="btn btn-secondary" onClick={() => setShowScanEntry(true)}>
-            Scan QR
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => setShowPassport(true)}>
-            Generate Passport
-          </button>
-          <button type="button" className="btn btn-primary" onClick={() => setShowContactStaff(true)}>
-            Contact Staff
-          </button>
+        <div className="app-header-top">
+          <BrandLogo />
+          <NavMenu
+            tabs={TABS}
+            activeTab={activeTab}
+            onSelectTab={setActiveTab}
+            coinTotal={coinsSummary?.total ?? 0}
+            onScanQr={() => setShowScanEntry(true)}
+            onGeneratePassport={() => setShowPassport(true)}
+            onContactStaff={() => setShowContactStaff(true)}
+          />
         </div>
       </header>
 

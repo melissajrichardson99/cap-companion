@@ -3,6 +3,8 @@ import type { MapNode, VisitNodeResponse } from '../api'
 import { NodeDetailPopup } from './NodeDetailPopup'
 import './MapScreen.css'
 
+const FRAME_CORNERS = ['tl', 'tr', 'bl', 'br'] as const
+
 const CATEGORY_LABEL: Record<MapNode['category'], string> = {
   attraction: 'Attraction',
   animal: 'Animal Habitat',
@@ -135,37 +137,44 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
 
   return (
     <div className="map-screen">
-      <div className="map-image-wrap">
-        <img src="/park-map.png" alt="Cobb's Adventure Park map" className="map-image" />
-        {positioned.map((node) => {
-          const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
-          const stateNote = node.state !== 'not_visited' ? `, ${node.state.replace('_', ' ')}` : ''
-          return (
-            <button
-              type="button"
-              key={node.id}
-              className={`map-pin map-pin-${node.category} map-pin-${node.state}`}
-              style={{ left: `${node.x_pct}%`, top: `${node.y_pct}%` }}
-              onClick={() => setSelectedNode(node)}
-              aria-label={`${node.name} (${CATEGORY_LABEL[node.category]}${stateNote})`}
-            >
-              {uncompletedCount > 0 && (
-                <span className="map-pin-tile-badge" aria-hidden="true">
-                  {uncompletedCount}
-                </span>
-              )}
-              <svg className="map-pin-shape" viewBox="0 0 30 30" width="30" height="30" aria-hidden="true">
-                <PinShapeVector category={node.category} />
-                <text className="map-pin-shape-text" x="15" y="15" textAnchor="middle" dominantBaseline="central">
-                  {pinShapeContent(node)}
-                </text>
-              </svg>
-              <span className="map-pin-label" aria-hidden="true">
-                {node.name}
-              </span>
-            </button>
-          )
-        })}
+      <div className="map-scene">
+        <div className="map-frame">
+          {FRAME_CORNERS.map((corner) => (
+            <span key={corner} className={`map-frame-bolt map-frame-bolt-${corner}`} aria-hidden="true" />
+          ))}
+          <div className="map-image-wrap">
+            <img src="/park-map.png" alt="Cobb's Adventure Park map" className="map-image" />
+            {positioned.map((node) => {
+              const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
+              const stateNote = node.state !== 'not_visited' ? `, ${node.state.replace('_', ' ')}` : ''
+              return (
+                <button
+                  type="button"
+                  key={node.id}
+                  className={`map-pin map-pin-${node.category} map-pin-${node.state}`}
+                  style={{ left: `${node.x_pct}%`, top: `${node.y_pct}%` }}
+                  onClick={() => setSelectedNode(node)}
+                  aria-label={`${node.name} (${CATEGORY_LABEL[node.category]}${stateNote})`}
+                >
+                  {uncompletedCount > 0 && (
+                    <span className="map-pin-tile-badge" aria-hidden="true">
+                      {uncompletedCount}
+                    </span>
+                  )}
+                  <svg className="map-pin-shape" viewBox="0 0 30 30" width="30" height="30" aria-hidden="true">
+                    <PinShapeVector category={node.category} />
+                    <text className="map-pin-shape-text" x="15" y="15" textAnchor="middle" dominantBaseline="central">
+                      {pinShapeContent(node)}
+                    </text>
+                  </svg>
+                  <span className="map-pin-label" aria-hidden="true">
+                    {node.name}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {unplaced.length > 0 && (

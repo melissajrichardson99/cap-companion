@@ -1,67 +1,52 @@
 #app-root {
   max-width: 900px;
   margin: 0 auto;
-  padding: 24px;
+  /* min-height: 100% (percentage of #root) silently did nothing: #root
+     (index.css) is a flex column, and #app-root -- its only child -- has no
+     flex-grow, so it never stretched to fill #root's 100svh floor. On any
+     page shorter than the viewport that left a gap below the content where
+     html's own background showed through (white in light mode, near-black
+     in dark mode -- the "black area at the bottom of the page" bug). A
+     same-element min-height in a real length unit sidesteps the percentage
+     dependency entirely; display:flex + .app-main's flex:1 (below) then
+     lets that full-viewport height actually reach the active tab's screen. */
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
   text-align: left;
-  min-height: 100%;
+  font-family: var(--cap-font-body);
+  background: var(--cap-color-page-bg);
 }
 
 .app-header {
+  background: var(--cap-color-header-green);
+  border-bottom: var(--cap-outline-width) solid var(--cap-color-outline);
+  padding: var(--cap-space-3) var(--cap-space-5);
+}
+
+.app-header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.app-title {
-  font-size: 28px;
-  margin: 0;
-  letter-spacing: -0.4px;
-}
-
-.app-tabs {
-  display: flex;
-  gap: 4px;
-  background: var(--code-bg);
-  border-radius: 10px;
-  padding: 4px;
-}
-
-.app-tab {
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.app-tab-active {
-  background: var(--accent);
-  color: #fff;
+  gap: var(--cap-space-4);
 }
 
 .app-main {
-  padding-bottom: 60px;
-}
-
-.app-header-actions {
+  /* flex:1 makes app-main (and whichever single screen it holds) claim the
+     full height left over after the header, instead of shrinking to
+     content -- see the #app-root comment above. A non-flexed block child
+     (every screen except .map-screen, which opts in via its own flex:1)
+     renders identically to before inside a flex column, so this doesn't
+     change any other tab's layout. */
+  flex: 1;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  padding: var(--cap-space-5) var(--cap-space-5) 60px;
 }
 
-.app-coin-total {
-  font-size: 15px;
-  font-weight: 700;
-  padding: 8px 14px;
-  border-radius: 8px;
-  background: var(--code-bg);
-  color: var(--text-h);
-  white-space: nowrap;
+.brand-logo {
+  height: 48px;
+  width: auto;
+  flex-shrink: 0;
+  filter: drop-shadow(2px 3px 0 rgba(10, 13, 14, 0.25));
 }
