@@ -85,3 +85,30 @@ export function CameraIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+// Speech bubble -- Contact Staff is a two-way "ask a question / flag an
+// emergency" flow, so a message bubble reads better than a one-way
+// megaphone/broadcast icon. Nothing else in the app covers this shape.
+export function MessageIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M2.5 5h13a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8.5L5 17.5V14H2.5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" />
+      <line x1="4.8" y1="8" x2="13.2" y2="8" />
+      <line x1="4.8" y1="10.8" x2="10.5" y2="10.8" />
+    </svg>
+  )
+}
+
+// Passport booklet -- rounded card with a "photo" circle and text lines,
+// distinct from ClipboardIcon (which is used elsewhere for lists/sheets).
+// Nothing else in the app covers this shape.
+export function PassportIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <rect x="4" y="2" width="12" height="16" rx="1.5" />
+      <circle cx="10" cy="7.5" r="2.3" />
+      <line x1="7" y1="12.5" x2="13" y2="12.5" />
+      <line x1="7" y1="15" x2="13" y2="15" />
+    </svg>
+  )
+}

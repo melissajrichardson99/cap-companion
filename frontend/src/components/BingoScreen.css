@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  font-family: var(--cap-font-body);
 }
 
 .bingo-loading {
@@ -9,17 +10,39 @@
   text-align: center;
 }
 
+/* One-off departure from the .cap-parchment-card surface every other
+   card/popup uses (Puzzles, etc.) -- the Bingo card reads as a wood-plank
+   sign board instead, using the same .map-frame/.nav-menu-frame wood-grain
+   gradient as the rest of the app's frames (not the flat Cobb Coins pill
+   tone, --cap-color-wood-sign, which stays its own one-off). */
+.bingo-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: var(--cap-space-4);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: var(--cap-radius-md);
+  box-shadow:
+    var(--cap-shadow-pop-sm),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.25);
+}
+
 .bingo-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
-}
-
-.bingo-owner {
-  font-size: 18px;
-  margin: 0;
 }
 
 .bingo-milestone-summary {
@@ -63,33 +86,53 @@
   font: inherit;
   font-size: 11.5px;
   line-height: 1.25;
-  padding: 6px;
+  padding: 8px 6px 6px;
   border-radius: 8px;
   cursor: pointer;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   text-align: center;
   position: relative;
-  border: 1.5px solid var(--border);
-  color: var(--text-h);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
   word-break: break-word;
   hyphens: auto;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
+/* Incomplete vs. completed reads as the board "blacking out" one tile at a
+   time: tan/outline until filled in, then flipped to solid dark green --
+   the base color itself carries the state, not a badge layered on top of a
+   uniform tile color. */
 .bingo-tile-open {
-  background: var(--bg);
-}
-
-.bingo-tile-open:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--accent-bg);
+  background: var(--cap-color-parchment);
+  border-color: var(--cap-color-nav-panel-green);
+  color: var(--cap-color-nav-panel-green);
 }
 
 .bingo-tile-completed {
-  background: var(--state-visited-bg);
-  border-color: var(--state-visited);
-  color: var(--state-visited);
+  background: var(--cap-color-nav-panel-green);
+  color: #fff;
+}
+
+.bingo-tile-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--cap-color-trail-tan);
+  border: 1.5px solid var(--cap-color-outline);
+}
+
+.bingo-tile-open:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--cap-shadow-pop);
+}
+
+.bingo-tile-completed {
   cursor: default;
 }
 
@@ -98,20 +141,28 @@
 }
 
 .bingo-tile-completed .bingo-tile-label {
-  opacity: 0.65;
+  opacity: 0.7;
 }
 
 .bingo-tile-stamp {
   position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 12px;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
   font-weight: 800;
-  color: var(--state-visited);
+  background: var(--cap-color-sunset-orange);
+  border: 2px solid var(--cap-color-outline);
+  color: #fff;
 }
 
 .bingo-tile:disabled {
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 /* Milestone shape highlight — exact tiles forming the completed line/X/blackout,
@@ -130,26 +181,62 @@
   }
 }
 
-.bingo-tile-milestone-line {
+.bingo-tile-milestone-line,
+.bingo-tile-milestone-x,
+.bingo-tile-milestone-blackout {
   animation: tile-sweep 0.4s ease-out forwards;
-  border-color: var(--milestone-line);
-  background: color-mix(in srgb, var(--milestone-line) 22%, var(--bg));
-  box-shadow: 0 0 0 2px var(--milestone-line);
   z-index: 1;
+}
+
+.bingo-tile-milestone-line {
+  border-color: var(--milestone-line);
+  box-shadow: 0 0 0 2px var(--milestone-line);
 }
 
 .bingo-tile-milestone-x {
-  animation: tile-sweep 0.4s ease-out forwards;
   border-color: var(--milestone-x);
-  background: color-mix(in srgb, var(--milestone-x) 22%, var(--bg));
   box-shadow: 0 0 0 2px var(--milestone-x);
-  z-index: 1;
 }
 
 .bingo-tile-milestone-blackout {
-  animation: tile-sweep 0.4s ease-out forwards;
   border-color: var(--milestone-blackout);
-  background: color-mix(in srgb, var(--milestone-blackout) 28%, var(--bg));
   box-shadow: 0 0 0 2px var(--milestone-blackout);
-  z-index: 1;
+}
+
+/* Milestone tiles are completed by definition (a line/X/blackout is only
+   achieved by filling in the tiles that form it), so
+   .bingo-tile-completed.bingo-tile-milestone-* is the path that actually
+   renders. The .bingo-tile-open pairing is unreachable today but kept
+   correct anyway -- mixing into the dark-green base would otherwise stay
+   dark-on-dark against a tan tile if that ever changes, and the milestone
+   text color needs to flip with it the same way the base tile states do
+   above. */
+.bingo-tile-completed.bingo-tile-milestone-line {
+  background: color-mix(in srgb, var(--milestone-line) 35%, var(--cap-color-nav-panel-green));
+  color: #fff;
+}
+
+.bingo-tile-open.bingo-tile-milestone-line {
+  background: color-mix(in srgb, var(--milestone-line) 35%, var(--cap-color-parchment));
+  color: var(--cap-color-nav-panel-green);
+}
+
+.bingo-tile-completed.bingo-tile-milestone-x {
+  background: color-mix(in srgb, var(--milestone-x) 35%, var(--cap-color-nav-panel-green));
+  color: #fff;
+}
+
+.bingo-tile-open.bingo-tile-milestone-x {
+  background: color-mix(in srgb, var(--milestone-x) 35%, var(--cap-color-parchment));
+  color: var(--cap-color-nav-panel-green);
+}
+
+.bingo-tile-completed.bingo-tile-milestone-blackout {
+  background: color-mix(in srgb, var(--milestone-blackout) 40%, var(--cap-color-nav-panel-green));
+  color: #fff;
+}
+
+.bingo-tile-open.bingo-tile-milestone-blackout {
+  background: color-mix(in srgb, var(--milestone-blackout) 40%, var(--cap-color-parchment));
+  color: var(--cap-color-nav-panel-green);
 }

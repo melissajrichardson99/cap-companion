@@ -1,7 +1,14 @@
+/* Standalone view (App.tsx mounts this outside #app-root -- no shared
+   header/nav with the guest-facing app), so this screen provides its own
+   page background/font instead of inheriting #app-root's. */
 .staff-requests-screen {
-  max-width: 720px;
+  min-height: 100svh;
+  box-sizing: border-box;
+  max-width: 860px;
   margin: 0 auto;
-  padding: 24px;
+  padding: var(--cap-space-5);
+  font-family: var(--cap-font-body);
+  background: var(--cap-color-page-bg);
 }
 
 .staff-requests-loading {
@@ -13,16 +20,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  gap: var(--cap-space-4);
+  margin-bottom: var(--cap-space-5);
 }
 
-.staff-requests-title {
-  font-size: 24px;
+.staff-requests-header .cap-sign-board {
   margin: 0;
 }
 
 .staff-requests-empty {
-  color: var(--text);
+  color: var(--cap-color-body-text);
 }
 
 .staff-requests-list {
@@ -41,14 +48,11 @@
   gap: 12px;
   flex-wrap: wrap;
   padding: 14px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--bg);
 }
 
 .staff-request-emergency {
-  border-color: var(--state-closed);
-  background: var(--state-closed-bg);
+  border-color: var(--cap-color-contact-red);
+  background: color-mix(in srgb, var(--cap-color-contact-red) 10%, var(--cap-color-parchment));
 }
 
 .staff-request-main {
@@ -64,42 +68,44 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--code-bg);
-  color: var(--text-h);
+  border-radius: var(--cap-radius-sm);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1.5px solid var(--cap-color-outline);
+  color: var(--cap-color-ink);
 }
 
 .staff-request-type-badge-emergency {
-  background: var(--state-closed);
+  background: var(--cap-color-contact-red);
+  border-color: var(--cap-color-outline);
   color: #fff;
 }
 
 .staff-request-location {
-  font-weight: 600;
-  color: var(--text-h);
+  font-weight: 700;
+  color: var(--cap-color-ink);
 }
 
 .staff-request-time {
   font-size: 13px;
-  color: var(--text);
+  color: var(--cap-color-body-text);
 }
 
 .staff-request-status-badge {
   font-size: 12px;
+  font-weight: 700;
   padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--state-not-visited-bg);
-  color: var(--state-not-visited);
+  border-radius: var(--cap-radius-sm);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1.5px solid var(--cap-color-outline);
+  color: var(--cap-color-body-text);
 }
 
 .staff-request-status-badge-acknowledged {
-  background: var(--accent-bg);
-  color: var(--accent);
+  color: var(--cap-color-sunset-orange-deep);
 }
 
 .staff-request-status-badge-resolved {
-  background: var(--state-visited-bg);
-  color: var(--state-visited);
+  color: var(--cap-color-adventure-green);
 }
 
 .staff-request-actions {
@@ -108,19 +114,21 @@
 }
 
 .staff-photos-section {
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--cap-space-5);
+  padding-bottom: var(--cap-space-5);
+  border-bottom: 2px solid var(--cap-color-outline);
 }
 
 .staff-photos-title {
+  font-family: var(--cap-font-display);
   font-size: 17px;
+  color: var(--cap-color-ink);
   margin: 0 0 12px;
 }
 
 .staff-photos-loading,
 .staff-photos-empty {
-  color: var(--text);
+  color: var(--cap-color-body-text);
 }
 
 .staff-photos-list {
@@ -138,25 +146,52 @@
   gap: 12px;
   flex-wrap: wrap;
   padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--bg);
 }
 
 .staff-photo-thumb {
   width: 56px;
   height: 56px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--cap-radius-sm);
+  border: 1.5px solid var(--cap-color-outline);
 }
 
 .staff-photo-label {
-  font-weight: 600;
-  color: var(--text-h);
+  font-weight: 700;
+  color: var(--cap-color-ink);
   flex: 1;
 }
 
 .staff-photo-actions {
   display: flex;
   gap: 8px;
+}
+
+.staff-requests-screen .btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.staff-requests-screen .btn:hover:not(:disabled) {
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+.staff-requests-screen .btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.staff-requests-screen .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+}
+
+.staff-requests-screen .btn-secondary {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--cap-color-ink);
 }

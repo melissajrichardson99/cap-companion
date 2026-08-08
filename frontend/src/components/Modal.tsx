@@ -5,11 +5,12 @@ interface ModalProps {
   onClose: () => void
   children: ReactNode
   labelledBy?: string
+  className?: string
 }
 
 // Generic accessible popup shell — backdrop click + Escape both close it.
 // Replaces the browser confirm()/alert() dialogs from the smoke-test build.
-export function Modal({ onClose, children, labelledBy }: ModalProps) {
+export function Modal({ onClose, children, labelledBy, className }: ModalProps) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -21,7 +22,7 @@ export function Modal({ onClose, children, labelledBy }: ModalProps) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal-panel"
+        className={className ? `modal-panel ${className}` : 'modal-panel'}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}

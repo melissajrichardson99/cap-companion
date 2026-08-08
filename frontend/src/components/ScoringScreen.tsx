@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ScoringGame } from '../api'
 import { ScoringSessionModal } from './ScoringSessionModal'
+import { ClipboardIcon } from './NavIcons'
 import './ScoringScreen.css'
 
 interface ScoringScreenProps {
@@ -30,15 +31,27 @@ export function ScoringScreen({ games, error, onReload, onCoinsChanged }: Scorin
 
   return (
     <div className="scoring-screen">
+      <h1 className="cap-sign-board">
+        <ClipboardIcon className="cap-sign-board-icon" />
+        Scoring Sheet
+      </h1>
+
       <div className="scoring-game-list">
         {games.map((game) => (
-          <div className="scoring-game-card" key={game.id}>
-            <h2 className="scoring-game-name">{game.name}</h2>
-            <p className="scoring-game-rules">{game.rules_text}</p>
-            <p className="scoring-game-win-condition">{game.win_condition_text}</p>
-            <button type="button" className="btn btn-primary" onClick={() => setActiveGame(game)}>
-              Start Scoring
-            </button>
+          <div className="scoring-card-frame" key={game.id}>
+            <div className="scoring-game-card cap-parchment-card">
+              <div className="scoring-game-header">
+                <span className="scoring-icon-badge" aria-hidden="true">
+                  <ClipboardIcon />
+                </span>
+                <h2 className="scoring-game-name">{game.name}</h2>
+              </div>
+              <p className="scoring-game-rules">{game.rules_text}</p>
+              <p className="scoring-game-win-condition">{game.win_condition_text}</p>
+              <button type="button" className="btn scoring-start-btn" onClick={() => setActiveGame(game)}>
+                Start Scoring
+              </button>
+            </div>
           </div>
         ))}
       </div>

@@ -1,4 +1,5 @@
 import type { CoinsSummary } from '../api'
+import { PawIcon } from './NavIcons'
 import './CollectiblesScreen.css'
 
 interface CollectiblesScreenProps {
@@ -25,6 +26,11 @@ export function CollectiblesScreen({ summary, error, onReload }: CollectiblesScr
 
   return (
     <div className="collectibles-screen">
+      <h1 className="cap-sign-board">
+        <PawIcon className="cap-sign-board-icon" />
+        Collectibles
+      </h1>
+
       <p className="collectibles-intro">
         Earn Cobb Coins by finishing Scavenger Hunt characters, Puzzle Timer challenges, Scoring Sheet wins, and
         Bingo tiles. Collect every badge!
@@ -34,7 +40,7 @@ export function CollectiblesScreen({ summary, error, onReload }: CollectiblesScr
         {summary.collectibles.map((collectible) => (
           <div
             key={collectible.id}
-            className={`collectible-card ${collectible.unlocked ? 'collectible-unlocked' : 'collectible-locked'}`}
+            className={`collectible-card cap-parchment-card ${collectible.unlocked ? 'collectible-unlocked' : 'collectible-locked'}`}
           >
             <span className="collectible-icon" aria-hidden="true">
               {collectible.unlocked ? collectible.icon : '🔒'}

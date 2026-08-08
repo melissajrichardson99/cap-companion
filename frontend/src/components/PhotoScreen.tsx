@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { api, type PhotoSubmission } from '../api'
 import { getVoterSessionId } from '../voterSession'
+import { CameraIcon } from './NavIcons'
 import './PhotoScreen.css'
 
 interface PhotoScreenProps {
@@ -53,7 +54,12 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
 
   return (
     <div className="photo-screen">
-      <section className="photo-submit">
+      <h1 className="cap-sign-board">
+        <CameraIcon className="cap-sign-board-icon" />
+        Favorite Photo
+      </h1>
+
+      <section className="photo-submit cap-parchment-card">
         <h2 className="photo-section-title">Submit Your Favorite Photo</h2>
         <p className="photo-section-desc">
           Share a favorite moment from your visit. A staff member reviews every photo before it goes up for voting.
@@ -97,7 +103,7 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
         ) : (
           <div className="photo-gallery-grid">
             {gallery.map((photo) => (
-              <div key={photo.id} className="photo-card">
+              <div key={photo.id} className="photo-card cap-parchment-card">
                 <img
                   src={photo.photo_url}
                   alt={photo.guest_label ?? 'Guest submitted park photo'}

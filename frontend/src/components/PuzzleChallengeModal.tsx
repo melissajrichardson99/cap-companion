@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, type Puzzle, type PuzzleAttempt, type PuzzleChallenge } from '../api'
 import { Modal } from './Modal'
 import { formatSeconds } from './PuzzleScreen'
+import { PuzzlePieceIcon } from './NavIcons'
 import './PuzzleChallengeModal.css'
 
 type TimerState = 'idle' | 'running' | 'confirming' | 'result'
@@ -84,23 +85,32 @@ export function PuzzleChallengeModal({ puzzle, challenge, onClose, onCoinsChange
   const hasHints = challenge.solution_type !== 'none'
   const finalTierLabel = challenge.solution_type === 'exact' ? 'Full Solution' : 'Full Strategy'
 
+  const title = (
+    <h2 id="puzzle-challenge-title" className="puzzle-modal-title">
+      <span className="puzzle-modal-icon-badge" aria-hidden="true">
+        <PuzzlePieceIcon />
+      </span>
+      {puzzle.name} — {challenge.label}
+    </h2>
+  )
+
   if (timerState === 'confirming') {
     return (
-      <Modal onClose={onClose} labelledBy="puzzle-challenge-title">
-        <h2 id="puzzle-challenge-title" className="puzzle-modal-title">
-          {puzzle.name} — {challenge.label}
-        </h2>
-        <p className="puzzle-confirm-question">Did you complete the puzzle?</p>
-        <div className="puzzle-modal-actions">
-          <button type="button" className="btn btn-secondary" disabled={recording} onClick={() => answerCompleted(false)}>
-            No
-          </button>
-          <button type="button" className="btn btn-primary" disabled={recording} onClick={() => answerCompleted(true)}>
-            Yes
-          </button>
+      <Modal onClose={onClose} labelledBy="puzzle-challenge-title" className="puzzle-modal-frame">
+        <div className="puzzle-modal-inner">
+          {title}
+          <p className="puzzle-confirm-question">Did you complete the puzzle?</p>
+          <div className="puzzle-modal-actions">
+            <button type="button" className="btn btn-secondary" disabled={recording} onClick={() => answerCompleted(false)}>
+              No
+            </button>
+            <button type="button" className="btn btn-primary" disabled={recording} onClick={() => answerCompleted(true)}>
+              Yes
+            </button>
+          </div>
+          {recording && <p className="puzzle-timer-status">Saving…</p>}
+          {attemptError && <p className="screen-error">Couldn't save that attempt: {attemptError}</p>}
         </div>
-        {recording && <p className="puzzle-timer-status">Saving…</p>}
-        {attemptError && <p className="screen-error">Couldn't save that attempt: {attemptError}</p>}
       </Modal>
     )
   }
@@ -108,70 +118,72 @@ export function PuzzleChallengeModal({ puzzle, challenge, onClose, onCoinsChange
   if (timerState === 'result' && resultAttempt) {
     const staffTime = challenge.staff_time_seconds
     return (
-      <Modal onClose={onClose} labelledBy="puzzle-challenge-title">
-        <h2 id="puzzle-challenge-title" className="puzzle-modal-title">
-          {puzzle.name} — {challenge.label}
-        </h2>
-        <div className="puzzle-result">
-          <span className="puzzle-result-time">{formatSeconds(resultAttempt.elapsed_seconds)}</span>
-          {staffTime !== null ? (
-            <p className="puzzle-result-comparison">{compareToStaffTime(resultAttempt.elapsed_seconds, staffTime)}</p>
-          ) : (
-            <p className="puzzle-result-no-staff-time">No staff time set for this one yet.</p>
-          )}
-          <p className="puzzle-result-hints">Hints used: {resultAttempt.hints_used}/3</p>
-        </div>
-        <div className="puzzle-modal-actions">
-          <button type="button" className="btn btn-primary" onClick={backToStart}>
-            Try Again
-          </button>
+      <Modal onClose={onClose} labelledBy="puzzle-challenge-title" className="puzzle-modal-frame">
+        <div className="puzzle-modal-inner">
+          {title}
+          <div className="puzzle-result">
+            <span className="puzzle-result-time">{formatSeconds(resultAttempt.elapsed_seconds)}</span>
+            {staffTime !== null ? (
+              <p className="puzzle-result-comparison">{compareToStaffTime(resultAttempt.elapsed_seconds, staffTime)}</p>
+            ) : (
+              <p className="puzzle-result-no-staff-time">No staff time set for this one yet.</p>
+            )}
+            <p className="puzzle-result-hints">Hints used: {resultAttempt.hints_used}/3</p>
+          </div>
+          <div className="puzzle-modal-actions">
+            <button type="button" className="btn btn-primary" onClick={backToStart}>
+              Try Again
+            </button>
+          </div>
         </div>
       </Modal>
     )
   }
 
   return (
-    <Modal onClose={onClose} labelledBy="puzzle-challenge-title">
-      <h2 id="puzzle-challenge-title" className="puzzle-modal-title">
-        {puzzle.name} — {challenge.label}
-      </h2>
-      <p className="puzzle-modal-rules">{puzzle.rules_text}</p>
-      {timerState === 'idle' && <p className="puzzle-modal-description">{challenge.description}</p>}
+    <Modal onClose={onClose} labelledBy="puzzle-challenge-title" className="puzzle-modal-frame">
+      <div className="puzzle-modal-inner">
+        {title}
+        <p className="puzzle-modal-rules">{puzzle.rules_text}</p>
+        {timerState === 'idle' && <p className="puzzle-modal-description">{challenge.description}</p>}
 
-      <div className="puzzle-timer">
-        <span className="puzzle-timer-display">{formatSeconds(Math.round(elapsedMs / 1000))}</span>
-        <div className="puzzle-timer-controls">
-          {timerState !== 'running' ? (
-            <button type="button" className="btn btn-primary" onClick={start}>
-              Start
-            </button>
-          ) : (
-            <button type="button" className="btn btn-primary" onClick={stop}>
-              Stop
-            </button>
-          )}
+        <div className="puzzle-timer">
+          <span className="puzzle-timer-display">{formatSeconds(Math.round(elapsedMs / 1000))}</span>
+          <div className="puzzle-timer-controls">
+            {timerState !== 'running' ? (
+              <button type="button" className="btn btn-primary" onClick={start}>
+                Start
+              </button>
+            ) : (
+              <button type="button" className="btn btn-primary" onClick={stop}>
+                Stop
+              </button>
+            )}
+          </div>
         </div>
+
+        {hasHints && timerState === 'running' && (
+          <div className="puzzle-hints-frame">
+            <div className="puzzle-hints">
+              <h3 className="puzzle-section-title">Hints</h3>
+              {HINT_TIERS.slice(0, hintsRevealed).map((tier, i) => (
+                <p key={tier} className="puzzle-hint-text">
+                  <strong>{i === 2 ? finalTierLabel : `Hint ${i + 1}`}:</strong> {hintText(tier)}
+                </p>
+              ))}
+              {hintsRevealed < 3 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setHintsRevealed((n) => n + 1)}
+                >
+                  {hintsRevealed === 2 ? `Show ${finalTierLabel}` : `Show Hint (${hintsRevealed + 1}/3)`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-
-      {hasHints && timerState === 'running' && (
-        <div className="puzzle-hints">
-          <h3 className="puzzle-section-title">Hints</h3>
-          {HINT_TIERS.slice(0, hintsRevealed).map((tier, i) => (
-            <p key={tier} className="puzzle-hint-text">
-              <strong>{i === 2 ? finalTierLabel : `Hint ${i + 1}`}:</strong> {hintText(tier)}
-            </p>
-          ))}
-          {hintsRevealed < 3 && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setHintsRevealed((n) => n + 1)}
-            >
-              {hintsRevealed === 2 ? `Show ${finalTierLabel}` : `Show Hint (${hintsRevealed + 1}/3)`}
-            </button>
-          )}
-        </div>
-      )}
     </Modal>
   )
 }

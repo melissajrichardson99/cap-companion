@@ -92,11 +92,27 @@
   --cap-color-nav-panel-green: rgb(44, 62, 25);
   --cap-color-wood-sign: rgb(131, 105, 61);
 
+  /* Content-card parchment, used by the Bingo and Puzzles screens (see
+     CLAUDE.md build-priority note). The title-sign background and the Bingo
+     board's main surface used to have their own flat wood token here
+     (--cap-color-sign-board) but now share the .map-frame/.nav-menu-frame
+     wood-grain gradient directly instead, so this token was removed --
+     --cap-color-wood-sign remains the one flat wood fill left (the Cobb
+     Coins pill in the nav). */
+  --cap-color-parchment: rgb(240, 222, 192);
+
   /* Neutrals -- a dark warm-teal ink (not stark black) and a pale
      blue-tinted surface (not cream) so the neutrals sit inside the same
      family as wood-plank-blue instead of fighting the saturated palette.
-     --cap-color-page-bg is a light wash of wood-plank-blue (not the
-     saturated signage version) and is the app's page background. */
+     --cap-color-page-bg is the flat tan "mat" wash (same value the Map
+     screen's wood frame sits on) and is the app's page background, applied
+     once on #app-root (App.css) -- the shared root every screen mounts
+     inside -- so new screens inherit it automatically instead of needing
+     their own copy. Previously this token was a pale blue that only the Map
+     screen's own hardcoded background-color painted over; every other
+     screen (Bingo, Puzzles) fell through to that stale blue and looked
+     white/washed-out by comparison. MapScreen.css now reads this same
+     token instead of repeating the hex, so there's one source of truth. */
   --cap-color-ink: #1e2b2e;
   --cap-color-outline: #14181a;
   --cap-color-body-text: #45585d;
@@ -107,7 +123,7 @@
      that should track the OS theme. */
   --cap-color-surface: var(--cap-color-sunset-orange);
   --cap-color-surface-sunken: #eaf2f6;
-  --cap-color-page-bg: #eef4f8;
+  --cap-color-page-bg: #e8d9bb;
   /* Text/icon color for content sitting directly on the header-green
      chrome -- fixed white regardless of theme, same reasoning as the brand
      hues above. */

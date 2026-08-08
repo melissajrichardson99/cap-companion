@@ -1,11 +1,65 @@
+/* Wood-grain frame/border treatment, same recipe as Puzzles'
+   .puzzle-modal-frame -- replaces Modal.css's default panel background so
+   this modal reads as "framed" the same way the Puzzle challenge modal is. */
+.scoring-modal-frame {
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.scoring-modal-inner {
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-4);
+  font-family: var(--cap-font-body);
+}
+
 .scoring-modal-title {
+  display: flex;
+  align-items: center;
+  gap: var(--cap-space-3);
+  font-family: var(--cap-font-display);
   font-size: 19px;
+  color: var(--cap-color-ink);
   margin: 0 0 8px;
+}
+
+.scoring-modal-icon-badge {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cap-color-adventure-green);
+  border: 2px solid var(--cap-color-outline);
+  color: #fff;
+}
+
+.scoring-modal-icon-badge svg {
+  width: 18px;
+  height: 18px;
 }
 
 .scoring-modal-rules {
   font-size: 14px;
   line-height: 145%;
+  color: var(--cap-color-body-text);
   margin: 0 0 4px;
 }
 
@@ -13,8 +67,8 @@
   font-size: 13px;
   line-height: 145%;
   margin: 0 0 16px;
-  color: var(--accent);
-  font-weight: 600;
+  color: var(--cap-color-sunset-orange-deep);
+  font-weight: 700;
 }
 
 .scoring-modal-actions {
@@ -25,11 +79,12 @@
 }
 
 .scoring-section-title {
+  font-family: var(--cap-font-display);
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0 0 8px;
-  color: var(--text);
+  color: var(--cap-color-ink);
 }
 
 .scoring-setup {
@@ -37,8 +92,8 @@
   flex-direction: column;
   gap: 8px;
   padding: 16px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-top: 2px solid var(--cap-color-outline);
+  border-bottom: 2px solid var(--cap-color-outline);
   margin: 12px 0;
 }
 
@@ -54,9 +109,9 @@
   font-size: 15px;
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--cap-color-ink);
 }
 
 .scoring-remove-player-btn {
@@ -67,9 +122,9 @@
 .scoring-tie-banner {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-h);
-  background: var(--accent-bg);
-  border: 1px solid var(--accent-border);
+  color: var(--cap-color-ink);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid var(--cap-color-outline);
   border-radius: 8px;
   padding: 10px 12px;
   margin: 0 0 16px;
@@ -82,9 +137,9 @@
   gap: 12px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-h);
-  background: var(--state-visited-bg);
-  border: 1px solid var(--state-visited);
+  color: var(--cap-color-ink);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid var(--cap-color-adventure-green);
   border-radius: 8px;
   padding: 10px 12px;
   margin: 0 0 16px;
@@ -107,9 +162,10 @@
 }
 
 .scoring-player-row {
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--cap-color-outline);
   border-radius: 10px;
   padding: 12px;
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .scoring-player-header {
@@ -120,15 +176,15 @@
 }
 
 .scoring-player-name {
-  font-weight: 600;
-  color: var(--text-h);
+  font-weight: 700;
+  color: var(--cap-color-ink);
 }
 
 .scoring-player-total {
   font-family: var(--mono);
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-h);
+  color: var(--cap-color-ink);
 }
 
 .scoring-event-buttons {
@@ -145,7 +201,7 @@
 .scoring-last-entry {
   font-size: 13px;
   margin: 16px 0 0;
-  opacity: 0.8;
+  color: var(--cap-color-body-text);
 }
 
 .scoring-win-banner {
@@ -157,7 +213,7 @@
 .scoring-win-headline {
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-h);
+  color: var(--cap-color-ink);
 }
 
 .scoring-final-totals {
@@ -168,9 +224,9 @@
 
 .scoring-final-totals td {
   padding: 8px 4px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1.5px solid var(--cap-color-outline);
   font-size: 15px;
-  color: var(--text-h);
+  color: var(--cap-color-ink);
 }
 
 .scoring-final-totals-score {
@@ -180,6 +236,35 @@
 }
 
 .scoring-final-totals-winner-row td {
-  color: var(--accent);
+  color: var(--cap-color-sunset-orange-deep);
   font-weight: 700;
+}
+
+.scoring-modal-inner .btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.scoring-modal-inner .btn:hover:not(:disabled) {
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+.scoring-modal-inner .btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.scoring-modal-inner .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+}
+
+.scoring-modal-inner .btn-secondary {
+  background: transparent;
+  color: var(--cap-color-ink);
 }

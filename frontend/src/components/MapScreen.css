@@ -19,7 +19,10 @@
   flex: 1;
   margin: calc(var(--cap-space-5) * -1) calc(var(--cap-space-5) * -1) -60px;
   padding: var(--cap-space-5) var(--cap-space-5) 60px;
-  background-color: #e8d9bb;
+  /* Same value as #app-root's page background (index.css) -- reads the
+     shared token instead of repeating the hex, now that the token itself is
+     this color, so the two can't drift apart again. */
+  background-color: var(--cap-color-page-bg);
 }
 
 .map-loading,
@@ -58,9 +61,7 @@
 
 /* Wood sign-board frame around the map. A CSS wood-grain treatment (not a
    raster crop) so the plank thickness and rounded corners scale cleanly at
-   any card size instead of stretching/tiling a fixed-resolution image --
-   the corner bolts below are the one piece pulled from the real asset,
-   since those are small and fixed-size regardless of frame size. */
+   any card size instead of stretching/tiling a fixed-resolution image. */
 .map-frame {
   position: relative;
   border-radius: clamp(16px, 4vw, 30px);
@@ -79,38 +80,6 @@
     inset 0 0 0 2px rgba(255, 255, 255, 0.12),
     inset 0 2px 4px rgba(255, 255, 255, 0.25),
     inset 0 -3px 6px rgba(0, 0, 0, 0.35);
-}
-
-.map-frame-bolt {
-  position: absolute;
-  z-index: 2;
-  width: clamp(16px, 3vw, 26px);
-  height: clamp(16px, 3vw, 26px);
-  background-image: url('../assets/map-frame-bolt.png');
-  background-size: contain;
-  background-repeat: no-repeat;
-  border-radius: 50%;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
-}
-
-.map-frame-bolt-tl {
-  top: clamp(6px, 1.6vw, 13px);
-  left: clamp(6px, 1.6vw, 13px);
-}
-
-.map-frame-bolt-tr {
-  top: clamp(6px, 1.6vw, 13px);
-  right: clamp(6px, 1.6vw, 13px);
-}
-
-.map-frame-bolt-bl {
-  bottom: clamp(6px, 1.6vw, 13px);
-  left: clamp(6px, 1.6vw, 13px);
-}
-
-.map-frame-bolt-br {
-  bottom: clamp(6px, 1.6vw, 13px);
-  right: clamp(6px, 1.6vw, 13px);
 }
 
 .map-image-wrap {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, type PhotoSubmission, type StaffRequest } from '../api'
+import { ClipboardIcon } from './NavIcons'
 import './StaffRequestsScreen.css'
 
 // Simple polling refresh rather than websockets -- fine for a POC-scale
@@ -93,7 +94,10 @@ export function StaffRequestsScreen() {
   return (
     <div className="staff-requests-screen">
       <div className="staff-requests-header">
-        <h1 className="staff-requests-title">Staff Requests</h1>
+        <h1 className="cap-sign-board">
+          <ClipboardIcon className="cap-sign-board-icon" />
+          Staff Requests
+        </h1>
         <button type="button" className="btn btn-secondary" onClick={reloadAll}>
           Refresh
         </button>
@@ -109,7 +113,7 @@ export function StaffRequestsScreen() {
         ) : (
           <ul className="staff-photos-list">
             {pendingPhotos.map((photo) => (
-              <li key={photo.id} className="staff-photo-row">
+              <li key={photo.id} className="staff-photo-row cap-parchment-card">
                 <img src={photo.photo_url} alt={photo.guest_label ?? 'Guest submitted photo'} className="staff-photo-thumb" />
                 <span className="staff-photo-label">{photo.guest_label ?? 'A guest'}</span>
                 <div className="staff-photo-actions">
@@ -141,7 +145,7 @@ export function StaffRequestsScreen() {
       ) : (
         <ul className="staff-requests-list">
           {requests.map((r) => (
-            <li key={r.id} className={`staff-request-row staff-request-${r.type}`}>
+            <li key={r.id} className={`staff-request-row cap-parchment-card staff-request-${r.type}`}>
               <div className="staff-request-main">
                 <span className={`staff-request-type-badge staff-request-type-badge-${r.type}`}>
                   {TYPE_LABEL[r.type]}

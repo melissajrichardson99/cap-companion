@@ -2,28 +2,29 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
+  font-family: var(--cap-font-body);
 }
 
 .photo-section-title {
+  font-family: var(--cap-font-display);
   font-size: 18px;
+  color: var(--cap-color-ink);
   margin: 0 0 8px;
 }
 
 .photo-section-desc {
   font-size: 14px;
+  color: var(--cap-color-body-text);
   margin: 0 0 12px;
 }
 
 .photo-submit {
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
   padding: 18px 16px;
-  background: var(--bg);
 }
 
 .photo-submitted-msg {
-  color: var(--state-visited);
-  font-weight: 600;
+  color: var(--cap-color-adventure-green);
+  font-weight: 700;
   margin: 0 0 10px;
 }
 
@@ -39,15 +40,35 @@
   font-size: 15px;
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--cap-color-ink);
   flex: 1 1 200px;
+}
+
+/* Compound selector so this reliably beats shared.css's .btn regardless of
+   import order (same fix Puzzles/Scoring use for their primary buttons). */
+.photo-submit-form .btn-primary {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.photo-submit-form .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
 }
 
 .photo-gallery-loading,
 .photo-gallery-empty {
   padding: 20px 0;
+  color: var(--cap-color-body-text);
 }
 
 .photo-gallery-grid {
@@ -57,10 +78,7 @@
 }
 
 .photo-card {
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
   overflow: hidden;
-  background: var(--bg);
   display: flex;
   flex-direction: column;
 }
@@ -82,9 +100,24 @@
 
 .photo-card-label {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text-h);
+  font-weight: 700;
+  color: var(--cap-color-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.photo-card-vote {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: transparent;
+  color: var(--cap-color-ink);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.photo-card-vote:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+  transform: translate(-1px, -1px);
 }

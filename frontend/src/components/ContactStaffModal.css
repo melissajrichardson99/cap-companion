@@ -1,15 +1,72 @@
+/* Wood-grain frame/border treatment, same recipe as Puzzles'
+   .puzzle-modal-frame. */
+.contact-staff-modal-frame {
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.contact-staff-modal-inner {
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-4);
+  font-family: var(--cap-font-body);
+}
+
 .contact-staff-title {
+  display: flex;
+  align-items: center;
+  gap: var(--cap-space-3);
+  font-family: var(--cap-font-display);
+  font-size: 19px;
+  color: var(--cap-color-ink);
   margin: 0 0 4px;
-  font-size: 20px;
+}
+
+/* Dark-red badge (not the green used elsewhere) so Contact Staff keeps its
+   own distinct "urgent" identity, matching the nav dropdown's Contact Staff
+   button. */
+.contact-staff-icon-badge {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cap-color-contact-red);
+  border: 2px solid var(--cap-color-outline);
+  color: #fff;
+}
+
+.contact-staff-icon-badge svg {
+  width: 18px;
+  height: 18px;
 }
 
 .contact-staff-subtitle {
   margin: 0 0 16px;
   font-size: 14px;
+  color: var(--cap-color-body-text);
 }
 
 .contact-staff-loading {
   font-size: 14px;
+  color: var(--cap-color-body-text);
 }
 
 .contact-staff-menu {
@@ -26,34 +83,34 @@
   text-align: left;
   font: inherit;
   padding: 14px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+  border-radius: var(--cap-radius-md);
+  border: 2px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--cap-color-ink);
   cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 .contact-staff-option:hover {
-  border-color: var(--accent-border);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--cap-shadow-pop-sm);
 }
 
 .contact-staff-option-emergency {
-  border-color: var(--state-closed);
-  background: var(--state-closed-bg);
-}
-
-.contact-staff-option-emergency:hover {
-  border-color: var(--state-closed);
+  border-color: var(--cap-color-contact-red);
+  background: color-mix(in srgb, var(--cap-color-contact-red) 12%, rgba(255, 255, 255, 0.55));
 }
 
 .contact-staff-option-title {
+  font-family: var(--cap-font-display);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--cap-color-ink);
 }
 
 .contact-staff-option-desc {
   font-size: 13px;
-  color: var(--text);
+  color: var(--cap-color-body-text);
 }
 
 .contact-staff-locations {
@@ -67,16 +124,16 @@
   font: inherit;
   font-size: 14px;
   padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+  border-radius: var(--cap-radius-sm);
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--cap-color-ink);
   cursor: pointer;
   text-align: left;
 }
 
 .contact-staff-location:hover:not(:disabled) {
-  border-color: var(--accent-border);
+  border-color: var(--cap-color-contact-red);
 }
 
 .contact-staff-location:disabled {
@@ -85,8 +142,8 @@
 }
 
 .contact-staff-location-selected {
-  border-color: var(--accent);
-  background: var(--accent-bg);
+  border-color: var(--cap-color-contact-red);
+  background: color-mix(in srgb, var(--cap-color-contact-red) 14%, rgba(255, 255, 255, 0.55));
 }
 
 .contact-staff-submit {
@@ -96,4 +153,36 @@
 
 .contact-staff-back {
   width: 100%;
+}
+
+.contact-staff-modal-inner .btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.contact-staff-modal-inner .btn:hover:not(:disabled) {
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+/* Contact Staff keeps its own dark-red CTA treatment (not the sunset-orange
+   every other screen's primary action uses) -- same distinct "urgent" red
+   as the nav dropdown's Contact Staff button. */
+.contact-staff-modal-inner .btn-danger {
+  background: var(--cap-color-contact-red);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.contact-staff-modal-inner .btn-danger:hover:not(:disabled) {
+  background: var(--cap-color-contact-red-deep);
+}
+
+.contact-staff-modal-inner .btn-secondary {
+  background: transparent;
+  color: var(--cap-color-ink);
 }

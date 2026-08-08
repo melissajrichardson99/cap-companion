@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { HuntCharacter } from '../api'
 import { HuntChallengeModal } from './HuntChallengeModal'
+import { SearchIcon } from './NavIcons'
 import './HuntScreen.css'
 
 interface HuntScreenProps {
@@ -42,6 +43,11 @@ export function HuntScreen({ characters, error, onReload, onCompleteChallenge, o
 
   return (
     <div className="hunt-screen">
+      <h1 className="cap-sign-board">
+        <SearchIcon className="cap-sign-board-icon" />
+        Scavenger Hunt
+      </h1>
+
       <p className="hunt-intro">Find all 5 animals and complete their challenges.</p>
       <div className="hunt-character-grid">
         {characters.map((character) => {
@@ -50,7 +56,7 @@ export function HuntScreen({ characters, error, onReload, onCompleteChallenge, o
             <button
               type="button"
               key={character.id}
-              className={`hunt-character-card ${isComplete ? 'hunt-character-complete' : ''}`}
+              className={`hunt-character-card cap-parchment-card ${isComplete ? 'hunt-character-complete' : ''}`}
               onClick={() => setActiveCharacterId(character.id)}
             >
               <span className="hunt-character-name">{character.name}</span>

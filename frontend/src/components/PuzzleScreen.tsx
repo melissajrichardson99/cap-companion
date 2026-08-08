@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Puzzle, PuzzleChallenge } from '../api'
 import { PuzzleChallengeModal } from './PuzzleChallengeModal'
+import { PuzzlePieceIcon } from './NavIcons'
 import './PuzzleScreen.css'
 
 interface PuzzleScreenProps {
@@ -36,22 +37,34 @@ export function PuzzleScreen({ puzzles, error, onReload, onCoinsChanged }: Puzzl
 
   return (
     <div className="puzzle-screen">
+      <h1 className="cap-sign-board">
+        <PuzzlePieceIcon className="cap-sign-board-icon" />
+        Floor Puzzles
+      </h1>
+
       <div className="puzzle-list">
         {puzzles.map((puzzle) => (
-          <div className="puzzle-card" key={puzzle.id}>
-            <h2 className="puzzle-name">{puzzle.name}</h2>
-            <p className="puzzle-rules">{puzzle.rules_text}</p>
-            <div className="puzzle-challenge-list">
-              {puzzle.challenges.map((challenge) => (
-                <button
-                  type="button"
-                  key={challenge.id}
-                  className="btn puzzle-challenge-btn"
-                  onClick={() => setActive({ puzzle, challenge })}
-                >
-                  <span className="puzzle-challenge-label">{challenge.label}</span>
-                </button>
-              ))}
+          <div className="puzzle-card-frame" key={puzzle.id}>
+            <div className="puzzle-card cap-parchment-card">
+              <div className="puzzle-card-header">
+                <span className="puzzle-icon-badge" aria-hidden="true">
+                  <PuzzlePieceIcon />
+                </span>
+                <h2 className="puzzle-name">{puzzle.name}</h2>
+              </div>
+              <p className="puzzle-rules">{puzzle.rules_text}</p>
+              <div className="puzzle-challenge-list">
+                {puzzle.challenges.map((challenge) => (
+                  <button
+                    type="button"
+                    key={challenge.id}
+                    className="btn puzzle-challenge-btn"
+                    onClick={() => setActive({ puzzle, challenge })}
+                  >
+                    <span className="puzzle-challenge-label">{challenge.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ))}

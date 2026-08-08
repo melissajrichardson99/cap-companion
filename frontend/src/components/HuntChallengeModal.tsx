@@ -8,6 +8,7 @@ import type {
   HuntTrueFalseSetContent,
 } from '../api'
 import { Modal } from './Modal'
+import { SearchIcon } from './NavIcons'
 import './HuntChallengeModal.css'
 
 interface HuntChallengeModalProps {
@@ -44,36 +45,46 @@ export function HuntChallengeModal({ character, onClose, onCompleteChallenge, on
 
   if (!currentChallenge) {
     return (
-      <Modal onClose={onClose} labelledBy="hunt-modal-title">
-        <h2 id="hunt-modal-title" className="hunt-modal-title">
-          {character.name}
-        </h2>
-        <div className="hunt-complete-banner">
-          <span className="hunt-complete-check">✓</span>
-          <p>You found {character.name}! All 3 challenges complete.</p>
-        </div>
-        <div className="hunt-modal-actions">
-          <button type="button" className="btn btn-primary" onClick={onClose}>
-            Done
-          </button>
+      <Modal onClose={onClose} labelledBy="hunt-modal-title" className="hunt-modal-frame">
+        <div className="hunt-modal-inner">
+          <h2 id="hunt-modal-title" className="hunt-modal-title">
+            <span className="hunt-modal-icon-badge" aria-hidden="true">
+              <SearchIcon />
+            </span>
+            {character.name}
+          </h2>
+          <div className="hunt-complete-banner">
+            <span className="hunt-complete-check">✓</span>
+            <p>You found {character.name}! All 3 challenges complete.</p>
+          </div>
+          <div className="hunt-modal-actions">
+            <button type="button" className="btn btn-primary" onClick={onClose}>
+              Done
+            </button>
+          </div>
         </div>
       </Modal>
     )
   }
 
   return (
-    <Modal onClose={onClose} labelledBy="hunt-modal-title">
-      <h2 id="hunt-modal-title" className="hunt-modal-title">
-        {character.name} — Challenge {currentChallenge.order_index}
-      </h2>
-      <ChallengeBody
-        key={currentChallenge.id}
-        challenge={currentChallenge}
-        disabled={saving}
-        onSolved={() => handleSolved(currentChallenge.id)}
-        onPlayMinigame={() => onPlayMinigame(currentChallenge.id, character.minigame_slug)}
-      />
-      {saveError && <p className="screen-error">Couldn't save progress: {saveError}</p>}
+    <Modal onClose={onClose} labelledBy="hunt-modal-title" className="hunt-modal-frame">
+      <div className="hunt-modal-inner">
+        <h2 id="hunt-modal-title" className="hunt-modal-title">
+          <span className="hunt-modal-icon-badge" aria-hidden="true">
+            <SearchIcon />
+          </span>
+          {character.name} — Challenge {currentChallenge.order_index}
+        </h2>
+        <ChallengeBody
+          key={currentChallenge.id}
+          challenge={currentChallenge}
+          disabled={saving}
+          onSolved={() => handleSolved(currentChallenge.id)}
+          onPlayMinigame={() => onPlayMinigame(currentChallenge.id, character.minigame_slug)}
+        />
+        {saveError && <p className="screen-error">Couldn't save progress: {saveError}</p>}
+      </div>
     </Modal>
   )
 }

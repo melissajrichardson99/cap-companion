@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import type { MapNode, VisitNodeResponse } from '../api'
 import { NodeDetailPopup } from './NodeDetailPopup'
+import { MapPinIcon } from './NavIcons'
 import './MapScreen.css'
-
-const FRAME_CORNERS = ['tl', 'tr', 'bl', 'br'] as const
 
 const CATEGORY_LABEL: Record<MapNode['category'], string> = {
   attraction: 'Attraction',
@@ -137,11 +136,13 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
 
   return (
     <div className="map-screen">
+      <h1 className="cap-sign-board">
+        <MapPinIcon className="cap-sign-board-icon" />
+        Park Map
+      </h1>
+
       <div className="map-scene">
         <div className="map-frame">
-          {FRAME_CORNERS.map((corner) => (
-            <span key={corner} className={`map-frame-bolt map-frame-bolt-${corner}`} aria-hidden="true" />
-          ))}
           <div className="map-image-wrap">
             <img src="/park-map.png" alt="Cobb's Adventure Park map" className="map-image" />
             {positioned.map((node) => {

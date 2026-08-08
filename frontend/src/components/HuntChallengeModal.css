@@ -1,6 +1,58 @@
+/* Wood-grain frame/border treatment, same recipe as Puzzles'
+   .puzzle-modal-frame. */
+.hunt-modal-frame {
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.hunt-modal-inner {
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-4);
+  font-family: var(--cap-font-body);
+}
+
 .hunt-modal-title {
+  display: flex;
+  align-items: center;
+  gap: var(--cap-space-3);
+  font-family: var(--cap-font-display);
   font-size: 19px;
+  color: var(--cap-color-ink);
   margin: 0 0 16px;
+}
+
+.hunt-modal-icon-badge {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cap-color-adventure-green);
+  border: 2px solid var(--cap-color-outline);
+  color: #fff;
+}
+
+.hunt-modal-icon-badge svg {
+  width: 18px;
+  height: 18px;
 }
 
 .hunt-modal-actions {
@@ -15,7 +67,7 @@
   line-height: 145%;
   margin: 0 0 14px;
   font-weight: 600;
-  color: var(--text-h);
+  color: var(--cap-color-ink);
 }
 
 .hunt-feedback {
@@ -24,7 +76,7 @@
 }
 
 .hunt-feedback-wrong {
-  color: var(--state-closed);
+  color: var(--cap-color-adventure-red);
 }
 
 .hunt-complete-banner {
@@ -33,15 +85,44 @@
   align-items: center;
   gap: 8px;
   padding: 20px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-top: 2px solid var(--cap-color-outline);
+  border-bottom: 2px solid var(--cap-color-outline);
   margin: 12px 0;
   text-align: center;
 }
 
 .hunt-complete-check {
   font-size: 32px;
-  color: var(--state-visited);
+  color: var(--cap-color-adventure-green);
+}
+
+.hunt-modal-inner .btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.hunt-modal-inner .btn:hover:not(:disabled) {
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+.hunt-modal-inner .btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.hunt-modal-inner .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+}
+
+.hunt-modal-inner .btn-secondary {
+  background: transparent;
+  color: var(--cap-color-ink);
 }
 
 /* Multiple-choice (mc, and the reveal step of image_mc) */
@@ -56,13 +137,13 @@
 }
 
 .hunt-option-correct {
-  border-color: var(--state-visited);
-  background: var(--state-visited-bg);
+  border-color: var(--cap-color-adventure-green);
+  background: color-mix(in srgb, var(--cap-color-adventure-green) 16%, transparent);
 }
 
 .hunt-option-wrong {
-  border-color: var(--state-closed);
-  background: var(--state-closed-bg);
+  border-color: var(--cap-color-adventure-red);
+  background: color-mix(in srgb, var(--cap-color-adventure-red) 12%, transparent);
 }
 
 /* Matching */
@@ -84,8 +165,8 @@
 }
 
 .hunt-matching-selected {
-  border-color: var(--accent);
-  background: var(--accent-bg);
+  border-color: var(--cap-color-sunset-orange);
+  background: color-mix(in srgb, var(--cap-color-sunset-orange) 14%, transparent);
 }
 
 /* True/False set */
@@ -93,7 +174,7 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.75;
+  color: var(--cap-color-body-text);
   margin: 0 0 6px;
 }
 
@@ -112,10 +193,10 @@
   align-items: center;
   justify-content: center;
   min-height: 100px;
-  border: 1.5px dashed var(--border);
+  border: 1.5px dashed var(--cap-color-outline);
   border-radius: 10px;
-  background: var(--code-bg);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.4);
+  color: var(--cap-color-body-text);
   font-size: 13px;
   text-align: center;
   padding: 12px;
@@ -125,7 +206,7 @@
 .hunt-scrambled {
   font-family: var(--mono);
   letter-spacing: 0.2em;
-  color: var(--accent);
+  color: var(--cap-color-sunset-orange-deep);
 }
 
 .hunt-unscramble-row {
@@ -139,9 +220,9 @@
   flex: 1;
   padding: 9px 12px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--cap-color-ink);
 }
 
 /* Minigame step */

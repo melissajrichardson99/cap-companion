@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, type BingoCard, type MilestoneEvent, type TileCompletionResult } from '../api'
 import { MilestoneBanner } from './MilestoneBanner'
+import { GridIcon } from './NavIcons'
 import './BingoScreen.css'
 
 interface BingoScreenProps {
@@ -62,43 +63,50 @@ export function BingoScreen({
 
   return (
     <div className="bingo-screen">
-      <div className="bingo-header">
-        <h2 className="bingo-owner">{card.owner_label}'s Card</h2>
-        <div className="bingo-milestone-summary">
-          {card.milestones_achieved.lines.map((lineIdx) => (
-            <span key={lineIdx} className="milestone-chip milestone-chip-line">
-              BINGO
-            </span>
-          ))}
-          {card.milestones_achieved.x && <span className="milestone-chip milestone-chip-x">X</span>}
-          {card.milestones_achieved.blackout && (
-            <span className="milestone-chip milestone-chip-blackout">BLACKOUT</span>
-          )}
+      <h1 className="cap-sign-board">
+        <GridIcon className="cap-sign-board-icon" />
+        Bingo Card
+      </h1>
+
+      <div className="bingo-content">
+        <div className="bingo-header">
+          <div className="bingo-milestone-summary">
+            {card.milestones_achieved.lines.map((lineIdx) => (
+              <span key={lineIdx} className="milestone-chip milestone-chip-line">
+                BINGO
+              </span>
+            ))}
+            {card.milestones_achieved.x && <span className="milestone-chip milestone-chip-x">X</span>}
+            {card.milestones_achieved.blackout && (
+              <span className="milestone-chip milestone-chip-blackout">BLACKOUT</span>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="bingo-grid">
-        {tiles.map((tile) => {
-          const shapeIndex = highlightIndex.get(tile.id)
-          const isHighlighted = shapeIndex !== undefined
-          const classes = ['bingo-tile']
-          classes.push(tile.completed ? 'bingo-tile-completed' : 'bingo-tile-open')
-          if (isHighlighted && activeMilestone) classes.push(`bingo-tile-milestone-${activeMilestone.type}`)
+        <div className="bingo-grid">
+          {tiles.map((tile) => {
+            const shapeIndex = highlightIndex.get(tile.id)
+            const isHighlighted = shapeIndex !== undefined
+            const classes = ['bingo-tile']
+            classes.push(tile.completed ? 'bingo-tile-completed' : 'bingo-tile-open')
+            if (isHighlighted && activeMilestone) classes.push(`bingo-tile-milestone-${activeMilestone.type}`)
 
-          return (
-            <button
-              type="button"
-              key={tile.id}
-              className={classes.join(' ')}
-              style={isHighlighted ? { animationDelay: `${shapeIndex! * 0.05}s` } : undefined}
-              disabled={tile.completed || pendingTileIds.has(tile.id)}
-              onClick={() => completeTile(tile.id)}
-            >
-              {tile.completed && <span className="bingo-tile-stamp" aria-hidden="true">✓</span>}
-              <span className="bingo-tile-label">{tile.label}</span>
-            </button>
-          )
-        })}
+            return (
+              <button
+                type="button"
+                key={tile.id}
+                className={classes.join(' ')}
+                style={isHighlighted ? { animationDelay: `${shapeIndex! * 0.05}s` } : undefined}
+                disabled={tile.completed || pendingTileIds.has(tile.id)}
+                onClick={() => completeTile(tile.id)}
+              >
+                <span className="bingo-tile-icon" aria-hidden="true" />
+                {tile.completed && <span className="bingo-tile-stamp" aria-hidden="true">✓</span>}
+                <span className="bingo-tile-label">{tile.label}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {activeMilestone && <MilestoneBanner event={activeMilestone} onDone={onMilestoneShown} />}

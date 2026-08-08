@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  font-family: var(--cap-font-body);
 }
 
 .puzzle-loading {
@@ -15,9 +16,40 @@
   gap: 14px;
 }
 
+/* Wood-grain frame/border treatment, matching the nav dropdown panel
+   (.nav-menu-frame in NavMenu.css, itself reusing .map-frame's gradient) --
+   wraps the parchment card so every card/popup on this screen reads as
+   "sitting inside the same wood chrome" as the nav panel. */
+.puzzle-card-frame {
+  /* Flex column so .puzzle-card (its only child) can be stretched to fill
+     the frame's full height -- .puzzle-list's grid rows stretch every frame
+     in a row to match the tallest card (default grid align-items: stretch),
+     and without this the leftover height landed as blank space below
+     .puzzle-card, inside the frame's own padding, making cards with fewer
+     buttons (e.g. plain Standard puzzles) look like they had a thicker
+     wood-frame border than cards with more buttons (e.g. Pyramid Puzzler's
+     3 Challenges). */
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
 .puzzle-card {
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
+  flex: 1;
   padding: 16px;
   text-align: left;
   display: flex;
@@ -25,14 +57,50 @@
   gap: 10px;
 }
 
+/* Compound selector so this reliably beats shared.css's .cap-parchment-card
+   border-radius regardless of import order (same reasoning as
+   .puzzle-list .puzzle-challenge-btn below) -- the card's corners need to sit
+   flush inside .puzzle-card-frame's padding instead of matching the outer
+   frame's own (larger-relative) radius. */
+.puzzle-list .puzzle-card {
+  border-radius: calc(var(--cap-radius-md) - 4px);
+}
+
+.puzzle-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--cap-space-3);
+}
+
+.puzzle-icon-badge {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cap-color-adventure-green);
+  border: 2px solid var(--cap-color-outline);
+  color: #fff;
+}
+
+.puzzle-icon-badge svg {
+  width: 20px;
+  height: 20px;
+}
+
 .puzzle-name {
+  font-family: var(--cap-font-display);
   font-size: 17px;
+  color: var(--cap-color-ink);
   margin: 0;
 }
 
 .puzzle-rules {
   font-size: 14px;
   line-height: 145%;
+  color: var(--cap-color-body-text);
   margin: 0;
 }
 
@@ -40,6 +108,11 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Pushes the button group to the bottom of .puzzle-card's flex column, so
+     any extra height from the grid row-stretch (see .puzzle-card-frame
+     above) becomes a gap here instead of blank space inside the frame's
+     border. */
+  margin-top: auto;
 }
 
 .puzzle-challenge-btn {
@@ -50,11 +123,30 @@
   text-align: left;
 }
 
-.puzzle-challenge-btn:hover {
-  border-color: var(--accent);
-  background: var(--accent-bg);
+/* Compound selector (not just .puzzle-challenge-btn) so this reliably beats
+   shared.css's .btn regardless of CSS import order -- a single-class
+   selector here would tie with .btn on specificity and lose whenever
+   shared.css happens to be injected after this file (it is: App.tsx imports
+   PuzzleScreen before shared.css, so shared.css's rules land later in the
+   bundle and would otherwise win the tie). Same fix MapScreen.css uses via
+   .map-screen .btn. */
+.puzzle-list .puzzle-challenge-btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.puzzle-list .puzzle-challenge-btn:hover {
+  background: var(--cap-color-sunset-orange-deep);
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
 }
 
 .puzzle-challenge-label {
-  font-weight: 600;
+  font-weight: 700;
 }

@@ -1,18 +1,75 @@
+/* Wood-grain frame/border treatment, matching the nav dropdown panel
+   (.nav-menu-frame in NavMenu.css, itself reusing .map-frame's gradient) --
+   replaces Modal.css's default panel background so the modal reads as
+   "framed" the same way the nav panel is. Overrides Modal.css's .modal-panel
+   padding (this file loads after Modal.css in the bundle, so the tie
+   resolves in this rule's favor) so the wood padding shows instead. */
+.puzzle-modal-frame {
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.puzzle-modal-inner {
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-4);
+  font-family: var(--cap-font-body);
+}
+
 .puzzle-modal-title {
+  display: flex;
+  align-items: center;
+  gap: var(--cap-space-3);
+  font-family: var(--cap-font-display);
   font-size: 19px;
+  color: var(--cap-color-ink);
   margin: 0 0 8px;
+}
+
+.puzzle-modal-icon-badge {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cap-color-adventure-green);
+  border: 2px solid var(--cap-color-outline);
+  color: #fff;
+}
+
+.puzzle-modal-icon-badge svg {
+  width: 18px;
+  height: 18px;
 }
 
 .puzzle-modal-rules {
   font-size: 14px;
   line-height: 145%;
+  color: var(--cap-color-body-text);
   margin: 0 0 4px;
 }
 
 .puzzle-modal-description {
   font-size: 14px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--cap-color-adventure-green);
   margin: 0 0 16px;
 }
 
@@ -23,9 +80,39 @@
   margin-top: 16px;
 }
 
+.puzzle-modal-inner .btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.puzzle-modal-inner .btn:hover:not(:disabled) {
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+.puzzle-modal-inner .btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.puzzle-modal-inner .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+}
+
+.puzzle-modal-inner .btn-secondary {
+  background: transparent;
+  color: var(--cap-color-ink);
+}
+
 .puzzle-confirm-question {
   font-size: 17px;
   line-height: 1.5;
+  color: var(--cap-color-ink);
   margin: 0 0 20px;
 }
 
@@ -35,8 +122,8 @@
   align-items: center;
   gap: 8px;
   padding: 20px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-top: 2px solid var(--cap-color-outline);
+  border-bottom: 2px solid var(--cap-color-outline);
   margin: 12px 0;
   text-align: center;
 }
@@ -45,27 +132,29 @@
   font-family: var(--mono);
   font-size: 40px;
   font-weight: 700;
-  color: var(--text-h);
+  color: var(--cap-color-ink);
   letter-spacing: -1px;
 }
 
 .puzzle-result-comparison {
   font-size: 15px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--cap-color-adventure-green);
   margin: 0;
 }
 
 .puzzle-result-no-staff-time {
   font-size: 14px;
+  color: var(--cap-color-body-text);
   margin: 0;
-  opacity: 0.75;
+  opacity: 0.9;
 }
 
 .puzzle-result-hints {
   font-size: 13px;
+  color: var(--cap-color-body-text);
   margin: 4px 0 0;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .puzzle-timer {
@@ -74,8 +163,8 @@
   align-items: center;
   gap: 12px;
   padding: 20px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-top: 2px solid var(--cap-color-outline);
+  border-bottom: 2px solid var(--cap-color-outline);
   margin: 12px 0;
 }
 
@@ -83,7 +172,7 @@
   font-family: var(--mono);
   font-size: 40px;
   font-weight: 700;
-  color: var(--text-h);
+  color: var(--cap-color-ink);
   letter-spacing: -1px;
 }
 
@@ -94,28 +183,57 @@
 
 .puzzle-timer-status {
   font-size: 13px;
+  color: var(--cap-color-body-text);
   margin: 0;
 }
 
 .puzzle-section-title {
+  font-family: var(--cap-font-display);
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0 0 8px;
-  color: var(--text);
+  color: var(--cap-color-ink);
+}
+
+/* Wood-grain frame/border treatment, same recipe as .puzzle-modal-frame
+   above -- wraps the inline hints section so it reads as its own framed
+   popup nested inside the modal, not a plain text block. */
+.puzzle-hints-frame {
+  margin: 16px 0;
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
 }
 
 .puzzle-hints {
-  margin: 16px 0;
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-3);
 }
 
 .puzzle-hint-text {
   font-size: 14px;
   line-height: 145%;
-  background: var(--code-bg);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid var(--cap-color-outline);
   border-radius: 8px;
   padding: 10px 12px;
   margin: 0 0 8px;
   white-space: pre-line;
+  color: var(--cap-color-ink);
 }
 

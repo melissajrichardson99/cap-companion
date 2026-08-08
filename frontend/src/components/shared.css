@@ -33,3 +33,62 @@
   padding: 12px 0;
   color: var(--state-closed);
 }
+
+/* Wooden sign-board screen title + parchment content card -- shared surface
+   pair for screens on the new cap-* brand pass (currently Bingo and
+   Puzzles). No leaf/vine (or any) decoration on the sign by design -- a
+   flat plank keeps it legible at any title length instead of fighting fixed
+   decorative art around variable text, same reasoning MapScreen's
+   .map-scene comment gives for dropping its illustrated scene image. */
+.cap-sign-board {
+  align-self: center;
+  margin: 0 0 var(--cap-space-5);
+  padding: var(--cap-space-3) var(--cap-space-6);
+  /* Same wood-grain gradient recipe as .map-frame/.nav-menu-frame (and
+     Puzzles' .puzzle-card-frame) instead of the flat --cap-color-sign-board
+     fill, so every title sign reads as the same wood chrome as the rest of
+     the app's frames. */
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: var(--cap-radius-md);
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.25);
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: normal;
+  line-height: 1.2;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cap-space-2);
+}
+
+/* Reuses the same icon components as the nav dropdown (NavIcons.tsx) --
+   currentColor stroke picks up the sign's white text color automatically. */
+.cap-sign-board-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.cap-parchment-card {
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: var(--cap-radius-md);
+  box-shadow: var(--cap-shadow-pop-sm);
+}
