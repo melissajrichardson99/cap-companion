@@ -11,29 +11,73 @@ one_shot = true
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="TopBar" type="Control" parent="UI"]
-offset_right = 400.0
-offset_bottom = 60.0
-
-[node name="PairsLabel" type="Label" parent="UI/TopBar"]
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 330.0
-offset_bottom = 44.0
-text = "Pairs: 0 / 8"
-
-[node name="ExitButton" type="Button" parent="UI/TopBar"]
-offset_left = 344.0
+[node name="SignBar" type="Control" parent="UI"]
+offset_left = 10.0
 offset_top = 10.0
 offset_right = 390.0
-offset_bottom = 42.0
+offset_bottom = 66.0
+
+[node name="TitleLabel" type="Label" parent="UI/SignBar"]
+offset_left = 52.0
+offset_top = 0.0
+offset_right = 320.0
+offset_bottom = 56.0
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 20
+text = "Card Flip Pairs"
+
+[node name="ExitButton" type="Button" parent="UI/SignBar"]
+offset_left = 334.0
+offset_top = 8.0
+offset_right = 372.0
+offset_bottom = 46.0
 text = "X"
+
+[node name="InstructionBar" type="Control" parent="UI"]
+offset_left = 10.0
+offset_top = 74.0
+offset_right = 390.0
+offset_bottom = 166.0
+
+[node name="InstructionLabel" type="Label" parent="UI/InstructionBar"]
+offset_left = 56.0
+offset_top = 8.0
+offset_right = 186.0
+offset_bottom = 84.0
+autowrap_mode = 2
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 13
+text = "Flip the cards and find all the matching pairs as fast as you can!"
+
+[node name="StatBox" type="Control" parent="UI/InstructionBar"]
+offset_left = 196.0
+offset_top = 8.0
+offset_right = 360.0
+offset_bottom = 84.0
+
+[node name="CaptionLabel" type="Label" parent="UI/InstructionBar/StatBox"]
+offset_left = 8.0
+offset_top = 10.0
+offset_right = 156.0
+offset_bottom = 30.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+text = "Pairs Found"
+
+[node name="ValueLabel" type="Label" parent="UI/InstructionBar/StatBox"]
+offset_left = 8.0
+offset_top = 32.0
+offset_right = 156.0
+offset_bottom = 68.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+text = "0 / 8"
 
 [node name="CardGrid" type="GridContainer" parent="UI"]
 offset_left = 28.0
-offset_top = 90.0
+offset_top = 184.0
 offset_right = 372.0
-offset_bottom = 434.0
+offset_bottom = 528.0
 theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 8
 columns = 4
@@ -102,6 +146,22 @@ text = ""
 custom_minimum_size = Vector2(80, 80)
 text = ""
 
+[node name="TipBar" type="Control" parent="UI"]
+offset_left = 10.0
+offset_top = 546.0
+offset_right = 390.0
+offset_bottom = 596.0
+
+[node name="TipLabel" type="Label" parent="UI/TipBar"]
+offset_left = 54.0
+offset_top = 0.0
+offset_right = 370.0
+offset_bottom = 50.0
+autowrap_mode = 2
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 13
+text = "Tip: Try to remember where you saw each card!"
+
 [node name="GameOverLayer" type="Control" parent="UI"]
 visible = false
 offset_right = 400.0
@@ -117,6 +177,7 @@ offset_top = 220.0
 offset_right = 400.0
 offset_bottom = 260.0
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 26
 text = "You Win!"
 
 [node name="ScoreResultLabel" type="Label" parent="UI/GameOverLayer"]
@@ -124,6 +185,7 @@ offset_top = 270.0
 offset_right = 400.0
 offset_bottom = 300.0
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
 text = "All 8 pairs found!"
 
 [node name="RestartButton" type="Button" parent="UI/GameOverLayer"]

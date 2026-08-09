@@ -10,38 +10,92 @@ const ROUND_GAP := 0.9
 const TAP_FLASH_DURATION := 0.15
 
 const ANIMAL_NAMES := ["COW", "PIG", "HEN", "EWE"]
-const IDLE_COLORS := [
-	Color(0.55, 0.55, 0.5),
-	Color(0.55, 0.35, 0.4),
-	Color(0.55, 0.45, 0.25),
-	Color(0.5, 0.5, 0.58),
-]
-const LIT_COLORS := [
-	Color(0.95, 0.95, 0.88),
-	Color(0.95, 0.55, 0.65),
-	Color(0.95, 0.78, 0.3),
-	Color(0.82, 0.85, 0.98),
-]
 
-@onready var score_label: Label = $UI/TopBar/ScoreLabel
-@onready var status_label: Label = $UI/TopBar/StatusLabel
+# --- Layout rects (design canvas is 400x600, see project.godot). Purely
+# cosmetic - none of this feeds gameplay math, which stays entirely in
+# sequence/index space. Mirrors Mini Snake's SIGN_RECT/STATS_RECT const
+# pattern.
+const SIGN_RECT := Rect2(10, 10, 380, 56)
+const INSTRUCTION_RECT := Rect2(10, 74, 380, 92)
+const ROUND_PILL_RECT := Rect2(266, 84, 104, 72)
+const TIP_RECT := Rect2(10, 530, 380, 58)
+const TILE_COW_RECT := Rect2(43, 208, 150, 150)
+const TILE_PIG_RECT := Rect2(207, 208, 150, 150)
+const TILE_HEN_RECT := Rect2(43, 372, 150, 150)
+const TILE_EWE_RECT := Rect2(207, 372, 150, 150)
+const TILE_RECTS := [TILE_COW_RECT, TILE_PIG_RECT, TILE_HEN_RECT, TILE_EWE_RECT]
+
+# --- Brand palette. Mirrors frontend/src/index.css's --cap-* tokens so this
+# game's chrome reads as the same parchment/wood UI system as the rest of
+# the app instead of a one-off style.
+const COLOR_OUTLINE := Color("#14181a")
+const COLOR_PARCHMENT := Color("#f0decc")
+const COLOR_PAGE_BG := Color("#e8d9bb")
+const COLOR_WOOD_LIGHT := Color("#a9773f")
+const COLOR_WOOD_MID := Color("#8a5a2f")
+const COLOR_WOOD_DARK := Color("#6e4523")
+const COLOR_INK := Color("#1e2b2e")
+const COLOR_HEADER_GREEN := Color("#144f05")
+const COLOR_ADVENTURE_GREEN := Color("#3b7801")
+const COLOR_SUNSET_ORANGE := Color("#f38630")
+const COLOR_SUNSET_ORANGE_DEEP := Color("#bc6825")
+const COLOR_GRASS_DARK := Color("#243a1c")
+const COLOR_GRASS_LINE := Color("#324d27")
+const COLOR_GRASS_BLADE := Color("#4c8a2e")
+
+# Per-animal accent colors used for both the tile's silhouette icon and (when
+# lit) its glow border. Idle = muted/dusty, Lit = bright. Replaces the old
+# raw Button.modulate tint swap; same mechanism (index-matched idle/lit
+# arrays), now driving real drawn chrome instead.
+const COLOR_COW_IDLE := Color("#c9a978")
+const COLOR_COW_LIT := Color("#f0dcb8")
+const COLOR_PIG_IDLE := Color("#e28aa0")
+const COLOR_PIG_LIT := Color("#ffc0d0")
+const COLOR_HEN_IDLE := Color("#d9ab1e")
+const COLOR_HEN_LIT := Color("#ffd94d")
+const COLOR_EWE_IDLE := Color("#8f9bb3")
+const COLOR_EWE_LIT := Color("#c9d4ea")
+const IDLE_COLORS := [COLOR_COW_IDLE, COLOR_PIG_IDLE, COLOR_HEN_IDLE, COLOR_EWE_IDLE]
+const LIT_COLORS := [COLOR_COW_LIT, COLOR_PIG_LIT, COLOR_HEN_LIT, COLOR_EWE_LIT]
+
+const NAME_LABEL_IDLE_COLOR := Color(0.97, 0.95, 0.9)
+
+@onready var status_label: Label = $UI/StatusLabel
+@onready var round_caption_label: Label = $UI/InstructionBar/RoundPill/CaptionLabel
+@onready var round_value_label: Label = $UI/InstructionBar/RoundPill/ValueLabel
+@onready var instruction_label: Label = $UI/InstructionBar/InstructionLabel
+@onready var title_label: Label = $UI/SignBar/TitleLabel
 @onready var animal_buttons: Array = [
 	$UI/AnimalGrid/BtnCow,
 	$UI/AnimalGrid/BtnPig,
 	$UI/AnimalGrid/BtnHen,
 	$UI/AnimalGrid/BtnEwe,
 ]
+@onready var animal_name_labels: Array = [
+	$UI/AnimalGrid/NameCow,
+	$UI/AnimalGrid/NamePig,
+	$UI/AnimalGrid/NameHen,
+	$UI/AnimalGrid/NameEwe,
+]
 @onready var game_over_layer: Control = $UI/GameOverLayer
 @onready var result_label: Label = $UI/GameOverLayer/ResultLabel
 @onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
 @onready var restart_button: Button = $UI/GameOverLayer/RestartButton
-@onready var top_exit_button: Button = $UI/TopBar/ExitButton
+@onready var top_exit_button: Button = $UI/SignBar/ExitButton
 @onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 
 var sequence: Array[int] = []
 var player_step: int = 0
 var is_running: bool = false
 var is_input_enabled: bool = false
+# 1-based count of rounds successfully completed + 1 (i.e. the round the
+# player is currently on). Distinct from sequence.size(), which is the
+# pattern's item count (2/4/6/8/10) - current_round is what the "Round"
+# stat box displays (1/2/3/4/5).
+var current_round: int = 1
+# Per-tile lit state, drawn each frame in _draw() instead of a raw
+# Button.modulate swap so the tile can get real chrome (panel + icon).
+var tile_lit: Array[bool] = [false, false, false, false]
 # Bumped each time a new round starts so stale awaits from a previous
 # round (or a round abandoned via exit/restart) can detect they're outdated
 # and bail out instead of resuming stale playback/input state.
@@ -49,10 +103,10 @@ var round_token: int = 0
 
 func _ready() -> void:
 	randomize()
+	_style_ui()
 	for i in range(animal_buttons.size()):
 		var idx := i
 		var button: Button = animal_buttons[i]
-		button.text = ANIMAL_NAMES[i]
 		button.pressed.connect(func(): _on_animal_pressed(idx))
 	restart_button.pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
@@ -63,6 +117,7 @@ func _start_game() -> void:
 	round_token += 1
 	sequence.clear()
 	player_step = 0
+	current_round = 1
 	is_running = true
 	is_input_enabled = false
 	game_over_layer.visible = false
@@ -120,11 +175,15 @@ func _on_animal_pressed(index: int) -> void:
 		return
 	for i in range(GROWTH_PER_ROUND):
 		sequence.append(randi() % ANIMAL_NAMES.size())
+	current_round += 1
+	_update_labels()
 	_play_sequence(token)
 
 func _set_button_lit(index: int, lit: bool) -> void:
-	var button: Button = animal_buttons[index]
-	button.modulate = LIT_COLORS[index] if lit else IDLE_COLORS[index]
+	tile_lit[index] = lit
+	var label: Label = animal_name_labels[index]
+	label.add_theme_color_override("font_color", LIT_COLORS[index] if lit else NAME_LABEL_IDLE_COLOR)
+	queue_redraw()
 
 func _end_game(won: bool) -> void:
 	is_running = false
@@ -149,4 +208,274 @@ func _notify_host_complete() -> void:
 		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'pattern_repeat' }, '*');")
 
 func _update_labels() -> void:
-	score_label.text = "Round: %d" % sequence.size()
+	round_value_label.text = str(current_round)
+
+# ---------------------------------------------------------------------------
+# Drawing. Main is a Node2D so everything here renders beneath the $UI
+# CanvasLayer's real Label/Button nodes (CanvasLayer always composites above
+# the base 2D canvas). The AnimalGrid's Button nodes are made fully
+# transparent (see _style_ui) so their only job is hit-testing; all tile
+# chrome + the animal silhouette icons are drawn here, underneath them.
+# ---------------------------------------------------------------------------
+
+func _draw() -> void:
+	_draw_page_bg()
+	_draw_sign_plank()
+	_draw_instruction_panel()
+	_draw_animal_tiles()
+	_draw_tip_bar()
+
+func _draw_page_bg() -> void:
+	var vp := get_viewport_rect().size
+	draw_rect(Rect2(Vector2.ZERO, vp), COLOR_PAGE_BG, true)
+
+func _draw_sign_plank() -> void:
+	_draw_wood_panel(SIGN_RECT, 14.0)
+	var cx := SIGN_RECT.position.x + 30
+	var cy := SIGN_RECT.position.y + SIGN_RECT.size.y * 0.5
+	_draw_badge_icon(Vector2(cx, cy), 13.0)
+
+func _draw_badge_icon(center: Vector2, r: float) -> void:
+	# Small 3-dot "traffic light" badge in a rounded wood chip.
+	var chip_rect := Rect2(center - Vector2(r * 0.85, r * 1.55), Vector2(r * 1.7, r * 3.1))
+	var chip_sb := StyleBoxFlat.new()
+	chip_sb.bg_color = COLOR_WOOD_DARK
+	chip_sb.set_corner_radius_all(int(r * 0.9))
+	chip_sb.set_border_width_all(1)
+	chip_sb.border_color = COLOR_OUTLINE
+	draw_style_box(chip_sb, chip_rect)
+	draw_circle(center + Vector2(0, -r * 0.95), r * 0.38, Color("#d9432e"))
+	draw_circle(center, r * 0.38, Color("#f2b705"))
+	draw_circle(center + Vector2(0, r * 0.95), r * 0.38, COLOR_ADVENTURE_GREEN)
+
+func _draw_instruction_panel() -> void:
+	_draw_parchment_pill(INSTRUCTION_RECT, 16.0)
+	var paw_center := INSTRUCTION_RECT.position + Vector2(26, 46)
+	_draw_paw_icon(paw_center, 13.0)
+	_draw_round_pill()
+
+func _draw_paw_icon(center: Vector2, r: float) -> void:
+	draw_circle(center + Vector2(0, r * 0.35), r * 0.62, COLOR_WOOD_DARK)
+	draw_circle(center + Vector2(-r * 0.55, -r * 0.35), r * 0.27, COLOR_WOOD_DARK)
+	draw_circle(center + Vector2(-r * 0.18, -r * 0.62), r * 0.27, COLOR_WOOD_DARK)
+	draw_circle(center + Vector2(r * 0.18, -r * 0.62), r * 0.27, COLOR_WOOD_DARK)
+	draw_circle(center + Vector2(r * 0.55, -r * 0.35), r * 0.27, COLOR_WOOD_DARK)
+
+func _draw_round_pill() -> void:
+	var shadow_sb := StyleBoxFlat.new()
+	shadow_sb.bg_color = COLOR_OUTLINE
+	shadow_sb.set_corner_radius_all(14)
+	draw_style_box(shadow_sb, Rect2(ROUND_PILL_RECT.position + Vector2(3, 3), ROUND_PILL_RECT.size))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = COLOR_HEADER_GREEN
+	sb.set_corner_radius_all(14)
+	sb.set_border_width_all(2)
+	sb.border_color = COLOR_OUTLINE
+	draw_style_box(sb, ROUND_PILL_RECT)
+
+func _draw_tip_bar() -> void:
+	_draw_parchment_pill(TIP_RECT, 14.0)
+	var cx := TIP_RECT.position.x + 30
+	var cy := TIP_RECT.position.y + TIP_RECT.size.y * 0.5
+	_draw_lightbulb_icon(Vector2(cx, cy), 12.0)
+
+func _draw_lightbulb_icon(center: Vector2, r: float) -> void:
+	draw_circle(center + Vector2(0, -r * 0.15), r * 0.65, Color("#f2b705"))
+	var base_sb := StyleBoxFlat.new()
+	base_sb.bg_color = COLOR_WOOD_DARK
+	base_sb.set_corner_radius_all(2)
+	draw_style_box(base_sb, Rect2(center + Vector2(-r * 0.28, r * 0.35), Vector2(r * 0.56, r * 0.35)))
+	draw_line(center + Vector2(-r * 0.15, -r * 0.35), center + Vector2(r * 0.1, r * 0.05), COLOR_OUTLINE, 1.5)
+	draw_line(center + Vector2(r * 0.15, -r * 0.35), center + Vector2(-r * 0.1, r * 0.05), COLOR_OUTLINE, 1.5)
+
+func _draw_animal_tiles() -> void:
+	for i in range(TILE_RECTS.size()):
+		_draw_animal_tile(i)
+
+func _draw_animal_tile(index: int) -> void:
+	var rect: Rect2 = TILE_RECTS[index]
+	var lit: bool = tile_lit[index]
+	var shadow_sb := StyleBoxFlat.new()
+	shadow_sb.bg_color = COLOR_OUTLINE
+	shadow_sb.set_corner_radius_all(16)
+	draw_style_box(shadow_sb, Rect2(rect.position + Vector2(3, 3), rect.size))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = COLOR_ADVENTURE_GREEN if lit else COLOR_HEADER_GREEN
+	sb.set_corner_radius_all(16)
+	sb.set_border_width_all(4 if lit else 3)
+	sb.border_color = LIT_COLORS[index] if lit else COLOR_OUTLINE
+	draw_style_box(sb, rect)
+	var accent: Color = LIT_COLORS[index] if lit else IDLE_COLORS[index]
+	match index:
+		0:
+			_draw_cow_icon(rect, accent)
+		1:
+			_draw_pig_icon(rect, accent)
+		2:
+			_draw_hen_icon(rect, accent)
+		3:
+			_draw_ewe_icon(rect, accent)
+
+func _draw_cow_icon(rect: Rect2, accent: Color) -> void:
+	var c := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.36)
+	var bw := rect.size.x * 0.42
+	var bh := rect.size.y * 0.28
+	draw_circle(c + Vector2(-bw * 0.62, -bh * 0.6), bw * 0.17, accent.darkened(0.2))
+	draw_circle(c + Vector2(bw * 0.62, -bh * 0.6), bw * 0.17, accent.darkened(0.2))
+	draw_circle(c + Vector2(-bw * 0.32, -bh * 1.05), bw * 0.1, Color("#f0decc"))
+	draw_circle(c + Vector2(bw * 0.32, -bh * 1.05), bw * 0.1, Color("#f0decc"))
+	var body_sb := StyleBoxFlat.new()
+	body_sb.bg_color = accent
+	body_sb.set_corner_radius_all(int(bh * 0.85))
+	draw_style_box(body_sb, Rect2(c - Vector2(bw, bh), Vector2(bw * 2, bh * 2)))
+	draw_circle(c + Vector2(-bw * 0.3, -bh * 0.1), bw * 0.2, accent.darkened(0.4))
+	draw_circle(c + Vector2(bw * 0.38, bh * 0.35), bw * 0.14, accent.darkened(0.4))
+	var snout_sb := StyleBoxFlat.new()
+	snout_sb.bg_color = Color("#f0decc")
+	snout_sb.set_corner_radius_all(int(bh * 0.3))
+	draw_style_box(snout_sb, Rect2(c + Vector2(-bw * 0.4, bh * 0.6), Vector2(bw * 0.8, bh * 0.5)))
+	draw_circle(c + Vector2(-bw * 0.15, bh * 0.85), 2.2, COLOR_OUTLINE)
+	draw_circle(c + Vector2(bw * 0.15, bh * 0.85), 2.2, COLOR_OUTLINE)
+	draw_circle(c + Vector2(-bw * 0.35, -bh * 0.3), 2.4, COLOR_OUTLINE)
+	draw_circle(c + Vector2(bw * 0.35, -bh * 0.3), 2.4, COLOR_OUTLINE)
+
+func _draw_pig_icon(rect: Rect2, accent: Color) -> void:
+	var c := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.42)
+	var r := rect.size.x * 0.28
+	draw_circle(c + Vector2(-r * 0.55, -r * 0.85), r * 0.22, accent.darkened(0.15))
+	draw_circle(c + Vector2(r * 0.55, -r * 0.85), r * 0.22, accent.darkened(0.15))
+	draw_circle(c, r, accent)
+	draw_circle(c + Vector2(0, r * 0.55), r * 0.4, accent.darkened(0.25))
+	draw_circle(c + Vector2(-r * 0.14, r * 0.58), 2.2, COLOR_OUTLINE)
+	draw_circle(c + Vector2(r * 0.14, r * 0.58), 2.2, COLOR_OUTLINE)
+	draw_circle(c + Vector2(-r * 0.32, -r * 0.15), 2.4, COLOR_OUTLINE)
+	draw_circle(c + Vector2(r * 0.32, -r * 0.15), 2.4, COLOR_OUTLINE)
+
+func _draw_hen_icon(rect: Rect2, accent: Color) -> void:
+	var c := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.46)
+	var r := rect.size.x * 0.24
+	draw_circle(c + Vector2(0, r * 0.35), r, accent)
+	draw_circle(c + Vector2(0, -r * 0.75), r * 0.55, accent)
+	draw_circle(c + Vector2(-r * 0.15, -r * 1.25), r * 0.18, Color("#d9432e"))
+	draw_circle(c + Vector2(r * 0.1, -r * 1.3), r * 0.18, Color("#d9432e"))
+	var beak_pts := PackedVector2Array([
+		c + Vector2(r * 0.5, -r * 0.75),
+		c + Vector2(r * 0.85, -r * 0.65),
+		c + Vector2(r * 0.5, -r * 0.52),
+	])
+	draw_colored_polygon(beak_pts, Color("#f38630"))
+	draw_circle(c + Vector2(r * 0.15, -r * 0.85), 2.2, COLOR_OUTLINE)
+	draw_circle(c + Vector2(-r * 0.2, r * 0.45), r * 0.38, accent.darkened(0.2))
+
+func _draw_ewe_icon(rect: Rect2, accent: Color) -> void:
+	var c := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.4)
+	var r := rect.size.x * 0.24
+	draw_circle(c + Vector2(-r * 0.5, r * 0.15), r * 0.55, accent)
+	draw_circle(c + Vector2(r * 0.5, r * 0.15), r * 0.55, accent)
+	draw_circle(c + Vector2(0, -r * 0.1), r * 0.68, accent)
+	draw_circle(c + Vector2(0, r * 0.55), r * 0.55, accent)
+	draw_circle(c + Vector2(-r * 0.75, -r * 0.3), r * 0.2, accent.darkened(0.3))
+	draw_circle(c + Vector2(r * 0.75, -r * 0.3), r * 0.2, accent.darkened(0.3))
+	draw_circle(c + Vector2(0, -r * 0.1), r * 0.36, accent.darkened(0.45))
+	draw_circle(c + Vector2(-r * 0.13, -r * 0.15), 2.1, COLOR_OUTLINE)
+	draw_circle(c + Vector2(r * 0.13, -r * 0.15), 2.1, COLOR_OUTLINE)
+
+# --- Shared panel drawing helpers -------------------------------------------
+
+func _draw_wood_panel(rect: Rect2, radius: float) -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = COLOR_WOOD_MID
+	sb.set_corner_radius_all(int(radius))
+	sb.border_width_top = 3
+	sb.border_width_bottom = 3
+	sb.border_width_left = 3
+	sb.border_width_right = 3
+	sb.border_color = COLOR_OUTLINE
+	# Hard "pop" shadow (no blur), matching --cap-shadow-pop's flat offset.
+	var shadow_sb := StyleBoxFlat.new()
+	shadow_sb.bg_color = COLOR_OUTLINE
+	shadow_sb.set_corner_radius_all(int(radius))
+	draw_style_box(shadow_sb, Rect2(rect.position + Vector2(3, 3), rect.size))
+	draw_style_box(sb, rect)
+	# Faint top highlight band to fake the light-to-dark wood gradient
+	# without needing a texture resource.
+	var highlight := Rect2(rect.position + Vector2(4, 4), Vector2(rect.size.x - 8, rect.size.y * 0.4))
+	var hl_sb := StyleBoxFlat.new()
+	hl_sb.bg_color = Color(COLOR_WOOD_LIGHT.r, COLOR_WOOD_LIGHT.g, COLOR_WOOD_LIGHT.b, 0.5)
+	hl_sb.corner_radius_top_left = int(radius) - 2
+	hl_sb.corner_radius_top_right = int(radius) - 2
+	draw_style_box(hl_sb, highlight)
+
+func _draw_parchment_pill(rect: Rect2, radius: float = 12.0) -> void:
+	var shadow_sb := StyleBoxFlat.new()
+	shadow_sb.bg_color = COLOR_OUTLINE
+	shadow_sb.set_corner_radius_all(int(radius))
+	draw_style_box(shadow_sb, Rect2(rect.position + Vector2(2, 2), rect.size))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = COLOR_PARCHMENT
+	sb.set_corner_radius_all(int(radius))
+	sb.border_width_top = 2
+	sb.border_width_bottom = 2
+	sb.border_width_left = 2
+	sb.border_width_right = 2
+	sb.border_color = COLOR_OUTLINE
+	draw_style_box(sb, rect)
+
+# ---------------------------------------------------------------------------
+# UI node styling - applied once in _ready() to real Control/Button nodes
+# (which need to stay real nodes for input + text layout) rather than
+# folded into _draw().
+# ---------------------------------------------------------------------------
+
+func _style_ui() -> void:
+	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
+	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
+	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
+	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
+	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
+	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
+
+	for button in animal_buttons:
+		var empty := StyleBoxEmpty.new()
+		button.add_theme_stylebox_override("normal", empty)
+		button.add_theme_stylebox_override("hover", empty)
+		button.add_theme_stylebox_override("pressed", empty)
+		button.add_theme_stylebox_override("focus", empty)
+		button.add_theme_stylebox_override("disabled", empty)
+
+	for label in animal_name_labels:
+		label.add_theme_color_override("font_color", NAME_LABEL_IDLE_COLOR)
+		label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
+		label.add_theme_constant_override("shadow_offset_x", 1)
+		label.add_theme_constant_override("shadow_offset_y", 1)
+
+	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	title_label.add_theme_constant_override("shadow_offset_x", 1)
+	title_label.add_theme_constant_override("shadow_offset_y", 1)
+
+	instruction_label.add_theme_color_override("font_color", COLOR_INK)
+	status_label.add_theme_color_override("font_color", COLOR_INK)
+	round_caption_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	round_value_label.add_theme_color_override("font_color", Color(1, 1, 1))
+
+	result_label.add_theme_color_override("font_color", COLOR_INK)
+	score_result_label.add_theme_color_override("font_color", COLOR_INK)
+
+func _style_round_button(btn: Button, bg: Color, border: Color, radius: int) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = bg
+	normal.set_corner_radius_all(radius)
+	normal.set_border_width_all(3)
+	normal.border_color = border
+	var hover := normal.duplicate()
+	hover.bg_color = bg.lightened(0.1)
+	var pressed := normal.duplicate()
+	pressed.bg_color = bg.darkened(0.15)
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("focus", normal)
+	btn.add_theme_color_override("font_color", Color(1, 1, 1))
+	btn.add_theme_color_override("font_hover_color", Color(1, 1, 1))
+	btn.add_theme_color_override("font_pressed_color", Color(1, 1, 1))

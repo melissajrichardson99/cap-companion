@@ -15,6 +15,5 @@ Godot 4.x project (GDScript only). Open `project.godot` in the Godot editor to t
 - Growth-on-eat and the win trigger at exactly length 10.
 - Round pacing — at the default 0.2s tick, tune `TICK_INTERVAL` if a typical round runs much longer/shorter than ~30s.
 
-## Not yet done (needs the GUI)
-- Web export (renderer is pre-set to GL Compatibility for export reliability, per `project.godot`).
-- Art/theme pass — snake/food/board currently render as flat-colored rectangles via `_draw()`, no textures yet.
+## Visuals
+Parchment/wood-sign chrome matching the rest of the app (see `frontend/src/index.css`'s `--cap-*` tokens, mirrored as color constants at the top of `scripts/Main.gd`). Everything is drawn procedurally in `_draw()` and via `StyleBoxFlat` theme overrides in `_style_ui()` - no bundled image/font assets, same approach as Card Flip Pairs' procedural icon textures. Note the geometric arrow glyphs (▲▼◀▶) originally used for the D-pad buttons render as missing-glyph boxes in the Web export, the same font-fallback gotcha as emoji - the D-pad uses plain ASCII (`^`/`v`/`<`/`>`) instead.

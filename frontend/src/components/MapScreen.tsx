@@ -12,6 +12,10 @@ const CATEGORY_LABEL: Record<MapNode['category'], string> = {
   seasonal: 'Seasonal',
 }
 
+// The four shape/color categories the printed map's legend covers -- excludes
+// 'seasonal' (no dedicated legend key on the physical map either).
+const LEGEND_CATEGORIES: MapNode['category'][] = ['attraction', 'animal', 'service', 'food']
+
 const STATE_ICON: Record<MapNode['state'], string> = {
   not_visited: '',
   visited: '✓',
@@ -107,6 +111,16 @@ interface MapScreenProps {
 
 export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenProps) {
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null)
+  const [openLegendCategories, setOpenLegendCategories] = useState<Set<MapNode['category']>>(new Set())
+
+  const toggleLegendCategory = (category: MapNode['category']) => {
+    setOpenLegendCategories((prev) => {
+      const next = new Set(prev)
+      if (next.has(category)) next.delete(category)
+      else next.add(category)
+      return next
+    })
+  }
 
   if (error) {
     return (
@@ -133,6 +147,21 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
   // selectedNode can go stale after a reload (state/linked_tiles changed) —
   // always resolve the popup's content off the fresh nodes list.
   const freshSelectedNode = selectedNode ? nodes.find((n) => n.id === selectedNode.id) ?? null : null
+
+  // Legend groups pull straight from the live nodes list (same topLevel used
+  // for pins/fallback cards) so it can never drift into a hardcoded
+  // duplicate -- add/rename/remove a node in the backend and the legend
+  // follows automatically. Sorted by the physical map's legend number (same
+  // LEGEND_NUMBER table the pin shapes use), not alphabetically, so the
+  // in-app order matches the printed map; nodes missing from the table sort
+  // last instead of throwing off the rest.
+  const legendGroups = LEGEND_CATEGORIES.map((category) => ({
+    category,
+    nodes: topLevel
+      .filter((n) => n.category === category)
+      .sort((a, b) => (LEGEND_NUMBER[a.name] ?? Infinity) - (LEGEND_NUMBER[b.name] ?? Infinity)),
+  }))
+  const legendTotal = legendGroups.reduce((sum, group) => sum + group.nodes.length, 0)
 
   return (
     <div className="map-screen">
@@ -210,6 +239,63 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
           </div>
         </section>
       )}
+
+      <div className="map-legend-frame">
+        <section className="map-legend cap-parchment-card">
+          <div className="map-legend-header">
+            <span className="map-legend-header-title">Map Legend</span>
+            <span className="map-legend-header-count">{legendTotal} locations</span>
+          </div>
+
+          <div className="map-legend-body">
+            {legendGroups.map(({ category, nodes: categoryNodes }) => {
+              const isOpen = openLegendCategories.has(category)
+              return (
+                <div className="map-legend-category" key={category}>
+                  <button
+                    type="button"
+                    className="map-legend-category-toggle"
+                    aria-expanded={isOpen}
+                    aria-controls={`map-legend-list-${category}`}
+                    onClick={() => toggleLegendCategory(category)}
+                  >
+                    <span className={`map-legend-swatch map-pin-${category}`} aria-hidden="true">
+                      <svg className="map-pin-shape" viewBox="0 0 30 30" width="18" height="18">
+                        <PinShapeVector category={category} />
+                      </svg>
+                    </span>
+                    <span className="map-legend-category-name">{CATEGORY_LABEL[category]}</span>
+                    <span className="map-legend-category-count">{categoryNodes.length}</span>
+                    <span className="map-legend-toggle-icon" aria-hidden="true">
+                      {isOpen ? '▾' : '▸'}
+                    </span>
+                  </button>
+
+                  {isOpen && (
+                    <ul id={`map-legend-list-${category}`} className="map-legend-list">
+                      {categoryNodes.map((node) => (
+                        <li key={node.id}>
+                          {LEGEND_NUMBER[node.name] != null && (
+                            <span className="map-legend-item-number">{LEGEND_NUMBER[node.name]}</span>
+                          )}
+                          {node.name}
+                          {node.children.length > 0 && (
+                            <ul className="map-legend-children">
+                              {node.children.map((child) => (
+                                <li key={child.id}>{child.name}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      </div>
 
       {freshSelectedNode && (
         <NodeDetailPopup node={freshSelectedNode} onClose={() => setSelectedNode(null)} onVisitResult={onVisitResult} />

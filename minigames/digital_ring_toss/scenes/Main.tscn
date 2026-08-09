@@ -7,38 +7,87 @@ script = ExtResource("1_main")
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="TopBar" type="Control" parent="UI"]
-offset_right = 400.0
-offset_bottom = 60.0
-
-[node name="ThrowsLabel" type="Label" parent="UI/TopBar"]
-offset_left = 8.0
-offset_top = 16.0
-offset_right = 110.0
-offset_bottom = 44.0
-text = "Throws: 4"
-
-[node name="ScoreLabel" type="Label" parent="UI/TopBar"]
-offset_left = 110.0
-offset_top = 16.0
-offset_right = 190.0
-offset_bottom = 44.0
-text = "Score: 0"
-
-[node name="StatusLabel" type="Label" parent="UI/TopBar"]
-offset_left = 190.0
-offset_top = 16.0
-offset_right = 354.0
-offset_bottom = 44.0
-horizontal_alignment = 1
-text = "Ready?"
-
-[node name="ExitButton" type="Button" parent="UI/TopBar"]
-offset_left = 354.0
+[node name="SignBar" type="Control" parent="UI"]
+offset_left = 10.0
 offset_top = 10.0
-offset_right = 400.0
-offset_bottom = 42.0
+offset_right = 390.0
+offset_bottom = 66.0
+
+[node name="TitleLabel" type="Label" parent="UI/SignBar"]
+offset_left = 54.0
+offset_top = 0.0
+offset_right = 330.0
+offset_bottom = 56.0
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 21
+text = "Digital Ring Toss"
+
+[node name="ExitButton" type="Button" parent="UI/SignBar"]
+offset_left = 334.0
+offset_top = 8.0
+offset_right = 372.0
+offset_bottom = 46.0
 text = "X"
+
+[node name="StatsBar" type="Control" parent="UI"]
+offset_left = 10.0
+offset_top = 74.0
+offset_right = 390.0
+offset_bottom = 128.0
+
+[node name="ThrowsPill" type="Control" parent="UI/StatsBar"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 185.0
+offset_bottom = 44.0
+
+[node name="CaptionLabel" type="Label" parent="UI/StatsBar/ThrowsPill"]
+offset_left = 26.0
+offset_top = 2.0
+offset_right = 155.0
+offset_bottom = 18.0
+theme_override_font_sizes/font_size = 12
+text = "THROWS"
+
+[node name="ValueLabel" type="Label" parent="UI/StatsBar/ThrowsPill"]
+offset_left = 26.0
+offset_top = 15.0
+offset_right = 155.0
+offset_bottom = 34.0
+theme_override_font_sizes/font_size = 18
+text = "4"
+
+[node name="ScorePill" type="Control" parent="UI/StatsBar"]
+offset_left = 195.0
+offset_top = 10.0
+offset_right = 370.0
+offset_bottom = 44.0
+
+[node name="CaptionLabel" type="Label" parent="UI/StatsBar/ScorePill"]
+offset_left = 26.0
+offset_top = 2.0
+offset_right = 155.0
+offset_bottom = 18.0
+theme_override_font_sizes/font_size = 12
+text = "SCORE"
+
+[node name="ValueLabel" type="Label" parent="UI/StatsBar/ScorePill"]
+offset_left = 26.0
+offset_top = 15.0
+offset_right = 155.0
+offset_bottom = 34.0
+theme_override_font_sizes/font_size = 18
+text = "0"
+
+[node name="StatusLabel" type="Label" parent="UI"]
+offset_left = 10.0
+offset_top = 148.0
+offset_right = 390.0
+offset_bottom = 180.0
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 18
+text = "Ready?"
 
 [node name="GameOverLayer" type="Control" parent="UI"]
 visible = false
@@ -55,13 +104,15 @@ offset_top = 220.0
 offset_right = 400.0
 offset_bottom = 260.0
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 26
 text = "Round Over"
 
 [node name="ScoreResultLabel" type="Label" parent="UI/GameOverLayer"]
-offset_top = 270.0
+offset_top = 268.0
 offset_right = 400.0
-offset_bottom = 300.0
+offset_bottom = 296.0
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
 text = ""
 
 [node name="RestartButton" type="Button" parent="UI/GameOverLayer"]

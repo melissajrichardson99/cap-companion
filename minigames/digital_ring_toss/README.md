@@ -25,6 +25,9 @@ Godot 4.x project (GDScript only). Open `project.godot` in the Godot editor to t
 - Round pacing: this game is player-paced (unlike the auto-scroll/timer games), so total round time depends on how quickly the player aims and releases each throw; only the countdown (~2.5s) and the per-throw travel+result-pause (~0.95s x 4 ≈ 3.8s) are fixed overhead. Confirm that fixed overhead doesn't itself blow past the ~30s target, leaving room for actual aiming time.
 - Confirmed via real Playwright mouse-driven runs against the exported Web build (not just an editor/code read-through) — see verification notes reported alongside this game's completion.
 
-## Not yet done (needs the GUI)
-- Art/theme pass — pegs, the anchor, the pull-back line, and the ring currently render as flat-colored circles/lines via `_draw()`, no textures yet.
-- Web export is already produced under `export_web/` and copied into `frontend/public/games/digital_ring_toss/` per the standard pipeline (renderer pre-set to GL Compatibility for export reliability, per `project.godot`).
+## Visuals
+Parchment/wood-sign chrome matching the rest of the app (see `frontend/src/index.css`'s `--cap-*` tokens, mirrored as color constants at the top of `scripts/Main.gd`), same system as Mini Snake. Everything is drawn procedurally in `_draw()` (wood header plank with a ring glyph + leaf-vine flourish, parchment Throws/Score stat pills, a wood-framed grass field with corner rock clusters, wood-post pegs colored red/blue/yellow for the 2/3/5 values, and a wood-post throw anchor with a dashed idle guide arrow) plus `StyleBoxFlat` theme overrides in `_style_ui()` for the real Button/Label nodes - no bundled image/font assets. All in-canvas text is plain ASCII (peg values, "X" exit) since the Web-export font has no emoji/geometric-glyph coverage.
+
+Note: `is_accepting_input` gates the idle guide-arrow drawn in `_draw()`, but Godot only re-runs `_draw()` after an explicit `queue_redraw()` - both `_start_game()` (after the ready countdown) and `_do_throw()` (after the result pause, when another throw remains) now call `queue_redraw()` right after flipping that flag to `true`, otherwise the canvas stays on its last-queued frame and the arrow silently never appears.
+
+Web export is already produced under `export_web/` and copied into `frontend/public/games/digital_ring_toss/` per the standard pipeline (renderer pre-set to GL Compatibility for export reliability, per `project.godot`).
