@@ -1,5 +1,7 @@
 // Typed fetch client for the Phase 1 backend endpoints.
 
+import { getStaffToken } from './staffAuth'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
 export type NodeState = 'not_visited' | 'visited' | 'closed'
@@ -299,7 +301,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const body = await res.text()
     throw new Error(`${init?.method ?? 'GET'} ${path} -> ${res.status}: ${body}`)
   }
+  if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
+}
+
+// Staff-only endpoints require this Authorization header (validated
+// server-side by app/staff_auth.require_staff -- the client-side /staff
+// login gate alone is not the real enforcement).
+function staffRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getStaffToken()
+  return request<T>(path, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
 }
 
 export const api = {
@@ -343,11 +360,22 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ type, location_node_id: locationNodeId }),
     }),
-  listStaffRequests: () => request<StaffRequest[]>('/staff-requests'),
+  listStaffRequests: (includeResolved = false) =>
+    staffRequest<StaffRequest[]>(`/staff-requests?include_resolved=${includeResolved}`),
   acknowledgeStaffRequest: (requestId: string) =>
-    request<StaffRequest>(`/staff-requests/${requestId}/acknowledge`, { method: 'POST' }),
+    staffRequest<StaffRequest>(`/staff-requests/${requestId}/acknowledge`, { method: 'POST' }),
   resolveStaffRequest: (requestId: string) =>
-    request<StaffRequest>(`/staff-requests/${requestId}/resolve`, { method: 'POST' }),
+    staffRequest<StaffRequest>(`/staff-requests/${requestId}/resolve`, { method: 'POST' }),
+  staffLogin: (password: string) =>
+    request<{ token: string }>('/staff/login', { method: 'POST', body: JSON.stringify({ password }) }),
+  staffCheckSession: async (): Promise<boolean> => {
+    try {
+      await staffRequest<{ ok: boolean }>('/staff/session')
+      return true
+    } catch {
+      return false
+    }
+  },
   getCoinsSummary: () => request<CoinsSummary>('/coins/summary'),
   submitPhoto: async (file: File, guestLabel: string | null) => {
     const body = new FormData()
@@ -363,11 +391,12 @@ export const api = {
     }
     return res.json() as Promise<PhotoSubmission>
   },
-  listPendingPhotos: () => request<PhotoSubmission[]>('/photos/pending'),
+  listPendingPhotos: () => staffRequest<PhotoSubmission[]>('/photos/pending'),
   shortlistPhoto: (submissionId: string) =>
-    request<PhotoSubmission>(`/photos/${submissionId}/shortlist`, { method: 'POST' }),
+    staffRequest<PhotoSubmission>(`/photos/${submissionId}/shortlist`, { method: 'POST' }),
   rejectPhoto: (submissionId: string) =>
-    request<PhotoSubmission>(`/photos/${submissionId}/reject`, { method: 'POST' }),
+    staffRequest<PhotoSubmission>(`/photos/${submissionId}/reject`, { method: 'POST' }),
+  deletePhoto: (submissionId: string) => staffRequest<void>(`/photos/${submissionId}`, { method: 'DELETE' }),
   listPhotoGallery: (voterSessionId: string) =>
     request<PhotoSubmission[]>(`/photos/gallery?voter_session_id=${encodeURIComponent(voterSessionId)}`),
   votePhoto: (submissionId: string, voterSessionId: string) =>

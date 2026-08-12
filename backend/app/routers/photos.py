@@ -1,10 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from app.errors import ConflictError, NotFoundError
 from app.models import CreateVoteRequest, PhotoSubmission
 from app.services import photos as photos_service
+from app.staff_auth import require_staff
 
 router = APIRouter(prefix="/photos", tags=["photos"])
 
@@ -17,7 +18,7 @@ async def submit(file: UploadFile = File(...), guest_label: str | None = Form(de
     )
 
 
-@router.get("/pending", response_model=list[PhotoSubmission])
+@router.get("/pending", response_model=list[PhotoSubmission], dependencies=[Depends(require_staff)])
 def list_pending() -> list[PhotoSubmission]:
     return photos_service.list_pending()
 
@@ -27,7 +28,7 @@ def gallery(voter_session_id: str | None = None) -> list[PhotoSubmission]:
     return photos_service.list_gallery(voter_session_id)
 
 
-@router.post("/{submission_id}/shortlist", response_model=PhotoSubmission)
+@router.post("/{submission_id}/shortlist", response_model=PhotoSubmission, dependencies=[Depends(require_staff)])
 def shortlist(submission_id: UUID) -> PhotoSubmission:
     try:
         return photos_service.shortlist(submission_id)
@@ -37,10 +38,20 @@ def shortlist(submission_id: UUID) -> PhotoSubmission:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/{submission_id}/reject", response_model=PhotoSubmission)
+@router.post("/{submission_id}/reject", response_model=PhotoSubmission, dependencies=[Depends(require_staff)])
 def reject(submission_id: UUID) -> PhotoSubmission:
     try:
         return photos_service.reject(submission_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.delete("/{submission_id}", status_code=204, dependencies=[Depends(require_staff)])
+def delete(submission_id: UUID) -> None:
+    try:
+        photos_service.delete_submission(submission_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConflictError as exc:

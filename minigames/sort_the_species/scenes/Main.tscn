@@ -16,32 +16,37 @@ offset_right = 400.0
 offset_bottom = 60.0
 
 [node name="CorrectLabel" type="Label" parent="UI/TopBar"]
-offset_left = 8.0
-offset_top = 16.0
-offset_right = 130.0
-offset_bottom = 44.0
+offset_left = 44.0
+offset_top = 12.0
+offset_right = 140.0
+offset_bottom = 48.0
+horizontal_alignment = 1
+vertical_alignment = 1
 text = "Correct: 0"
 
 [node name="MissedLabel" type="Label" parent="UI/TopBar"]
-offset_left = 130.0
-offset_top = 16.0
-offset_right = 250.0
-offset_bottom = 44.0
+offset_left = 148.0
+offset_top = 12.0
+offset_right = 244.0
+offset_bottom = 48.0
+horizontal_alignment = 1
+vertical_alignment = 1
 text = "Missed: 0 / 4"
 
 [node name="StatusLabel" type="Label" parent="UI/TopBar"]
 offset_left = 250.0
 offset_top = 16.0
-offset_right = 354.0
+offset_right = 332.0
 offset_bottom = 44.0
 horizontal_alignment = 1
+vertical_alignment = 1
 text = "Ready?"
 
 [node name="ExitButton" type="Button" parent="UI/TopBar"]
-offset_left = 354.0
+offset_left = 338.0
 offset_top = 10.0
-offset_right = 400.0
-offset_bottom = 42.0
+offset_right = 386.0
+offset_bottom = 46.0
 text = "X"
 
 [node name="Bins" type="Control" parent="UI"]
@@ -52,28 +57,31 @@ offset_bottom = 600.0
 
 [node name="BinLabel0" type="Label" parent="UI/Bins"]
 offset_left = 0.0
-offset_top = 58.0
+offset_top = 66.0
 offset_right = 133.333
-offset_bottom = 100.0
+offset_bottom = 90.0
 horizontal_alignment = 1
+vertical_alignment = 1
 autowrap_mode = 2
 text = "Capybara"
 
 [node name="BinLabel1" type="Label" parent="UI/Bins"]
 offset_left = 133.333
-offset_top = 58.0
+offset_top = 66.0
 offset_right = 266.667
-offset_bottom = 100.0
+offset_bottom = 90.0
 horizontal_alignment = 1
+vertical_alignment = 1
 autowrap_mode = 2
 text = "Alpaca"
 
 [node name="BinLabel2" type="Label" parent="UI/Bins"]
 offset_left = 266.667
-offset_top = 58.0
+offset_top = 66.0
 offset_right = 400.0
-offset_bottom = 100.0
+offset_bottom = 90.0
 horizontal_alignment = 1
+vertical_alignment = 1
 autowrap_mode = 2
 text = "Chicken"
 
@@ -92,6 +100,7 @@ offset_top = 220.0
 offset_right = 400.0
 offset_bottom = 260.0
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
 text = "Game Over"
 
 [node name="ScoreResultLabel" type="Label" parent="UI/GameOverLayer"]
@@ -99,6 +108,7 @@ offset_top = 270.0
 offset_right = 400.0
 offset_bottom = 300.0
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 15
 text = ""
 
 [node name="RestartButton" type="Button" parent="UI/GameOverLayer"]

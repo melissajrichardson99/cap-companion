@@ -27,36 +27,21 @@ const COLOR_ADVENTURE_GREEN := Color("#3b7801")
 const COLOR_SUNSET_ORANGE := Color("#f38630")
 const COLOR_SUNSET_ORANGE_DEEP := Color("#bc6825")
 
-# Per-animal silhouette colors. Distinct hues so each icon is tell-apart-able
-# by color alone, on top of already being a distinct silhouette shape.
-const COLOR_ANIMAL_CAPYBARA := Color("#9c7a4d")
-const COLOR_ANIMAL_KANGAROO := Color("#c17a4a")
-const COLOR_ANIMAL_WALLAROO := Color("#7a4a2e")
-const COLOR_ANIMAL_GOAT := Color("#a89570")
-const COLOR_ANIMAL_ALPACA := Color("#d9b98a")
-const COLOR_ANIMAL_SHEEP := Color("#f2ede0")
-const COLOR_ANIMAL_PIG := Color("#e8a0ac")
-const COLOR_ANIMAL_EMU := Color("#46543f")
-
-# Godot's default font (used by the Web export) has no glyphs for emoji
-# codepoints - verified via Playwright screenshot, where Button.text set to
-# an animal emoji rendered as a "U+1F418"-style missing-glyph box, not a
-# picture. Every animal "face" is therefore a procedurally-drawn silhouette
-# icon (simple blob-body + one distinguishing feature per animal), matching
-# the confirmed 8-pair roster in CAP_Companion_App_TechSpec.md. This is a
-# placeholder art pass (like Mini Snake's apple/snake glyphs), not
-# photorealistic art.
-const ANIMAL_NAMES := ["capybara", "kangaroo", "wallaroo", "goat", "alpaca", "sheep", "pig", "emu"]
-const ANIMAL_COLORS := [
-	COLOR_ANIMAL_CAPYBARA,
-	COLOR_ANIMAL_KANGAROO,
-	COLOR_ANIMAL_WALLAROO,
-	COLOR_ANIMAL_GOAT,
-	COLOR_ANIMAL_ALPACA,
-	COLOR_ANIMAL_SHEEP,
-	COLOR_ANIMAL_PIG,
-	COLOR_ANIMAL_EMU,
-]
+# Real photo-style textures for each animal "face", matching the confirmed
+# 8-pair park roster. Replaces the earlier procedurally-drawn silhouette
+# placeholder art pass now that real cropped assets are staged in
+# res://assets/.
+const ANIMAL_NAMES := ["capybara", "kangaroo", "chicken", "porcupine", "alpaca", "sheep", "pig", "emu"]
+const ANIMAL_TEXTURES := {
+	"capybara": preload("res://assets/capybara.png"),
+	"kangaroo": preload("res://assets/kangaroo.png"),
+	"alpaca": preload("res://assets/alpaca.png"),
+	"sheep": preload("res://assets/sheep.png"),
+	"pig": preload("res://assets/pig.png"),
+	"emu": preload("res://assets/emu.png"),
+	"chicken": preload("res://assets/chicken.png"),
+	"porcupine": preload("res://assets/porcupine.png"),
+}
 
 @onready var title_label: Label = $UI/SignBar/TitleLabel
 @onready var instruction_label: Label = $UI/InstructionBar/InstructionLabel
@@ -81,14 +66,14 @@ var pairs_found: int = 0
 var is_running: bool = false
 var busy: bool = false
 var back_texture: ImageTexture
-var face_textures: Array[ImageTexture] = []
+var face_textures: Array[Texture2D] = []
 
 func _ready() -> void:
 	randomize()
 	back_texture = _make_back_texture()
 	face_textures.clear()
 	for i in range(ANIMAL_NAMES.size()):
-		face_textures.append(_make_face_texture(ANIMAL_NAMES[i], ANIMAL_COLORS[i]))
+		face_textures.append(ANIMAL_TEXTURES[ANIMAL_NAMES[i]])
 	cards.assign(card_grid.get_children())
 	for i in range(cards.size()):
 		var idx := i
@@ -102,11 +87,10 @@ func _ready() -> void:
 	_start_game()
 
 # ---------------------------------------------------------------------------
-# Texture generation. Card backs and animal faces are both built pixel-by-
-# pixel into an Image/ImageTexture (no bundled image assets exist anywhere in
-# this repo - deliberate), the same technique the previous abstract-shape
-# placeholder used, just with real silhouette hit-tests instead of
-# circle/square/diamond primitives.
+# Card back texture generation. The back is still a procedurally-drawn paw
+# print built pixel-by-pixel into an Image/ImageTexture - unchanged. Card
+# faces are now real photo PNGs loaded via ANIMAL_TEXTURES above instead of
+# the earlier procedural silhouette generation.
 # ---------------------------------------------------------------------------
 
 func _make_back_texture() -> ImageTexture:
@@ -134,178 +118,10 @@ func _paw_print_contains(px: float, py: float, cx: float, cy: float, r: float) -
 			return true
 	return false
 
-func _make_face_texture(animal: String, color: Color) -> ImageTexture:
-	var image := Image.create(ICON_SIZE, ICON_SIZE, false, Image.FORMAT_RGBA8)
-	var cx := ICON_SIZE / 2.0
-	var cy := ICON_SIZE / 2.0
-	var r := ICON_SIZE / 2.0 - ICON_SIZE * 0.14
-	var accent := color.darkened(0.32)
-	for y in range(ICON_SIZE):
-		for x in range(ICON_SIZE):
-			var px := x + 0.5
-			var py := y + 0.5
-			var part := _animal_part(animal, px, py, cx, cy, r)
-			if part == 1:
-				image.set_pixel(x, y, color)
-			elif part == 2:
-				image.set_pixel(x, y, accent)
-			else:
-				image.set_pixel(x, y, Color(0, 0, 0, 0))
-	return ImageTexture.create_from_image(image)
-
-# Returns 0 (transparent), 1 (primary silhouette color) or 2 (darker accent
-# color, used for a small distinguishing feature like a snout or horns).
-func _animal_part(animal: String, px: float, py: float, cx: float, cy: float, r: float) -> int:
-	match animal:
-		"capybara":
-			return _capybara_part(px, py, cx, cy, r)
-		"kangaroo":
-			return _kangaroo_part(px, py, cx, cy, r, 1.0)
-		"wallaroo":
-			# Same body plan as kangaroo but smaller and a different color -
-			# these two real park animals are easy to mix up, so they're
-			# distinguished by size and hue rather than a wholly different
-			# silhouette, per the spec.
-			return _kangaroo_part(px, py, cx, cy, r, 0.8)
-		"goat":
-			return _goat_part(px, py, cx, cy, r)
-		"alpaca":
-			return _alpaca_part(px, py, cx, cy, r)
-		"sheep":
-			return _sheep_part(px, py, cx, cy, r)
-		"pig":
-			return _pig_part(px, py, cx, cy, r)
-		"emu":
-			return _emu_part(px, py, cx, cy, r)
-		_:
-			return 0
-
-func _capybara_part(px: float, py: float, cx: float, cy: float, r: float) -> int:
-	# Low, wide rounded body with small ears and a dark nose.
-	if _circle_contains(px, py, cx + 0.95 * r, cy + 0.05 * r, 0.22 * r):
-		return 2
-	if _ellipse_contains(px, py, cx, cy + 0.15 * r, 1.05 * r, 0.62 * r):
-		return 1
-	if _circle_contains(px, py, cx - 0.55 * r, cy - 0.55 * r, 0.18 * r):
-		return 1
-	if _circle_contains(px, py, cx + 0.55 * r, cy - 0.55 * r, 0.18 * r):
-		return 1
-	return 0
-
-func _kangaroo_part(px: float, py: float, cx: float, cy: float, r: float, scale: float) -> int:
-	# Upright body, round head with tall ears, and a thick tail.
-	var r2 := r * scale
-	if _circle_contains(px, py, cx, cy - 0.68 * r2, 0.12 * r2):
-		return 2
-	if _ellipse_contains(px, py, cx, cy + 0.15 * r2, 0.5 * r2, 0.85 * r2):
-		return 1
-	if _circle_contains(px, py, cx, cy - 0.75 * r2, 0.32 * r2):
-		return 1
-	if _circle_contains(px, py, cx - 0.18 * r2, cy - 1.05 * r2, 0.14 * r2):
-		return 1
-	if _circle_contains(px, py, cx + 0.18 * r2, cy - 1.05 * r2, 0.14 * r2):
-		return 1
-	if _point_in_triangle(px, py, cx + 0.3 * r2, cy + 0.65 * r2, cx + 0.85 * r2, cy + 1.0 * r2, cx + 0.55 * r2, cy + 1.05 * r2):
-		return 1
-	return 0
-
-func _goat_part(px: float, py: float, cx: float, cy: float, r: float) -> int:
-	# Rounded body and head, curved horns, small beard.
-	if _point_in_triangle(px, py, cx - 0.15 * r, cy - 0.55 * r, cx - 0.42 * r, cy - 1.0 * r, cx - 0.02 * r, cy - 0.6 * r):
-		return 2
-	if _point_in_triangle(px, py, cx + 0.15 * r, cy - 0.55 * r, cx + 0.42 * r, cy - 1.0 * r, cx + 0.02 * r, cy - 0.6 * r):
-		return 2
-	if _point_in_triangle(px, py, cx - 0.1 * r, cy - 0.05 * r, cx + 0.1 * r, cy - 0.05 * r, cx, cy + 0.18 * r):
-		return 2
-	if _ellipse_contains(px, py, cx, cy + 0.25 * r, 0.6 * r, 0.5 * r):
-		return 1
-	if _circle_contains(px, py, cx, cy - 0.35 * r, 0.32 * r):
-		return 1
-	if _circle_contains(px, py, cx - 0.32 * r, cy - 0.35 * r, 0.14 * r):
-		return 1
-	if _circle_contains(px, py, cx + 0.32 * r, cy - 0.35 * r, 0.14 * r):
-		return 1
-	return 0
-
-func _alpaca_part(px: float, py: float, cx: float, cy: float, r: float) -> int:
-	# Long neck, small head, fluffy body low down.
-	if _circle_contains(px, py, cx, cy - 0.55 * r, 0.12 * r):
-		return 2
-	if _ellipse_contains(px, py, cx, cy + 0.65 * r, 0.55 * r, 0.4 * r):
-		return 1
-	if _ellipse_contains(px, py, cx, cy + 0.05 * r, 0.24 * r, 0.55 * r):
-		return 1
-	if _circle_contains(px, py, cx, cy - 0.6 * r, 0.26 * r):
-		return 1
-	if _circle_contains(px, py, cx - 0.15 * r, cy - 0.85 * r, 0.1 * r):
-		return 1
-	if _circle_contains(px, py, cx + 0.15 * r, cy - 0.85 * r, 0.1 * r):
-		return 1
-	return 0
-
-func _sheep_part(px: float, py: float, cx: float, cy: float, r: float) -> int:
-	# Fluffy cloud-cluster body with a small dark face peeking out the side.
-	if _circle_contains(px, py, cx - 0.68 * r, cy - 0.05 * r, 0.22 * r):
-		return 2
-	if _circle_contains(px, py, cx - 0.55 * r, cy - 0.3 * r, 0.12 * r):
-		return 2
-	if _circle_contains(px, py, cx, cy + 0.05 * r, 0.62 * r):
-		return 1
-	var angles := [0.0, 72.0, 144.0, 216.0, 288.0]
-	for ang in angles:
-		var rad := deg_to_rad(ang)
-		var ox := cos(rad) * 0.4 * r
-		var oy := sin(rad) * 0.4 * r
-		if _circle_contains(px, py, cx + ox, cy + 0.05 * r + oy, 0.32 * r):
-			return 1
-	return 0
-
-func _pig_part(px: float, py: float, cx: float, cy: float, r: float) -> int:
-	# Round body, round protruding snout, small triangular ears, curly tail.
-	if _circle_contains(px, py, cx + 0.55 * r, cy + 0.05 * r, 0.24 * r):
-		return 2
-	if _circle_contains(px, py, cx - 0.7 * r, cy + 0.35 * r, 0.1 * r):
-		return 2
-	if _ellipse_contains(px, py, cx, cy + 0.1 * r, 0.58 * r, 0.5 * r):
-		return 1
-	if _point_in_triangle(px, py, cx - 0.35 * r, cy - 0.4 * r, cx - 0.55 * r, cy - 0.75 * r, cx - 0.1 * r, cy - 0.45 * r):
-		return 1
-	if _point_in_triangle(px, py, cx + 0.35 * r, cy - 0.4 * r, cx + 0.55 * r, cy - 0.75 * r, cx + 0.1 * r, cy - 0.45 * r):
-		return 1
-	return 0
-
-func _emu_part(px: float, py: float, cx: float, cy: float, r: float) -> int:
-	# Long-neck bird silhouette: round body, tall thin neck, small head, beak.
-	if _point_in_triangle(px, py, cx + 0.12 * r, cy - 0.85 * r, cx + 0.4 * r, cy - 0.8 * r, cx + 0.12 * r, cy - 0.75 * r):
-		return 2
-	if _ellipse_contains(px, py, cx, cy + 0.55 * r, 0.45 * r, 0.4 * r):
-		return 1
-	if _ellipse_contains(px, py, cx, cy - 0.15 * r, 0.16 * r, 0.65 * r):
-		return 1
-	if _circle_contains(px, py, cx, cy - 0.85 * r, 0.16 * r):
-		return 1
-	return 0
-
 func _circle_contains(px: float, py: float, ccx: float, ccy: float, rad: float) -> bool:
 	var dx := px - ccx
 	var dy := py - ccy
 	return dx * dx + dy * dy <= rad * rad
-
-func _ellipse_contains(px: float, py: float, ecx: float, ecy: float, rx: float, ry: float) -> bool:
-	var dx := (px - ecx) / rx
-	var dy := (py - ecy) / ry
-	return dx * dx + dy * dy <= 1.0
-
-func _point_in_triangle(px: float, py: float, ax: float, ay: float, bx: float, by: float, cx2: float, cy2: float) -> bool:
-	var d1 := _triangle_sign(px, py, ax, ay, bx, by)
-	var d2 := _triangle_sign(px, py, bx, by, cx2, cy2)
-	var d3 := _triangle_sign(px, py, cx2, cy2, ax, ay)
-	var has_neg := d1 < 0 or d2 < 0 or d3 < 0
-	var has_pos := d1 > 0 or d2 > 0 or d3 > 0
-	return not (has_neg and has_pos)
-
-func _triangle_sign(px: float, py: float, ax: float, ay: float, bx: float, by: float) -> float:
-	return (px - bx) * (ay - by) - (ax - bx) * (py - by)
 
 # ---------------------------------------------------------------------------
 # Game logic - unchanged from the pre-art-pass version.

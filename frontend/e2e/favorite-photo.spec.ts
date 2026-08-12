@@ -1,9 +1,19 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+import { loginAsStaff } from './staffAuthHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
+
+// The Favorite Photo tab lives inside the guest nav's dropdown panel, which
+// starts closed on every fresh page load -- open it before selecting a tab.
+async function openFavoritePhoto(page: Page) {
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  // The tab list uses role="menuitemradio" (NavMenu.tsx), not the button
+  // tag's implicit "button" role.
+  await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
+}
 
 // Covers Favorite Photo (Plan.md 2.14, migration 012_favorite_photo.sql):
 // guest submission -> staff shortlist -> public gallery -> vote -> a second
@@ -15,21 +25,21 @@ test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', 
   const guestLabel = `E2E Guest ${Date.now()}`
 
   await page.goto('/')
-  await page.getByRole('button', { name: 'Favorite Photo' }).click()
+  await openFavoritePhoto(page)
   await page.locator('.photo-submit-form input[type="file"]').setInputFiles(FIXTURE_PHOTO)
   await page.getByPlaceholder('Your name (optional)').fill(guestLabel)
   await page.getByRole('button', { name: 'Submit Photo' }).click()
   await expect(page.getByText('Thanks! Your photo is in for staff review.')).toBeVisible()
 
   const staffPage = await context.newPage()
-  await staffPage.goto('/staff')
+  await loginAsStaff(staffPage)
   const staffRow = staffPage.locator('.staff-photo-row', { hasText: guestLabel })
   await expect(staffRow).toBeVisible()
-  await staffRow.getByRole('button', { name: 'Shortlist' }).click()
+  await staffRow.getByRole('button', { name: 'Approve' }).click()
   await expect(staffPage.locator('.staff-photo-row', { hasText: guestLabel })).toHaveCount(0)
 
   await page.goto('/')
-  await page.getByRole('button', { name: 'Favorite Photo' }).click()
+  await openFavoritePhoto(page)
   const galleryCard = page.locator('.photo-card', { hasText: guestLabel })
   await expect(galleryCard).toBeVisible()
   const voteButton = galleryCard.getByRole('button', { name: 'Vote (0)' })
@@ -40,7 +50,7 @@ test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', 
   // Confirm the vote persisted server-side (not just local component state)
   // by reloading fresh and checking voted_by_me still comes back true.
   await page.goto('/')
-  await page.getByRole('button', { name: 'Favorite Photo' }).click()
+  await openFavoritePhoto(page)
   await expect(
     page.locator('.photo-card', { hasText: guestLabel }).getByRole('button', { name: '✓ Voted (1)' }),
   ).toBeDisabled()

@@ -408,6 +408,14 @@ class PhotoSubmission(BaseModel):
     voted_by_me: bool = False
 
 
+class StaffLoginRequest(BaseModel):
+    password: str = Field(min_length=1)
+
+
+class StaffLoginResponse(BaseModel):
+    token: str
+
+
 class CreateVoteRequest(BaseModel):
     voter_session_id: str = Field(min_length=1)
 

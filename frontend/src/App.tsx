@@ -17,7 +17,7 @@ import { ResetSessionModal } from './components/ResetSessionModal'
 import { ScanEntryModal } from './components/ScanEntryModal'
 import { ScanScreen } from './components/ScanScreen'
 import { ScoringScreen } from './components/ScoringScreen'
-import { StaffRequestsScreen } from './components/StaffRequestsScreen'
+import { StaffPage } from './components/StaffPage'
 import { ToastStack, type ToastItem } from './components/ToastStack'
 import { getVoterSessionId } from './voterSession'
 import './components/shared.css'
@@ -303,9 +303,9 @@ function App() {
 
   if (isStaffView) {
     // Lightweight, separate view (Plan.md 2.10) -- no shared header/nav with
-    // the guest-facing app, no login/auth (same no-auth POC scope as the
-    // rest of the app). Staff reach it by navigating straight to /staff.
-    return <StaffRequestsScreen />
+    // the guest-facing app. Gated behind a shared staff password
+    // (app/staff_auth.py) -- StaffPage itself handles the login screen.
+    return <StaffPage />
   }
 
   if (scanMatch) {
@@ -345,6 +345,7 @@ function App() {
             onGeneratePassport={() => setShowPassport(true)}
             onContactStaff={() => setShowContactStaff(true)}
             onResetSession={() => setShowResetConfirm(true)}
+            onStaffNav={() => navigate('/staff')}
           />
         </div>
       </header>

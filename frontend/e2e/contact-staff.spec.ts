@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { loginAsStaff } from './staffAuthHelper'
 
 // Covers Contact Staff (Plan.md 2.10, migration 010_contact_staff.sql): both
 // guest-facing flows (question / emergency) submit with the right location
@@ -10,6 +11,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 async function openContactStaff(page: Page) {
   await page.goto('/')
+  await page.getByRole('button', { name: 'Open menu' }).click()
   await page.getByRole('button', { name: 'Contact Staff' }).click()
   return page.getByRole('dialog')
 }
@@ -73,7 +75,8 @@ test.describe('Contact Staff', () => {
     await expect(dialog.getByText('Question sent')).toBeVisible()
 
     const staffPage = await context.newPage()
-    await staffPage.goto('/staff')
+    await loginAsStaff(staffPage)
+    await staffPage.getByRole('tab', { name: 'Contact Requests' }).click()
 
     const row = staffPage.locator('.staff-request-row', { hasText: 'Admin Offices' })
     await expect(row).toBeVisible()
@@ -86,7 +89,8 @@ test.describe('Contact Staff', () => {
     context,
   }) => {
     const staffPage = await context.newPage()
-    await staffPage.goto('/staff')
+    await loginAsStaff(staffPage)
+    await staffPage.getByRole('tab', { name: 'Contact Requests' }).click()
     await expect(staffPage.locator('.staff-request-row', { hasText: 'Party Tents' })).toHaveCount(0)
 
     const dialog = await openContactStaff(page)
@@ -105,7 +109,7 @@ test.describe('Contact Staff', () => {
     await expect(row.getByText('Acknowledged', { exact: true })).toBeVisible()
     await expect(row.getByRole('button', { name: 'Acknowledge' })).toHaveCount(0)
 
-    await row.getByRole('button', { name: 'Resolve' }).click()
+    await row.getByRole('button', { name: 'Mark Resolved' }).click()
     // Resolved requests drop off the default (open + acknowledged) staff list.
     await expect(staffPage.locator('.staff-request-row', { hasText: 'Party Tents' })).toHaveCount(0)
 

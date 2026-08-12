@@ -9,7 +9,7 @@ const GAP_DURATION := 0.25
 const ROUND_GAP := 0.9
 const TAP_FLASH_DURATION := 0.15
 
-const ANIMAL_NAMES := ["COW", "PIG", "HEN", "EWE"]
+const ANIMAL_NAMES := ["ALPACA", "PIG", "HEN", "EWE"]
 
 # --- Layout rects (design canvas is 400x600, see project.godot). Purely
 # cosmetic - none of this feeds gameplay math, which stays entirely in
@@ -43,20 +43,32 @@ const COLOR_GRASS_DARK := Color("#243a1c")
 const COLOR_GRASS_LINE := Color("#324d27")
 const COLOR_GRASS_BLADE := Color("#4c8a2e")
 
-# Per-animal accent colors used for both the tile's silhouette icon and (when
-# lit) its glow border. Idle = muted/dusty, Lit = bright. Replaces the old
-# raw Button.modulate tint swap; same mechanism (index-matched idle/lit
-# arrays), now driving real drawn chrome instead.
-const COLOR_COW_IDLE := Color("#c9a978")
-const COLOR_COW_LIT := Color("#f0dcb8")
+# Per-animal accent colors used for the tile's glow border when lit. Idle =
+# muted/dusty, Lit = bright. Replaces the old raw Button.modulate tint swap;
+# same mechanism (index-matched idle/lit arrays). No longer used to tint the
+# animal art itself (that's now a real photo texture, drawn unmodulated) but
+# still drives the lit border_color/font_color chrome.
+const COLOR_ALPACA_IDLE := Color("#c9a978")
+const COLOR_ALPACA_LIT := Color("#f0dcb8")
 const COLOR_PIG_IDLE := Color("#e28aa0")
 const COLOR_PIG_LIT := Color("#ffc0d0")
 const COLOR_HEN_IDLE := Color("#d9ab1e")
 const COLOR_HEN_LIT := Color("#ffd94d")
 const COLOR_EWE_IDLE := Color("#8f9bb3")
 const COLOR_EWE_LIT := Color("#c9d4ea")
-const IDLE_COLORS := [COLOR_COW_IDLE, COLOR_PIG_IDLE, COLOR_HEN_IDLE, COLOR_EWE_IDLE]
-const LIT_COLORS := [COLOR_COW_LIT, COLOR_PIG_LIT, COLOR_HEN_LIT, COLOR_EWE_LIT]
+const IDLE_COLORS := [COLOR_ALPACA_IDLE, COLOR_PIG_IDLE, COLOR_HEN_IDLE, COLOR_EWE_IDLE]
+const LIT_COLORS := [COLOR_ALPACA_LIT, COLOR_PIG_LIT, COLOR_HEN_LIT, COLOR_EWE_LIT]
+
+# Real photo-style textures for each tile, index-aligned with TILE_RECTS /
+# animal_buttons (0=Alpaca [was Cow, same slot], 1=Pig, 2=Hen/Chicken,
+# 3=Ewe/Sheep). Drawn unmodulated in _draw_animal_icon - see note there on
+# why lit/idle state is signaled by the panel chrome instead of a tint.
+const TILE_TEXTURES := [
+	preload("res://assets/alpaca.png"),
+	preload("res://assets/pig.png"),
+	preload("res://assets/chicken.png"),
+	preload("res://assets/sheep.png"),
+]
 
 const NAME_LABEL_IDLE_COLOR := Color(0.97, 0.95, 0.9)
 
@@ -305,80 +317,23 @@ func _draw_animal_tile(index: int) -> void:
 	sb.set_border_width_all(4 if lit else 3)
 	sb.border_color = LIT_COLORS[index] if lit else COLOR_OUTLINE
 	draw_style_box(sb, rect)
-	var accent: Color = LIT_COLORS[index] if lit else IDLE_COLORS[index]
-	match index:
-		0:
-			_draw_cow_icon(rect, accent)
-		1:
-			_draw_pig_icon(rect, accent)
-		2:
-			_draw_hen_icon(rect, accent)
-		3:
-			_draw_ewe_icon(rect, accent)
+	_draw_animal_icon(rect, index)
 
-func _draw_cow_icon(rect: Rect2, accent: Color) -> void:
-	var c := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.36)
-	var bw := rect.size.x * 0.42
-	var bh := rect.size.y * 0.28
-	draw_circle(c + Vector2(-bw * 0.62, -bh * 0.6), bw * 0.17, accent.darkened(0.2))
-	draw_circle(c + Vector2(bw * 0.62, -bh * 0.6), bw * 0.17, accent.darkened(0.2))
-	draw_circle(c + Vector2(-bw * 0.32, -bh * 1.05), bw * 0.1, Color("#f0decc"))
-	draw_circle(c + Vector2(bw * 0.32, -bh * 1.05), bw * 0.1, Color("#f0decc"))
-	var body_sb := StyleBoxFlat.new()
-	body_sb.bg_color = accent
-	body_sb.set_corner_radius_all(int(bh * 0.85))
-	draw_style_box(body_sb, Rect2(c - Vector2(bw, bh), Vector2(bw * 2, bh * 2)))
-	draw_circle(c + Vector2(-bw * 0.3, -bh * 0.1), bw * 0.2, accent.darkened(0.4))
-	draw_circle(c + Vector2(bw * 0.38, bh * 0.35), bw * 0.14, accent.darkened(0.4))
-	var snout_sb := StyleBoxFlat.new()
-	snout_sb.bg_color = Color("#f0decc")
-	snout_sb.set_corner_radius_all(int(bh * 0.3))
-	draw_style_box(snout_sb, Rect2(c + Vector2(-bw * 0.4, bh * 0.6), Vector2(bw * 0.8, bh * 0.5)))
-	draw_circle(c + Vector2(-bw * 0.15, bh * 0.85), 2.2, COLOR_OUTLINE)
-	draw_circle(c + Vector2(bw * 0.15, bh * 0.85), 2.2, COLOR_OUTLINE)
-	draw_circle(c + Vector2(-bw * 0.35, -bh * 0.3), 2.4, COLOR_OUTLINE)
-	draw_circle(c + Vector2(bw * 0.35, -bh * 0.3), 2.4, COLOR_OUTLINE)
-
-func _draw_pig_icon(rect: Rect2, accent: Color) -> void:
-	var c := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.42)
-	var r := rect.size.x * 0.28
-	draw_circle(c + Vector2(-r * 0.55, -r * 0.85), r * 0.22, accent.darkened(0.15))
-	draw_circle(c + Vector2(r * 0.55, -r * 0.85), r * 0.22, accent.darkened(0.15))
-	draw_circle(c, r, accent)
-	draw_circle(c + Vector2(0, r * 0.55), r * 0.4, accent.darkened(0.25))
-	draw_circle(c + Vector2(-r * 0.14, r * 0.58), 2.2, COLOR_OUTLINE)
-	draw_circle(c + Vector2(r * 0.14, r * 0.58), 2.2, COLOR_OUTLINE)
-	draw_circle(c + Vector2(-r * 0.32, -r * 0.15), 2.4, COLOR_OUTLINE)
-	draw_circle(c + Vector2(r * 0.32, -r * 0.15), 2.4, COLOR_OUTLINE)
-
-func _draw_hen_icon(rect: Rect2, accent: Color) -> void:
-	var c := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.46)
-	var r := rect.size.x * 0.24
-	draw_circle(c + Vector2(0, r * 0.35), r, accent)
-	draw_circle(c + Vector2(0, -r * 0.75), r * 0.55, accent)
-	draw_circle(c + Vector2(-r * 0.15, -r * 1.25), r * 0.18, Color("#d9432e"))
-	draw_circle(c + Vector2(r * 0.1, -r * 1.3), r * 0.18, Color("#d9432e"))
-	var beak_pts := PackedVector2Array([
-		c + Vector2(r * 0.5, -r * 0.75),
-		c + Vector2(r * 0.85, -r * 0.65),
-		c + Vector2(r * 0.5, -r * 0.52),
-	])
-	draw_colored_polygon(beak_pts, Color("#f38630"))
-	draw_circle(c + Vector2(r * 0.15, -r * 0.85), 2.2, COLOR_OUTLINE)
-	draw_circle(c + Vector2(-r * 0.2, r * 0.45), r * 0.38, accent.darkened(0.2))
-
-func _draw_ewe_icon(rect: Rect2, accent: Color) -> void:
-	var c := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.4)
-	var r := rect.size.x * 0.24
-	draw_circle(c + Vector2(-r * 0.5, r * 0.15), r * 0.55, accent)
-	draw_circle(c + Vector2(r * 0.5, r * 0.15), r * 0.55, accent)
-	draw_circle(c + Vector2(0, -r * 0.1), r * 0.68, accent)
-	draw_circle(c + Vector2(0, r * 0.55), r * 0.55, accent)
-	draw_circle(c + Vector2(-r * 0.75, -r * 0.3), r * 0.2, accent.darkened(0.3))
-	draw_circle(c + Vector2(r * 0.75, -r * 0.3), r * 0.2, accent.darkened(0.3))
-	draw_circle(c + Vector2(0, -r * 0.1), r * 0.36, accent.darkened(0.45))
-	draw_circle(c + Vector2(-r * 0.13, -r * 0.15), 2.1, COLOR_OUTLINE)
-	draw_circle(c + Vector2(r * 0.13, -r * 0.15), 2.1, COLOR_OUTLINE)
+func _draw_animal_icon(rect: Rect2, index: int) -> void:
+	# Real photo textures are drawn unmodulated regardless of lit state - the
+	# panel chrome above (bg_color/border_color/border width in
+	# _draw_animal_tile) already carries the lit-vs-idle signal. Tinting a
+	# photo by an accent color (the old flat-color-icon approach) would muddy
+	# it, so we deliberately don't touch color here.
+	var tex: Texture2D = TILE_TEXTURES[index]
+	var tex_size := tex.get_size()
+	var target_size := rect.size * 0.72
+	var icon_scale: float = min(target_size.x / tex_size.x, target_size.y / tex_size.y)
+	var draw_size: Vector2 = tex_size * icon_scale
+	# 0.42 y-fraction mirrors where the old icons were vertically centered,
+	# slightly above tile-center, to leave room for the name label below.
+	var center := rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.42)
+	draw_texture_rect(tex, Rect2(center - draw_size * 0.5, draw_size), false)
 
 # --- Shared panel drawing helpers -------------------------------------------
 

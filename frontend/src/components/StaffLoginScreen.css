@@ -1,0 +1,81 @@
+/* Standalone view, same reasoning as StaffPage.css -- no shared header/nav
+   with the guest-facing app, so this screen provides its own page
+   background instead of inheriting #app-root's. */
+.staff-login-screen {
+  min-height: 100svh;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cap-space-5);
+  font-family: var(--cap-font-body);
+  background: var(--cap-color-page-bg);
+}
+
+/* Same wood-grain frame recipe as .contact-staff-modal-frame/.map-frame --
+   this screen isn't a modal, but reuses the recipe for the same wood chrome. */
+.staff-login-frame {
+  width: 100%;
+  max-width: 360px;
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.staff-login-inner {
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-5) var(--cap-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--cap-space-2);
+}
+
+.staff-login-title {
+  margin: 0 0 var(--cap-space-3);
+  font-size: 19px;
+}
+
+.staff-login-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--cap-color-ink);
+}
+
+.staff-login-input {
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: var(--cap-radius-sm);
+  border: 2px solid var(--cap-color-outline);
+  background: #fff;
+  color: var(--cap-color-ink);
+}
+
+.staff-login-submit {
+  margin-top: var(--cap-space-3);
+  background: var(--cap-color-sunset-orange);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: var(--cap-radius-pill);
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 18px;
+  box-shadow: var(--cap-shadow-pop-sm);
+}
+
+.staff-login-submit:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+}

@@ -233,17 +233,23 @@
   color: #fff;
 }
 
-/* A narrow guest-facing reset, distinct from the primary/danger pill
-   buttons above -- underlined text, not its own button chrome, so it reads
-   as a low-emphasis "advanced" action rather than a headline CTA. Actual
-   confirmation happens in ResetSessionModal, opened via onResetSession --
-   this link never resets anything by itself. */
+/* Two narrow, low-emphasis links -- Staff and the guest-facing reset --
+   distinct from the primary/danger pill buttons above -- underlined text,
+   not its own button chrome, so both read as "advanced"/irrelevant-to-most
+   actions rather than headline CTAs. /staff is gated behind its own login
+   (StaffPage), so this link doesn't need to be hidden for security -- it's
+   kept subtle only because it's irrelevant to the vast majority of guests.
+   Actual reset confirmation happens in ResetSessionModal, opened via
+   onResetSession -- that link never resets anything by itself. */
 .nav-menu-footer {
   padding-top: var(--cap-space-1);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
+.nav-menu-staff-link,
 .nav-menu-reset-link {
   font-family: var(--cap-font-body);
   font-size: 12.5px;
@@ -257,6 +263,7 @@
   text-underline-offset: 2px;
 }
 
+.nav-menu-staff-link:hover,
 .nav-menu-reset-link:hover {
   color: var(--cap-color-on-header);
 }

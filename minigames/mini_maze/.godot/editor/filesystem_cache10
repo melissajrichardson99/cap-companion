@@ -1,9 +1,11 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1785449574
+::res://::1786314365
 export_presets.cfg::TextFile::-1::1785448729::0::1::::<><><>0<>0<><>::
 README.md::TextFile::-1::1785448823::0::1::::<><><>0<>0<><>::
-::res://export_web/::1785449574
-::res://scenes/::1785448805
-Main.tscn::PackedScene::-1::1785448805::0::1::::<><><>0<>0<><>::res://scripts/Main.gd
-::res://scripts/::1785449398
-Main.gd::GDScript::3694021739727562287::1785448792::0::1::::<>Node2D<><>0<>0<><>::
+::res://assets/::1786314260
+emu.png::CompressedTexture2D::9033459734363227264::1786314260::1786314376::1::::<><><>0<>0<>f930bbfbd3fe31c5c3040e71dde4c1ea<>res://.godot/imported/emu.png-513f1cd1904a566f6ca3c7bcec642352.ctex::
+::res://export_web/::1786314365
+::res://scenes/::1786298775
+Main.tscn::PackedScene::-1::1786298775::0::1::::<><><>0<>0<><>::res://scripts/Main.gd
+::res://scripts/::1786314351
+Main.gd::GDScript::3694021739727562287::1786314351::0::1::::<>Node2D<><>0<>0<><>::

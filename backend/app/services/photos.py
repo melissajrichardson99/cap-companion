@@ -103,6 +103,22 @@ def reject(submission_id: UUID) -> PhotoSubmission:
     return _curate(submission_id, PhotoStatus.REJECTED)
 
 
+def delete_submission(submission_id: UUID) -> None:
+    # Hard delete, for genuinely inappropriate content -- distinct from reject
+    # (which soft-flags and keeps the row for an audit trail). Only allowed
+    # from pending_review: the Photo Queue only ever acts on pending rows, and
+    # an already-curated (shortlisted/rejected) row should go through reject
+    # first rather than disappearing without a trace.
+    row = _get_row(submission_id)
+    current = PhotoStatus(row["status"])
+    if current != PhotoStatus.PENDING_REVIEW:
+        raise ConflictError(f'Photo submission {submission_id} is "{current}", cannot delete')
+
+    client = get_supabase_client()
+    client.storage.from_(BUCKET).remove([row["storage_path"]])
+    client.table("photo_submissions").delete().eq("id", str(submission_id)).execute()
+
+
 def list_gallery(voter_session_id: str | None) -> list[PhotoSubmission]:
     client = get_supabase_client()
     rows = (

@@ -92,35 +92,63 @@ position = Vector2(200, 300)
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="TopBar" type="Control" parent="UI"]
-offset_right = 400.0
-offset_bottom = 60.0
-
-[node name="StatusLabel" type="Label" parent="UI/TopBar"]
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 354.0
-offset_bottom = 44.0
-horizontal_alignment = 1
-text = "Ready?"
-
-[node name="ExitButton" type="Button" parent="UI/TopBar"]
-offset_left = 354.0
+[node name="SignBar" type="Control" parent="UI"]
+offset_left = 10.0
 offset_top = 10.0
-offset_right = 400.0
-offset_bottom = 42.0
+offset_right = 390.0
+offset_bottom = 64.0
+
+[node name="TitleLabel" type="Label" parent="UI/SignBar"]
+offset_left = 20.0
+offset_top = 0.0
+offset_right = 330.0
+offset_bottom = 54.0
+vertical_alignment = 1
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+text = "Kangaroo Hop"
+
+[node name="ExitButton" type="Button" parent="UI/SignBar"]
+offset_left = 340.0
+offset_top = 8.0
+offset_right = 378.0
+offset_bottom = 46.0
 text = "X"
 
+[node name="StatusPill" type="Control" parent="UI"]
+offset_left = 10.0
+offset_top = 72.0
+offset_right = 390.0
+offset_bottom = 104.0
+
+[node name="StatusLabel" type="Label" parent="UI/StatusPill"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 380.0
+offset_bottom = 32.0
+vertical_alignment = 1
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+text = "Ready?"
+
+[node name="PlayFrame" type="Control" parent="UI"]
+mouse_filter = 2
+offset_left = 10.0
+offset_top = 112.0
+offset_right = 390.0
+offset_bottom = 494.0
+
 [node name="Controls" type="Control" parent="UI"]
-offset_top = 500.0
-offset_right = 400.0
-offset_bottom = 600.0
+offset_left = 10.0
+offset_top = 504.0
+offset_right = 390.0
+offset_bottom = 590.0
 
 [node name="JumpButton" type="Button" parent="UI/Controls"]
-offset_left = 130.0
-offset_top = 10.0
-offset_right = 270.0
-offset_bottom = 90.0
+offset_left = 120.0
+offset_top = 8.0
+offset_right = 260.0
+offset_bottom = 78.0
 text = "JUMP"
 
 [node name="GameOverLayer" type="Control" parent="UI"]
@@ -133,30 +161,39 @@ offset_right = 400.0
 offset_bottom = 600.0
 color = Color(0, 0, 0, 0.6)
 
+[node name="Panel" type="Control" parent="UI/GameOverLayer"]
+offset_left = 40.0
+offset_top = 170.0
+offset_right = 360.0
+offset_bottom = 450.0
+
 [node name="ResultLabel" type="Label" parent="UI/GameOverLayer"]
-offset_top = 220.0
-offset_right = 400.0
-offset_bottom = 260.0
+offset_left = 40.0
+offset_top = 196.0
+offset_right = 360.0
+offset_bottom = 236.0
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 26
 text = "Game Over"
 
 [node name="ScoreResultLabel" type="Label" parent="UI/GameOverLayer"]
-offset_top = 270.0
-offset_right = 400.0
-offset_bottom = 300.0
+offset_left = 40.0
+offset_top = 242.0
+offset_right = 360.0
+offset_bottom = 270.0
 horizontal_alignment = 1
 text = ""
 
 [node name="RestartButton" type="Button" parent="UI/GameOverLayer"]
-offset_left = 140.0
-offset_top = 330.0
-offset_right = 260.0
-offset_bottom = 370.0
+offset_left = 120.0
+offset_top = 302.0
+offset_right = 280.0
+offset_bottom = 346.0
 text = "Play Again"
 
 [node name="ExitButton" type="Button" parent="UI/GameOverLayer"]
-offset_left = 140.0
-offset_top = 380.0
-offset_right = 260.0
-offset_bottom = 420.0
+offset_left = 120.0
+offset_top = 354.0
+offset_right = 280.0
+offset_bottom = 398.0
 text = "Exit"

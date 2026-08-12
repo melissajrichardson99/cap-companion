@@ -15,6 +15,7 @@ from app.routers import (
     scan,
     scoring,
     session,
+    staff_auth,
     staff_requests,
 )
 
@@ -54,6 +55,7 @@ app.include_router(puzzles.router)
 app.include_router(scoring.router)
 app.include_router(hunt.router)
 app.include_router(scan.router)
+app.include_router(staff_auth.router)
 app.include_router(staff_requests.router)
 app.include_router(coins.router)
 app.include_router(photos.router)

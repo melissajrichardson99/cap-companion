@@ -59,6 +59,9 @@ def list_requests(include_resolved: bool = False) -> list[StaffRequest]:
     if not include_resolved:
         query = query.neq("status", StaffRequestStatus.RESOLVED.value)
     rows = query.execute().data
+    # Emergencies pinned to the top; Python's sort is stable, so within each
+    # group rows stay in the created_at order the query already fetched them in.
+    rows.sort(key=lambda r: r["type"] != StaffRequestType.EMERGENCY.value)
     return [_row_to_request(r) for r in rows]
 
 

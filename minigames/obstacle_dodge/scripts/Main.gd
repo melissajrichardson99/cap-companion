@@ -16,6 +16,46 @@ const TWO_LANE_SPAWN_CHANCE := 0.35
 const READY_COUNTDOWN := ["Ready?", "3", "2", "1", "Go!"]
 const READY_STEP_DURATION := 0.5
 
+# --- Layout rects (design canvas is 400x600, see project.godot). Purely
+# cosmetic - none of this feeds gameplay math, which stays anchored to
+# PLAY_TOP/PLAY_BOTTOM/PLAYER_Y/LANE_WIDTH and only touches pixels at draw
+# time. See mini_snake/scripts/Main.gd for the pattern this mirrors.
+const HEADER_RECT := Rect2(4, 4, 392, 48)
+const TIME_PILL_RECT := Rect2(6, 10, 100, 32)
+const DODGED_PILL_RECT := Rect2(114, 10, 108, 32)
+const FRAME_RECT := Rect2(2, 56, 396, 446)
+const CONTROLS_RECT := Rect2(4, 506, 392, 90)
+
+# --- Brand palette. Mirrors frontend/src/index.css's --cap-* tokens so this
+# game's chrome reads as the same parchment/wood UI system as the rest of
+# the app instead of a one-off style.
+const COLOR_OUTLINE := Color("#14181a")
+const COLOR_PARCHMENT := Color("#f0decc")
+const COLOR_PAGE_BG := Color("#e8d9bb")
+const COLOR_WOOD_LIGHT := Color("#a9773f")
+const COLOR_WOOD_MID := Color("#8a5a2f")
+const COLOR_WOOD_DARK := Color("#6e4523")
+const COLOR_INK := Color("#1e2b2e")
+const COLOR_HEADER_GREEN := Color("#144f05")
+const COLOR_ADVENTURE_GREEN := Color("#3b7801")
+const COLOR_SUNSET_ORANGE := Color("#f38630")
+const COLOR_SUNSET_ORANGE_DEEP := Color("#bc6825")
+
+# --- Game-specific palette: dirt trail, rock obstacles, alpaca fur.
+const COLOR_TRAIL_BG := Color("#7a5c3a")
+const COLOR_TRAIL_BG_DARK := Color("#5f4429")
+const COLOR_LANE_DIVIDER := Color("#e8d9bb")
+const COLOR_ROCK_BASE := Color("#8d8577")
+const COLOR_ROCK_DARK := Color("#655f54")
+const COLOR_ROCK_HIGHLIGHT := Color("#b7b0a2")
+const COLOR_ALPACA_FUR := Color("#f3e6c9")
+const COLOR_ALPACA_FUR_SHADE := Color("#d8bd85")
+const COLOR_ALPACA_FACE := Color("#9c6b3c")
+const COLOR_ALPACA_LEG := Color("#6e4523")
+const COLOR_ALPACA_EAR_INNER := Color("#bc6825")
+
+const ALPACA_TEXTURE := preload("res://assets/alpaca.png")
+
 @onready var spawn_timer: Timer = $SpawnTimer
 @onready var time_label: Label = $UI/TopBar/TimeLabel
 @onready var dodged_label: Label = $UI/TopBar/DodgedLabel
@@ -48,6 +88,7 @@ var touch_active: bool = false
 var round_token: int = 0
 
 func _ready() -> void:
+	_style_ui()
 	spawn_timer.timeout.connect(_spawn_wave)
 	btn_left.pressed.connect(func(): _try_switch_lane(-1))
 	btn_right.pressed.connect(func(): _try_switch_lane(1))
@@ -183,19 +224,195 @@ func _update_labels() -> void:
 	time_label.text = "Time: %d" % ceili(max(0.0, ROUND_DURATION - elapsed_time))
 	dodged_label.text = "Dodged: %d" % dodged_count
 
+# ---------------------------------------------------------------------------
+# Drawing. Main is a Node2D so everything here renders beneath the $UI
+# CanvasLayer's real Label/Button nodes (CanvasLayer always composites above
+# the base 2D canvas), the same layering the other redesigned games rely on.
+# ---------------------------------------------------------------------------
+
 func _draw() -> void:
-	draw_rect(Rect2(Vector2(0, PLAY_TOP), Vector2(VIEWPORT_WIDTH, PLAY_BOTTOM - PLAY_TOP)), Color(0.16, 0.14, 0.2), true)
+	_draw_page_bg()
+	_draw_header_plank()
+	_draw_stat_pills()
+	_draw_trail()
+	for obstacle in obstacles:
+		_draw_rock(Vector2(_lane_x(obstacle["lane"]), obstacle["y"]))
+	_draw_player()
+	_draw_controls_plate()
+
+func _draw_page_bg() -> void:
+	var vp := get_viewport_rect().size
+	draw_rect(Rect2(Vector2.ZERO, vp), COLOR_PAGE_BG, true)
+
+func _draw_header_plank() -> void:
+	_draw_wood_panel(HEADER_RECT, 14.0)
+
+func _draw_stat_pills() -> void:
+	_draw_parchment_pill(TIME_PILL_RECT, 10.0)
+	_draw_parchment_pill(DODGED_PILL_RECT, 10.0)
+	_draw_hourglass_icon(TIME_PILL_RECT.position + Vector2(18, TIME_PILL_RECT.size.y * 0.5), 8.0)
+	_draw_pawprint_icon(DODGED_PILL_RECT.position + Vector2(18, DODGED_PILL_RECT.size.y * 0.5), 8.0)
+
+func _draw_hourglass_icon(center: Vector2, r: float) -> void:
+	var top_tri := PackedVector2Array([center + Vector2(-r, -r), center + Vector2(r, -r), center + Vector2(0, 0)])
+	var bottom_tri := PackedVector2Array([center + Vector2(-r, r), center + Vector2(r, r), center + Vector2(0, 0)])
+	draw_colored_polygon(top_tri, COLOR_SUNSET_ORANGE)
+	draw_colored_polygon(bottom_tri, COLOR_SUNSET_ORANGE_DEEP)
+	draw_line(center + Vector2(-r, -r), center + Vector2(r, -r), COLOR_OUTLINE, 1.5)
+	draw_line(center + Vector2(-r, r), center + Vector2(r, r), COLOR_OUTLINE, 1.5)
+
+func _draw_pawprint_icon(center: Vector2, r: float) -> void:
+	# Asymmetric hoofprint (not a radially-symmetric clover/flower shape):
+	# one larger oval pad plus two smaller offset toe pads.
+	draw_circle(center + Vector2(0, r * 0.4), r * 0.58, COLOR_ALPACA_LEG)
+	draw_circle(center + Vector2(-r * 0.42, -r * 0.3), r * 0.26, COLOR_ALPACA_LEG)
+	draw_circle(center + Vector2(r * 0.34, -r * 0.42), r * 0.24, COLOR_ALPACA_LEG)
+
+func _draw_trail() -> void:
+	_draw_wood_panel(FRAME_RECT, 16.0)
+	# Fill matches PLAY_TOP/PLAY_BOTTOM/VIEWPORT_WIDTH exactly - this is the
+	# same rect the original flat-color prototype drew, just recolored, so
+	# it stays pixel-aligned with the gameplay bounds those constants define.
+	var fill_rect := Rect2(Vector2(0, PLAY_TOP), Vector2(VIEWPORT_WIDTH, PLAY_BOTTOM - PLAY_TOP))
+	draw_rect(fill_rect, COLOR_TRAIL_BG, true)
+	for lane in range(LANE_COUNT):
+		if lane % 2 == 1:
+			var lane_rect := Rect2(Vector2(lane * LANE_WIDTH, PLAY_TOP), Vector2(LANE_WIDTH, PLAY_BOTTOM - PLAY_TOP))
+			draw_rect(lane_rect, COLOR_TRAIL_BG_DARK, true)
 	for lane in range(1, LANE_COUNT):
 		var x: float = lane * LANE_WIDTH
-		draw_line(Vector2(x, PLAY_TOP), Vector2(x, PLAY_BOTTOM), Color(0.4, 0.38, 0.45), 2.0)
-	for obstacle in obstacles:
-		var pos := Vector2(_lane_x(obstacle["lane"]), obstacle["y"])
-		draw_rect(Rect2(pos - OBSTACLE_SIZE / 2.0, OBSTACLE_SIZE), Color(0.55, 0.32, 0.2), true)
-	_draw_player()
+		_draw_dashed_vline(x, PLAY_TOP, PLAY_BOTTOM, COLOR_LANE_DIVIDER)
+
+func _draw_dashed_vline(x: float, y0: float, y1: float, color: Color) -> void:
+	var dash := 14.0
+	var gap := 10.0
+	var y := y0
+	while y < y1:
+		var seg_end: float = min(y + dash, y1)
+		draw_line(Vector2(x, y), Vector2(x, seg_end), color, 2.0)
+		y += dash + gap
+
+func _draw_rock(pos: Vector2) -> void:
+	var box := Rect2(pos - OBSTACLE_SIZE / 2.0, OBSTACLE_SIZE)
+	# Soft contact shadow grounds the rock on the trail without extending
+	# the visible silhouette meaningfully past the actual collision box.
+	draw_circle(Vector2(pos.x, box.position.y + box.size.y - 2.0), box.size.x * 0.3, Color(0, 0, 0, 0.18))
+	draw_circle(pos + Vector2(-box.size.x * 0.18, box.size.y * 0.08), box.size.y * 0.46, COLOR_ROCK_DARK)
+	draw_circle(pos + Vector2(box.size.x * 0.16, box.size.y * 0.02), box.size.y * 0.5, COLOR_ROCK_BASE)
+	draw_circle(pos + Vector2(0, -box.size.y * 0.22), box.size.y * 0.3, COLOR_ROCK_HIGHLIGHT)
+	draw_arc(pos, box.size.y * 0.5, 0, TAU, 24, COLOR_OUTLINE, 2.0)
+
+func _draw_controls_plate() -> void:
+	_draw_parchment_pill(CONTROLS_RECT, 16.0)
+
+# ---------------------------------------------------------------------------
+# Player - a procedural alpaca silhouette. The visible body sits inside the
+# exact Rect2(pos - PLAYER_SIZE / 2, PLAYER_SIZE) box used for collision;
+# neck/head/legs are purely decorative extensions above/below that box, the
+# same trick the previous placeholder shape used for its ears.
+# ---------------------------------------------------------------------------
 
 func _draw_player() -> void:
 	var pos := Vector2(player_x, PLAYER_Y)
-	draw_rect(Rect2(pos - PLAYER_SIZE / 2.0, PLAYER_SIZE), Color(0.92, 0.88, 0.8), true)
-	draw_rect(Rect2(pos + Vector2(-14.0, -PLAYER_SIZE.y / 2.0 - 16.0), Vector2(28.0, 20.0)), Color(0.92, 0.88, 0.8), true)
-	draw_rect(Rect2(pos + Vector2(-10.0, -PLAYER_SIZE.y / 2.0 - 24.0), Vector2(6.0, 10.0)), Color(0.92, 0.88, 0.8), true)
-	draw_rect(Rect2(pos + Vector2(4.0, -PLAYER_SIZE.y / 2.0 - 24.0), Vector2(6.0, 10.0)), Color(0.92, 0.88, 0.8), true)
+	var box := Rect2(pos - PLAYER_SIZE / 2.0, PLAYER_SIZE)
+	var body_center := box.position + box.size / 2.0
+
+	# Contain-fit photo-style alpaca texture, sized/anchored to roughly match
+	# the visual reach of the old procedural art: draw height a bit taller
+	# than the collision box (to preserve the old long-neck overshoot above
+	# and leg overshoot below), width follows from the source image's own
+	# aspect ratio so it's never stretched. Feet anchored near the box
+	# bottom, same as where the old legs ended. Same contain-fit pattern as
+	# mini_maze's Main.gd _draw_emu/_draw_emu_glyph.
+	var tex_size := ALPACA_TEXTURE.get_size()
+	var h := box.size.y + 46.0
+	var w := h * tex_size.x / tex_size.y
+	var rect := Rect2(Vector2(body_center.x - w / 2.0, box.position.y + box.size.y - h), Vector2(w, h))
+	draw_texture_rect(ALPACA_TEXTURE, rect, false)
+
+# --- Shared panel drawing helpers -------------------------------------------
+
+func _draw_wood_panel(rect: Rect2, radius: float) -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = COLOR_WOOD_MID
+	sb.set_corner_radius_all(int(radius))
+	sb.border_width_top = 3
+	sb.border_width_bottom = 3
+	sb.border_width_left = 3
+	sb.border_width_right = 3
+	sb.border_color = COLOR_OUTLINE
+	# Hard "pop" shadow (no blur), matching --cap-shadow-pop's flat offset.
+	var shadow_sb := StyleBoxFlat.new()
+	shadow_sb.bg_color = COLOR_OUTLINE
+	shadow_sb.set_corner_radius_all(int(radius))
+	draw_style_box(shadow_sb, Rect2(rect.position + Vector2(3, 3), rect.size))
+	draw_style_box(sb, rect)
+	# Faint top highlight band to fake the light-to-dark wood gradient
+	# without needing a texture resource.
+	var highlight := Rect2(rect.position + Vector2(4, 4), Vector2(rect.size.x - 8, rect.size.y * 0.4))
+	var hl_sb := StyleBoxFlat.new()
+	hl_sb.bg_color = Color(COLOR_WOOD_LIGHT.r, COLOR_WOOD_LIGHT.g, COLOR_WOOD_LIGHT.b, 0.5)
+	hl_sb.corner_radius_top_left = int(radius) - 2
+	hl_sb.corner_radius_top_right = int(radius) - 2
+	draw_style_box(hl_sb, highlight)
+
+func _draw_parchment_pill(rect: Rect2, radius: float = 12.0) -> void:
+	var shadow_sb := StyleBoxFlat.new()
+	shadow_sb.bg_color = COLOR_OUTLINE
+	shadow_sb.set_corner_radius_all(int(radius))
+	draw_style_box(shadow_sb, Rect2(rect.position + Vector2(2, 2), rect.size))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = COLOR_PARCHMENT
+	sb.set_corner_radius_all(int(radius))
+	sb.border_width_top = 2
+	sb.border_width_bottom = 2
+	sb.border_width_left = 2
+	sb.border_width_right = 2
+	sb.border_color = COLOR_OUTLINE
+	draw_style_box(sb, rect)
+
+# ---------------------------------------------------------------------------
+# UI node styling - applied once in _ready() to real Control/Button nodes
+# (which need to stay real nodes for input + text layout) rather than
+# folded into _draw().
+# ---------------------------------------------------------------------------
+
+func _style_ui() -> void:
+	_style_round_button(btn_left, COLOR_HEADER_GREEN, COLOR_WOOD_LIGHT, 10)
+	_style_round_button(btn_right, COLOR_HEADER_GREEN, COLOR_WOOD_LIGHT, 10)
+	btn_left.add_theme_font_size_override("font_size", 24)
+	btn_right.add_theme_font_size_override("font_size", 24)
+	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
+	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
+	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
+	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
+	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
+	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
+
+	time_label.add_theme_color_override("font_color", COLOR_INK)
+	dodged_label.add_theme_color_override("font_color", COLOR_INK)
+	status_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	status_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	status_label.add_theme_constant_override("shadow_offset_x", 1)
+	status_label.add_theme_constant_override("shadow_offset_y", 1)
+
+	result_label.add_theme_color_override("font_color", COLOR_INK)
+	score_result_label.add_theme_color_override("font_color", COLOR_INK)
+
+func _style_round_button(btn: Button, bg: Color, border: Color, radius: int) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = bg
+	normal.set_corner_radius_all(radius)
+	normal.set_border_width_all(3)
+	normal.border_color = border
+	var hover := normal.duplicate()
+	hover.bg_color = bg.lightened(0.1)
+	var pressed := normal.duplicate()
+	pressed.bg_color = bg.darkened(0.15)
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("focus", normal)
+	btn.add_theme_color_override("font_color", Color(1, 1, 1))
+	btn.add_theme_color_override("font_hover_color", Color(1, 1, 1))
+	btn.add_theme_color_override("font_pressed_color", Color(1, 1, 1))

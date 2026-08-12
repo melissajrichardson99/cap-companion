@@ -1,7 +1,7 @@
 /* Standalone view (App.tsx mounts this outside #app-root -- no shared
    header/nav with the guest-facing app), so this screen provides its own
    page background/font instead of inheriting #app-root's. */
-.staff-requests-screen {
+.staff-page {
   min-height: 100svh;
   box-sizing: border-box;
   max-width: 860px;
@@ -11,25 +11,79 @@
   background: var(--cap-color-page-bg);
 }
 
-.staff-requests-loading {
+.staff-page-loading {
   padding: 40px 0;
   text-align: center;
 }
 
-.staff-requests-header {
+.staff-page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--cap-space-4);
-  margin-bottom: var(--cap-space-5);
+  margin-bottom: var(--cap-space-4);
 }
 
-.staff-requests-header .cap-sign-board {
+.staff-page-header .cap-sign-board {
   margin: 0;
 }
 
+.staff-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--cap-space-3);
+}
+
+/* Neutral/slate, deliberately not a brand color -- this badge just signals
+   "you're on the internal page", it isn't a new CTA or urgency signal. */
+.staff-mode-badge {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: var(--cap-radius-pill);
+  background: rgba(69, 88, 93, 0.14);
+  color: var(--cap-color-body-text);
+  border: 1.5px solid rgba(69, 88, 93, 0.35);
+}
+
+.staff-page-tabs {
+  display: flex;
+  gap: var(--cap-space-2);
+  margin-bottom: var(--cap-space-4);
+}
+
+.staff-page-tab {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 9px 16px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--cap-color-ink);
+  cursor: pointer;
+}
+
+.staff-page-tab-active {
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+}
+
+.staff-requests-loading,
 .staff-requests-empty {
   color: var(--cap-color-body-text);
+}
+
+.staff-resolved-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cap-color-ink);
+  margin-bottom: var(--cap-space-3);
 }
 
 .staff-requests-list {
@@ -113,19 +167,6 @@
   gap: 8px;
 }
 
-.staff-photos-section {
-  margin-bottom: var(--cap-space-5);
-  padding-bottom: var(--cap-space-5);
-  border-bottom: 2px solid var(--cap-color-outline);
-}
-
-.staff-photos-title {
-  font-family: var(--cap-font-display);
-  font-size: 17px;
-  color: var(--cap-color-ink);
-  margin: 0 0 12px;
-}
-
 .staff-photos-loading,
 .staff-photos-empty {
   color: var(--cap-color-body-text);
@@ -167,7 +208,7 @@
   gap: 8px;
 }
 
-.staff-requests-screen .btn {
+.staff-page .btn {
   font-family: var(--cap-font-body);
   font-weight: 700;
   border-radius: var(--cap-radius-pill);
@@ -176,22 +217,45 @@
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
 
-.staff-requests-screen .btn:hover:not(:disabled) {
+.staff-page .btn:hover:not(:disabled) {
   box-shadow: var(--cap-shadow-pop);
   transform: translate(-1px, -1px);
 }
 
-.staff-requests-screen .btn-primary {
+.staff-page .btn-secondary {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--cap-color-ink);
+}
+
+/* Functional color only, per this page's design brief -- green = approve /
+   mark resolved, orange = reject, dark red = delete (a visually and
+   functionally distinct action from reject). */
+.staff-page .btn-approve {
+  background: var(--cap-color-adventure-green);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.staff-page .btn-approve:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.staff-page .btn-reject {
   background: var(--cap-color-sunset-orange);
   border-color: var(--cap-color-outline);
   color: #fff;
 }
 
-.staff-requests-screen .btn-primary:hover:not(:disabled) {
+.staff-page .btn-reject:hover:not(:disabled) {
   background: var(--cap-color-sunset-orange-deep);
 }
 
-.staff-requests-screen .btn-secondary {
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--cap-color-ink);
+.staff-page .btn-delete {
+  background: var(--cap-color-contact-red);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.staff-page .btn-delete:hover:not(:disabled) {
+  background: var(--cap-color-contact-red-deep);
 }

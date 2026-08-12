@@ -7,76 +7,163 @@ script = ExtResource("1_main")
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="TopBar" type="Control" parent="UI"]
-offset_right = 400.0
-offset_bottom = 60.0
-
-[node name="ScoreLabel" type="Label" parent="UI/TopBar"]
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 160.0
-offset_bottom = 44.0
-text = "Score: 0"
-
-[node name="TimeLabel" type="Label" parent="UI/TopBar"]
-offset_left = 150.0
-offset_top = 16.0
-offset_right = 330.0
-offset_bottom = 44.0
-horizontal_alignment = 2
-text = "Time: 30"
-
-[node name="ExitButton" type="Button" parent="UI/TopBar"]
-offset_left = 344.0
+[node name="SignBar" type="Control" parent="UI"]
+offset_left = 10.0
 offset_top = 10.0
 offset_right = 390.0
-offset_bottom = 42.0
+offset_bottom = 66.0
+
+[node name="TitleLabel" type="Label" parent="UI/SignBar"]
+offset_left = 52.0
+offset_top = 0.0
+offset_right = 330.0
+offset_bottom = 56.0
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 24
+text = "Whack-a-Capybara"
+
+[node name="ExitButton" type="Button" parent="UI/SignBar"]
+offset_left = 334.0
+offset_top = 8.0
+offset_right = 372.0
+offset_bottom = 46.0
 text = "X"
 
+[node name="StatsBar" type="Control" parent="UI"]
+offset_left = 10.0
+offset_top = 74.0
+offset_right = 390.0
+offset_bottom = 128.0
+
+[node name="ScorePill" type="Control" parent="UI/StatsBar"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 185.0
+offset_bottom = 44.0
+
+[node name="CaptionLabel" type="Label" parent="UI/StatsBar/ScorePill"]
+offset_left = 34.0
+offset_top = 2.0
+offset_right = 155.0
+offset_bottom = 18.0
+theme_override_font_sizes/font_size = 12
+text = "SCORE"
+
+[node name="ValueLabel" type="Label" parent="UI/StatsBar/ScorePill"]
+offset_left = 34.0
+offset_top = 15.0
+offset_right = 155.0
+offset_bottom = 34.0
+theme_override_font_sizes/font_size = 18
+text = "0"
+
+[node name="TimePill" type="Control" parent="UI/StatsBar"]
+offset_left = 195.0
+offset_top = 10.0
+offset_right = 370.0
+offset_bottom = 44.0
+
+[node name="CaptionLabel" type="Label" parent="UI/StatsBar/TimePill"]
+offset_left = 34.0
+offset_top = 2.0
+offset_right = 155.0
+offset_bottom = 18.0
+theme_override_font_sizes/font_size = 12
+text = "TIME"
+
+[node name="ValueLabel" type="Label" parent="UI/StatsBar/TimePill"]
+offset_left = 34.0
+offset_top = 15.0
+offset_right = 155.0
+offset_bottom = 34.0
+theme_override_font_sizes/font_size = 18
+text = "30"
+
 [node name="HoleGrid" type="GridContainer" parent="UI"]
-offset_left = 25.0
-offset_top = 90.0
-offset_right = 375.0
-offset_bottom = 440.0
-theme_override_constants/h_separation = 10
-theme_override_constants/v_separation = 10
+offset_left = 38.0
+offset_top = 168.0
+offset_right = 362.0
+offset_bottom = 492.0
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
 columns = 3
 
 [node name="Hole0" type="Button" parent="UI/HoleGrid"]
-custom_minimum_size = Vector2(110, 110)
+custom_minimum_size = Vector2(100, 100)
+focus_mode = 0
 text = ""
 
 [node name="Hole1" type="Button" parent="UI/HoleGrid"]
-custom_minimum_size = Vector2(110, 110)
+custom_minimum_size = Vector2(100, 100)
+focus_mode = 0
 text = ""
 
 [node name="Hole2" type="Button" parent="UI/HoleGrid"]
-custom_minimum_size = Vector2(110, 110)
+custom_minimum_size = Vector2(100, 100)
+focus_mode = 0
 text = ""
 
 [node name="Hole3" type="Button" parent="UI/HoleGrid"]
-custom_minimum_size = Vector2(110, 110)
+custom_minimum_size = Vector2(100, 100)
+focus_mode = 0
 text = ""
 
 [node name="Hole4" type="Button" parent="UI/HoleGrid"]
-custom_minimum_size = Vector2(110, 110)
+custom_minimum_size = Vector2(100, 100)
+focus_mode = 0
 text = ""
 
 [node name="Hole5" type="Button" parent="UI/HoleGrid"]
-custom_minimum_size = Vector2(110, 110)
+custom_minimum_size = Vector2(100, 100)
+focus_mode = 0
 text = ""
 
 [node name="Hole6" type="Button" parent="UI/HoleGrid"]
-custom_minimum_size = Vector2(110, 110)
+custom_minimum_size = Vector2(100, 100)
+focus_mode = 0
 text = ""
 
 [node name="Hole7" type="Button" parent="UI/HoleGrid"]
-custom_minimum_size = Vector2(110, 110)
+custom_minimum_size = Vector2(100, 100)
+focus_mode = 0
 text = ""
 
 [node name="Hole8" type="Button" parent="UI/HoleGrid"]
-custom_minimum_size = Vector2(110, 110)
+custom_minimum_size = Vector2(100, 100)
+focus_mode = 0
 text = ""
+
+[node name="LegendCapy" type="Control" parent="UI"]
+offset_left = 20.0
+offset_top = 536.0
+offset_right = 195.0
+offset_bottom = 584.0
+
+[node name="Label" type="Label" parent="UI/LegendCapy"]
+offset_left = 50.0
+offset_top = 0.0
+offset_right = 175.0
+offset_bottom = 48.0
+vertical_alignment = 1
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Tap the Capybara"
+
+[node name="LegendPorc" type="Control" parent="UI"]
+offset_left = 205.0
+offset_top = 536.0
+offset_right = 380.0
+offset_bottom = 584.0
+
+[node name="Label" type="Label" parent="UI/LegendPorc"]
+offset_left = 50.0
+offset_top = 0.0
+offset_right = 175.0
+offset_bottom = 48.0
+vertical_alignment = 1
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Avoid the Porcupine"
 
 [node name="GameOverLayer" type="Control" parent="UI"]
 visible = false
@@ -88,11 +175,18 @@ offset_right = 400.0
 offset_bottom = 600.0
 color = Color(0, 0, 0, 0.6)
 
+[node name="Card" type="Panel" parent="UI/GameOverLayer"]
+offset_left = 40.0
+offset_top = 196.0
+offset_right = 360.0
+offset_bottom = 436.0
+
 [node name="ResultLabel" type="Label" parent="UI/GameOverLayer"]
 offset_top = 220.0
 offset_right = 400.0
 offset_bottom = 260.0
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 26
 text = "Time's Up!"
 
 [node name="ScoreResultLabel" type="Label" parent="UI/GameOverLayer"]
@@ -100,6 +194,7 @@ offset_top = 270.0
 offset_right = 400.0
 offset_bottom = 300.0
 horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
 text = "Capybaras caught: 0"
 
 [node name="RestartButton" type="Button" parent="UI/GameOverLayer"]
