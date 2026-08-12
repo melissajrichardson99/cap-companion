@@ -28,6 +28,11 @@ def gallery(voter_session_id: str | None = None) -> list[PhotoSubmission]:
     return photos_service.list_gallery(voter_session_id)
 
 
+@router.get("/of-the-day", response_model=PhotoSubmission | None)
+def of_the_day() -> PhotoSubmission | None:
+    return photos_service.get_photo_of_the_day()
+
+
 @router.post("/{submission_id}/shortlist", response_model=PhotoSubmission, dependencies=[Depends(require_staff)])
 def shortlist(submission_id: UUID) -> PhotoSubmission:
     try:

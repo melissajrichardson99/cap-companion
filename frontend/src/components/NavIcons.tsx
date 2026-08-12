@@ -99,6 +99,20 @@ export function MessageIcon({ className }: IconProps) {
   )
 }
 
+// Simple house shape -- used by the Home page's sign-board header. Nothing
+// else in the app covers this shape.
+export function HomeIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M3 9.5L10 3l7 6.5" />
+      <path d="M4.5 8.5V17h11V8.5" />
+      <line x1="8" y1="17" x2="8" y2="12.5" />
+      <line x1="12" y1="17" x2="12" y2="12.5" />
+      <line x1="8" y1="12.5" x2="12" y2="12.5" />
+    </svg>
+  )
+}
+
 // Passport booklet -- rounded card with a "photo" circle and text lines,
 // distinct from ClipboardIcon (which is used elsewhere for lists/sheets).
 // Nothing else in the app covers this shape.

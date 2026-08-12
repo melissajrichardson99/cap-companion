@@ -404,6 +404,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ voter_session_id: voterSessionId }),
     }),
+  getPhotoOfTheDay: () => request<PhotoSubmission | null>('/photos/of-the-day'),
   generatePassport: async (familyLabel: string, file: File | null) => {
     const body = new FormData()
     body.append('family_label', familyLabel)

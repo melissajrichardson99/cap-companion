@@ -132,6 +132,18 @@ def list_gallery(voter_session_id: str | None) -> list[PhotoSubmission]:
     return [_row_to_submission(r, voter_session_id) for r in rows]
 
 
+def get_photo_of_the_day() -> PhotoSubmission | None:
+    # Highest-voted shortlisted photo. list_gallery already orders by
+    # submitted_at ascending, and max()'s "first item wins ties" behavior
+    # means a tie between two photos (including an all-zero-vote shortlist)
+    # resolves to whichever was submitted first -- a deterministic, if
+    # arbitrary, tiebreak rather than one that changes on every request.
+    photos = list_gallery(None)
+    if not photos:
+        return None
+    return max(photos, key=lambda p: p.vote_count)
+
+
 def vote(submission_id: UUID, voter_session_id: str) -> PhotoSubmission:
     row = _get_row(submission_id)
     if PhotoStatus(row["status"]) != PhotoStatus.SHORTLISTED:

@@ -1,0 +1,134 @@
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: var(--cap-font-body);
+}
+
+.home-card {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-section-title {
+  font-family: var(--cap-font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--cap-color-ink);
+  margin: 0;
+}
+
+.home-today-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-open-badge {
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  color: #fff;
+}
+
+.home-open-badge-open {
+  background: var(--cap-color-adventure-green);
+}
+
+.home-open-badge-closed {
+  background: var(--cap-color-contact-red);
+}
+
+.home-hours-text {
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+}
+
+.home-weather {
+  font-size: 14px;
+}
+
+.home-weather-value {
+  color: var(--cap-color-ink);
+  font-weight: 600;
+}
+
+.home-weather-unavailable,
+.home-weather-loading {
+  color: var(--cap-color-body-text);
+  font-style: italic;
+}
+
+.home-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.home-schedule-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-schedule-heading {
+  font-family: var(--cap-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cap-color-ink);
+  margin: 0;
+}
+
+.home-schedule-times {
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}
+
+.home-photo-empty {
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}
+
+.home-photo-frame {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-photo-image {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  border-radius: var(--cap-radius-sm);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+}
+
+.home-photo-caption {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cap-color-sunset-orange-deep);
+}
+
+.home-announcements-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-announcement-item {
+  font-size: 14px;
+  color: var(--cap-color-ink);
+}

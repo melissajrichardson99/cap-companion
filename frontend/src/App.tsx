@@ -5,6 +5,7 @@ import { BingoScreen } from './components/BingoScreen'
 import { BrandLogo } from './components/BrandLogo'
 import { CollectiblesScreen } from './components/CollectiblesScreen'
 import { ContactStaffModal } from './components/ContactStaffModal'
+import { HomePage } from './components/HomePage'
 import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
@@ -37,6 +38,13 @@ const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('map')
+  // True root route (Plan.md build-priority item 4): guests land on Home
+  // first, same as `path`/`activeTab` below this is state layered on the
+  // single '/' route rather than its own URL -- consistent with the rest of
+  // this hand-rolled router, which never gave individual tabs their own
+  // paths either. Picking a tab (NavMenu) leaves Home; the navbar logo
+  // (BrandLogo) always returns to it.
+  const [showHome, setShowHome] = useState(true)
 
   // Hand-rolled routing (no router lib elsewhere in this app): the only real
   // URL route is /scan/:code, which must work as a hard deep link (someone
@@ -314,7 +322,12 @@ function App() {
       <div id="app-root">
         <header className="app-header">
           <div className="app-header-top">
-            <BrandLogo />
+            <BrandLogo
+              onClick={() => {
+                navigate('/')
+                setShowHome(true)
+              }}
+            />
           </div>
         </header>
         <main className="app-main">
@@ -335,11 +348,14 @@ function App() {
     <div id="app-root">
       <header className="app-header">
         <div className="app-header-top">
-          <BrandLogo />
+          <BrandLogo onClick={() => setShowHome(true)} />
           <NavMenu
             tabs={TABS}
             activeTab={activeTab}
-            onSelectTab={setActiveTab}
+            onSelectTab={(tab) => {
+              setShowHome(false)
+              setActiveTab(tab)
+            }}
             coinTotal={coinsSummary?.total ?? 0}
             onScanQr={() => setShowScanEntry(true)}
             onGeneratePassport={() => setShowPassport(true)}
@@ -351,10 +367,11 @@ function App() {
       </header>
 
       <main className="app-main">
-        {activeTab === 'map' && (
+        {showHome && <HomePage />}
+        {!showHome && activeTab === 'map' && (
           <MapScreen nodes={nodes} error={nodesError} onReload={reloadNodes} onVisitResult={handleVisitResult} />
         )}
-        {activeTab === 'bingo' && (
+        {!showHome && activeTab === 'bingo' && (
           <BingoScreen
             card={card}
             error={cardError}
@@ -366,10 +383,10 @@ function App() {
             onPlayMilestoneMinigame={handlePlayMilestoneMinigame}
           />
         )}
-        {activeTab === 'puzzles' && (
+        {!showHome && activeTab === 'puzzles' && (
           <PuzzleScreen puzzles={puzzles} error={puzzlesError} onReload={reloadPuzzles} onCoinsChanged={reloadCoins} />
         )}
-        {activeTab === 'scoring' && (
+        {!showHome && activeTab === 'scoring' && (
           <ScoringScreen
             games={scoringGames}
             error={scoringGamesError}
@@ -377,7 +394,7 @@ function App() {
             onCoinsChanged={reloadCoins}
           />
         )}
-        {activeTab === 'hunt' && (
+        {!showHome && activeTab === 'hunt' && (
           <HuntScreen
             characters={huntCharacters}
             error={huntError}
@@ -386,10 +403,10 @@ function App() {
             onPlayMinigame={handlePlayHuntMinigame}
           />
         )}
-        {activeTab === 'collectibles' && (
+        {!showHome && activeTab === 'collectibles' && (
           <CollectiblesScreen summary={coinsSummary} error={coinsError} onReload={reloadCoins} />
         )}
-        {activeTab === 'photos' && (
+        {!showHome && activeTab === 'photos' && (
           <PhotoScreen gallery={photoGallery} error={photoGalleryError} onReload={reloadPhotoGallery} />
         )}
       </main>

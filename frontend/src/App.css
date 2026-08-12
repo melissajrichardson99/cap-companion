@@ -50,3 +50,12 @@
   flex-shrink: 0;
   filter: drop-shadow(2px 3px 0 rgba(10, 13, 14, 0.25));
 }
+
+.brand-logo-button {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  line-height: 0;
+}
