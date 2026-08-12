@@ -113,6 +113,17 @@ export function HomeIcon({ className }: IconProps) {
   )
 }
 
+// Padlock -- used for locked Scavenger Hunt characters (locked until their
+// QR code is scanned). Nothing else in the app covers this shape.
+export function LockIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <rect x="4.5" y="9" width="11" height="8.5" rx="1.5" />
+      <path d="M6.5 9V6.5a3.5 3.5 0 0 1 7 0V9" />
+    </svg>
+  )
+}
+
 // Passport booklet -- rounded card with a "photo" circle and text lines,
 // distinct from ClipboardIcon (which is used elsewhere for lists/sheets).
 // Nothing else in the app covers this shape.

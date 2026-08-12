@@ -219,6 +219,10 @@ create table if not exists hunt_progress (
     -- this reaches all 3, monotonically -- never re-derived/unset.
     challenges_completed  integer[] not null default '{}',
     completed_at          timestamptz,
+    -- Set once, the first time a guest scans/enters this character's QR
+    -- code (migration 014). NULL = locked; the character's challenges are
+    -- gated behind this in the frontend until it's set.
+    unlocked_at           timestamptz,
     created_at            timestamptz not null default now()
 );
 

@@ -1,7 +1,8 @@
 """Guest-facing "Reset Session" — narrower than the dev-only reset_demo_data.py script.
 
 Clears only: Bingo tile completion + milestone state, Map node visited state,
-and Scavenger Hunt challenge progress. Unlike reset_demo_data.py, this
+and Scavenger Hunt challenge/unlock progress (so the next group must re-scan
+each character's QR code, same as a fresh visit). Unlike reset_demo_data.py, this
 deliberately leaves Cobb Coins, puzzle attempts, staff requests, photos, and
 passports untouched -- a guest handing the phone to the next group shouldn't
 lose coins/photos already earned, just the "what have we already done"
@@ -44,7 +45,7 @@ def reset_session() -> ResetSessionResult:
 
     progress_rows = (
         client.table("hunt_progress")
-        .update({"challenges_completed": [], "completed_at": None})
+        .update({"challenges_completed": [], "completed_at": None, "unlocked_at": None})
         .neq("id", _MATCH_ALL_ID)
         .execute()
         .data

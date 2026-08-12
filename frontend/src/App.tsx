@@ -275,6 +275,12 @@ function App() {
       return updated
     })
 
+  const unlockHuntCharacter = (characterId: string): Promise<HuntCharacter> =>
+    api.unlockHuntCharacter(characterId).then((updated) => {
+      setHuntCharacters((prev) => (prev ? prev.map((c) => (c.id === updated.id ? updated : c)) : prev))
+      return updated
+    })
+
   const handlePlayHuntMinigame = (challengeId: string, minigameSlug: string) => {
     const game = minigames?.find((m) => getMinigameSlug(m) === minigameSlug)
     if (!game) {
@@ -334,6 +340,7 @@ function App() {
           <ScanScreen
             code={code}
             onCompleteChallenge={completeHuntChallenge}
+            onUnlockCharacter={unlockHuntCharacter}
             onPlayMinigame={handlePlayHuntMinigame}
             onClose={() => navigate('/')}
           />
@@ -401,6 +408,7 @@ function App() {
             onReload={reloadHuntCharacters}
             onCompleteChallenge={completeHuntChallenge}
             onPlayMinigame={handlePlayHuntMinigame}
+            onScanQr={() => setShowScanEntry(true)}
           />
         )}
         {!showHome && activeTab === 'collectibles' && (

@@ -18,7 +18,8 @@ Resets:
     (real staff times otherwise get set directly in the DB by park staff --
     there's no in-app UI for it in this POC)
   - every hunt_progress row: challenges_completed = [], completed_at = null,
-    so the Scavenger Hunt specs start with every character un-started
+    unlocked_at = null, so the Scavenger Hunt specs start with every
+    character un-started and locked
   - every staff_requests row deleted, so the Contact Staff specs start with
     an empty staff view each run
   - every coin_awards row deleted, so the Cobb Coins specs start from a
@@ -100,7 +101,7 @@ def reset_demo_data() -> None:
     # Same "no bare filterless update" PostgREST rule as map_nodes above.
     progress_rows = (
         client.table("hunt_progress")
-        .update({"challenges_completed": [], "completed_at": None})
+        .update({"challenges_completed": [], "completed_at": None, "unlocked_at": None})
         .neq("id", "00000000-0000-0000-0000-000000000000")
         .execute()
         .data

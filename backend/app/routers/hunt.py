@@ -20,3 +20,11 @@ def complete_challenge(challenge_id: UUID) -> HuntCharacter:
         return hunt_service.complete_challenge(challenge_id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/characters/{character_id}/unlock", response_model=HuntCharacter)
+def unlock_character(character_id: UUID) -> HuntCharacter:
+    try:
+        return hunt_service.unlock_character(character_id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

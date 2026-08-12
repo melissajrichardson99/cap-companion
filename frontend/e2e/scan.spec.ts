@@ -1,46 +1,111 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
-// Covers QR/manual-code scanning (migration 009_scan_codes.sql): manual code
-// entry resolving both a hunt_character and an encyclopedia_entry, an
-// unknown code showing a clear "not found" state, and /scan/:code working as
-// a hard direct deep link (page.goto straight to the URL, simulating someone
+// Covers QR/manual-code scanning (migration 009_scan_codes.sql) and the
+// Scavenger Hunt lock/unlock gate built on top of it (migration
+// 014_hunt_unlock.sql): manual code entry and a mocked camera decode both
+// unlocking a hunt_character and dropping the guest straight into Challenge
+// 1, resolving an encyclopedia_entry code, an unknown code showing a clear
+// "not found" state, re-scanning an already-unlocked character being a
+// silent no-op (not an error or a re-lock), and /scan/:code working as a
+// hard direct deep link (page.goto straight to the URL, simulating someone
 // else's camera app opening it fresh rather than in-app navigation).
 //
-// Deliberately never answers/advances a Hunt challenge here -- only asserts
-// the modal opened on the right character -- so this file doesn't mutate
-// hunt_progress and can run in any order relative to scavenger-hunt.spec.ts,
-// which assumes every character starts at 0/3.
+// Deliberately never answers/advances a Hunt challenge past Challenge 1
+// here -- only asserts the modal opened on the right character -- so this
+// file doesn't mutate hunt_progress.challenges_completed and can run in any
+// order relative to scavenger-hunt.spec.ts, which assumes every character
+// starts at 0/3. It DOES unlock Kangaroo (via 'brave-otter') as a side
+// effect of scanning, same as any real scan -- that's idempotent and
+// scavenger-hunt.spec.ts's Kangaroo test accounts for it possibly already
+// being unlocked.
+//
+// The guest nav is a closed-by-default hamburger dropdown -- "Scan QR"
+// lives inside it, so every test opens it first via "Open menu".
+
+async function openScanEntry(page: Page): Promise<void> {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  await page.getByRole('button', { name: 'Scan QR' }).click()
+}
 
 test.describe('QR / manual code scanning', () => {
-  test('manual entry resolves a hunt_character code into that character\'s challenge flow', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Scan QR' }).click()
+  test('manual entry unlocks a hunt_character code and routes into its first challenge', async ({ page }) => {
+    await openScanEntry(page)
 
     const modal = page.locator('.modal-panel')
-    await modal.getByLabel('Or enter the code from the sign').fill('brave-otter')
+    await modal.getByLabel('Code from the sign').fill('brave-otter')
     await modal.getByRole('button', { name: 'Go' }).click()
 
     await expect(page.getByText('Kangaroo — Challenge 1')).toBeVisible()
     await expect(page).toHaveURL(/\/scan\/brave-otter$/)
+
+    // The unlock persists -- Kangaroo shows unlocked (not "Scan to unlock")
+    // back on the Scavenger Hunt tab.
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    await page.getByRole('menuitemradio', { name: 'Scavenger Hunt' }).click()
+    const kangarooCard = page.locator('.hunt-character-card', { hasText: 'Kangaroo' })
+    await expect(kangarooCard).not.toHaveClass(/hunt-character-locked/)
   })
 
   test('manual entry is case-insensitive and whitespace-tolerant', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Scan QR' }).click()
+    await openScanEntry(page)
 
     const modal = page.locator('.modal-panel')
-    await modal.getByLabel('Or enter the code from the sign').fill('  Brave Otter  ')
+    await modal.getByLabel('Code from the sign').fill('  Brave Otter  ')
     await modal.getByRole('button', { name: 'Go' }).click()
 
     await expect(page.getByText('Kangaroo — Challenge 1')).toBeVisible()
   })
 
+  test('re-scanning an already-unlocked character is a silent no-op, not an error', async ({ page }) => {
+    // Scan it once, then again -- both via the direct deep-link path, same
+    // as a guest re-scanning the same sign with their phone's camera app.
+    await page.goto('/scan/brave-otter')
+    await expect(page.getByText('Kangaroo — Challenge 1')).toBeVisible()
+
+    await page.goto('/scan/brave-otter')
+    await expect(page.getByText('Kangaroo — Challenge 1')).toBeVisible()
+    await expect(page.locator('.screen-error')).toHaveCount(0)
+  })
+
+  test('camera scan (mocked decode) unlocks a hunt_character the same way manual entry does', async ({ page }) => {
+    // Playwright can't show a physical QR code to a real camera -- stub
+    // getUserMedia to hand back a real (blank) MediaStream via
+    // canvas.captureStream(), and BarcodeDetector to return a canned decode
+    // result immediately, matching ScanEntryModal's actual detection path
+    // (it prefers BarcodeDetector when present, only falling back to jsQR
+    // otherwise). Installed via addInitScript so it's in place before the
+    // page's own scripts run and feature-detect 'BarcodeDetector' in window.
+    await page.addInitScript(() => {
+      class FakeBarcodeDetector {
+        async detect() {
+          return [{ rawValue: 'https://cap-companion.example/scan/happy-panda' }]
+        }
+      }
+      // @ts-expect-error test-only global stub
+      window.BarcodeDetector = FakeBarcodeDetector
+      // @ts-expect-error test-only global stub
+      navigator.mediaDevices.getUserMedia = async () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 10
+        canvas.height = 10
+        return canvas.captureStream()
+      }
+    })
+
+    await openScanEntry(page)
+    await page.getByRole('button', { name: 'Use Camera' }).click()
+
+    await expect(page.getByText('Pig — Challenge 1')).toBeVisible()
+    await expect(page).toHaveURL(/\/scan\/happy-panda$/)
+  })
+
   test('manual entry resolves an encyclopedia_entry code into the "coming soon" stub', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Scan QR' }).click()
+    await openScanEntry(page)
 
     const modal = page.locator('.modal-panel')
-    await modal.getByLabel('Or enter the code from the sign').fill('jolly-zebra')
+    await modal.getByLabel('Code from the sign').fill('jolly-zebra')
     await modal.getByRole('button', { name: 'Go' }).click()
 
     await expect(page.getByRole('heading', { name: 'Red Panda' })).toBeVisible()
@@ -48,15 +113,15 @@ test.describe('QR / manual code scanning', () => {
   })
 
   test('an unknown code shows a clear not-found state, not a broken page', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Scan QR' }).click()
+    await openScanEntry(page)
 
     const modal = page.locator('.modal-panel')
-    await modal.getByLabel('Or enter the code from the sign').fill('totally-bogus-code')
+    await modal.getByLabel('Code from the sign').fill('totally-bogus-code')
     await modal.getByRole('button', { name: 'Go' }).click()
 
     await expect(page.getByText(/couldn't find a code matching/i)).toBeVisible()
     await page.getByRole('button', { name: 'Back to the app' }).click()
+    await page.getByRole('button', { name: 'Open menu' }).click()
     await expect(page.getByRole('button', { name: 'Scan QR' })).toBeVisible()
   })
 
@@ -70,7 +135,21 @@ test.describe('QR / manual code scanning', () => {
 
     await page.getByRole('button', { name: 'Back to the app' }).click()
     await expect(page).toHaveURL('/')
+    await page.getByRole('button', { name: 'Open menu' }).click()
     await expect(page.getByRole('button', { name: 'Scan QR' })).toBeVisible()
+  })
+
+  test('/scan/:code deep link for a hunt_character unlocks it directly, same as camera app -> app', async ({
+    page,
+  }) => {
+    await page.goto('/scan/calm-turtle')
+    await expect(page.getByText('Capybara — Challenge 1')).toBeVisible()
+
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    await page.getByRole('menuitemradio', { name: 'Scavenger Hunt' }).click()
+    const capybaraCard = page.locator('.hunt-character-card', { hasText: 'Capybara' })
+    await expect(capybaraCard).not.toHaveClass(/hunt-character-locked/)
   })
 
   test('/scan/:code deep link for an unknown code also shows not-found, not a crash', async ({ page }) => {

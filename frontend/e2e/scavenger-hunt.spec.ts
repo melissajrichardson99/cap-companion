@@ -1,14 +1,33 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 
-// Covers the Scavenger Hunt: the 5-character select screen, all 4 Challenge 2
-// variants (matching, true_false_set, image_mc, and the 2nd mc used by Pig),
-// wrong-answer retry (no lockout), Challenge 3's deterministic per-character
-// minigame launch (not a random draw), and progress tracking through to a
-// character being marked found. Hits the real dev Supabase project via the
-// backend, same as the other e2e specs -- no mocking. Tests are ordered
-// top-to-bottom and each uses its own character, since hunt_progress is
-// cumulative per character across tests in this file (only reset once by
-// global setup, same as every other spec).
+// Covers the Scavenger Hunt: the 5-character select screen, the lock/unlock
+// gate (migration 014_hunt_unlock.sql -- characters start locked and are
+// unlocked by scanning/entering their QR code, see scan.spec.ts for the
+// scan-resolution side of this), all 4 Challenge 2 variants (matching,
+// true_false_set, image_mc, and the 2nd mc used by Pig), wrong-answer retry
+// (no lockout), Challenge 3's deterministic per-character minigame launch
+// (not a random draw), and progress tracking through to a character being
+// marked found. Hits the real dev Supabase project via the backend, same as
+// the other e2e specs -- no mocking. Tests are ordered top-to-bottom and
+// each uses its own character, since hunt_progress (including unlocked_at)
+// is cumulative per character across tests in this file (only reset once by
+// global setup, same as every other spec). Kangaroo may already be unlocked
+// by the time this file runs, since scan.spec.ts (which runs first,
+// alphabetically) also scans its code -- Sloth is the one character no
+// other spec ever touches, so it's used below to assert the locked state
+// deterministically.
+//
+// The guest nav is a closed-by-default hamburger dropdown -- every
+// tab/action click below opens it first via "Open menu", and tab buttons
+// use the menuitemradio role (not button) per NavMenu.tsx's aria roles.
+
+const CHARACTER_CODES: Record<string, string> = {
+  Kangaroo: 'brave-otter',
+  Pig: 'happy-panda',
+  Capybara: 'calm-turtle',
+  Snake: 'quick-falcon',
+  Sloth: 'sleepy-koala',
+}
 
 function huntDialog(page: Page): Locator {
   return page.locator('.modal-panel')
@@ -18,17 +37,36 @@ function characterCard(page: Page, name: string): Locator {
   return page.locator('.hunt-character-card', { hasText: name })
 }
 
-async function openCharacter(page: Page, name: string): Promise<Locator> {
+async function openNavMenu(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Open menu' }).click()
+}
+
+async function openHuntTab(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Scavenger Hunt' }).click()
+  await openNavMenu(page)
+  await page.getByRole('menuitemradio', { name: 'Scavenger Hunt' }).click()
+}
+
+// Unlocks a character via its QR code (the same code scan.spec.ts scans/
+// manually enters) by deep-linking straight to /scan/:code, exactly as a
+// guest's own camera app would. Confirms the guest lands straight in
+// Challenge 1 as part of unlocking, per the ticket's "scanning unlocks and
+// navigates straight into the first challenge" requirement.
+async function unlockCharacter(page: Page, name: string): Promise<void> {
+  await page.goto(`/scan/${CHARACTER_CODES[name]}`)
+  await expect(page.getByText(`${name} — Challenge 1`)).toBeVisible()
+}
+
+async function openCharacter(page: Page, name: string): Promise<Locator> {
+  await unlockCharacter(page, name)
+  await openHuntTab(page)
   await characterCard(page, name).click()
   return huntDialog(page)
 }
 
 test.describe('Scavenger Hunt', () => {
-  test('lists all 5 characters with species labels and 0/3 status', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Scavenger Hunt' }).click()
+  test('lists all 5 characters with species labels; locked characters show a scan prompt', async ({ page }) => {
+    await openHuntTab(page)
 
     for (const name of ['Kangaroo', 'Pig', 'Capybara', 'Snake', 'Sloth']) {
       await expect(characterCard(page, name)).toBeVisible()
@@ -37,7 +75,38 @@ test.describe('Scavenger Hunt', () => {
     await expect(characterCard(page, 'Kangaroo').locator('.hunt-character-species')).toHaveText('Marsupial')
     await expect(characterCard(page, 'Capybara').locator('.hunt-character-species')).toHaveText('Rodent')
     await expect(characterCard(page, 'Sloth').locator('.hunt-character-species')).toHaveText('Animal')
-    await expect(characterCard(page, 'Sloth').locator('.hunt-character-status')).toHaveText('0/3 challenges')
+
+    // Sloth is never scanned by any other spec, so it's a reliable
+    // always-locked control for the locked-state UI.
+    await expect(characterCard(page, 'Sloth').locator('.hunt-character-status')).toHaveText('Scan to unlock')
+    await expect(characterCard(page, 'Sloth')).toHaveClass(/hunt-character-locked/)
+  })
+
+  test('a locked character shows a scan prompt instead of its challenges, and does not unlock on its own', async ({
+    page,
+  }) => {
+    await openHuntTab(page)
+    await characterCard(page, 'Sloth').click()
+
+    const prompt = page.locator('.modal-panel')
+    await expect(prompt.getByText('Sloth is locked')).toBeVisible()
+    await expect(prompt.getByText(/scan its qr code/i)).toBeVisible()
+    // No challenge content leaked into this prompt.
+    await expect(prompt.getByText(/Challenge 1/)).toHaveCount(0)
+
+    await prompt.getByRole('button', { name: 'Not Yet' }).click()
+    await expect(prompt).toHaveCount(0)
+    // Still locked -- dismissing the prompt isn't itself an unlock.
+    await expect(characterCard(page, 'Sloth').locator('.hunt-character-status')).toHaveText('Scan to unlock')
+  })
+
+  test('the scan prompt\'s "Scan Now" button opens the scan-entry modal', async ({ page }) => {
+    await openHuntTab(page)
+    await characterCard(page, 'Sloth').click()
+    await page.locator('.modal-panel').getByRole('button', { name: 'Scan Now' }).click()
+
+    await expect(page.getByText('Scan a Code')).toBeVisible()
+    await expect(page.getByLabel('Code from the sign')).toBeVisible()
   })
 
   test('Kangaroo: mc -> matching -> minigame, completing the character end to end', async ({ page }) => {
@@ -158,5 +227,22 @@ test.describe('Scavenger Hunt', () => {
     await dialog.getByRole('button', { name: 'Scale', exact: true }).click()
 
     await expect(dialog.getByText('Snake — Challenge 3')).toBeVisible()
+  })
+
+  test('re-scanning an already-unlocked (and fully completed) character just navigates back in, no error', async ({
+    page,
+  }) => {
+    // Kangaroo was already unlocked AND fully completed (all 3 challenges)
+    // by the earlier "Kangaroo: mc -> matching -> minigame" test in this
+    // file. Re-scanning it must not error, re-lock it, or reset its
+    // progress -- just land back on the same "found" state.
+    await page.goto(`/scan/${CHARACTER_CODES.Kangaroo}`)
+
+    await expect(page.getByText('You found Kangaroo! All 3 challenges complete.')).toBeVisible()
+    await expect(page.locator('.screen-error')).toHaveCount(0)
+
+    await openHuntTab(page)
+    await expect(characterCard(page, 'Kangaroo').locator('.hunt-character-status')).toHaveText('Found! ✓')
+    await expect(characterCard(page, 'Kangaroo')).not.toHaveClass(/hunt-character-locked/)
   })
 })

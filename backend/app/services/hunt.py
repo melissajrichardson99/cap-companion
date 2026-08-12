@@ -38,6 +38,7 @@ def _character_from_rows(char_row: dict, challenge_rows: list[dict], progress_ro
         challenges=[_row_to_challenge(r) for r in sorted(challenge_rows, key=lambda r: r["order_index"])],
         challenges_completed=sorted(progress_row["challenges_completed"]) if progress_row else [],
         completed_at=progress_row["completed_at"] if progress_row else None,
+        unlocked=bool(progress_row and progress_row["unlocked_at"] is not None),
     )
 
 
@@ -74,6 +75,25 @@ def get_character(character_id: UUID | str) -> HuntCharacter:
     progress_rows = client.table("hunt_progress").select("*").eq("character_id", str(character_id)).execute().data
 
     return _character_from_rows(char_rows[0], challenge_rows, progress_rows[0] if progress_rows else None)
+
+
+def unlock_character(character_id: UUID | str) -> HuntCharacter:
+    """Marks a character unlocked (first scan/manual-code entry of its QR
+    code). Idempotent -- set once, monotonically, like completed_at above --
+    so re-scanning an already-unlocked character is a silent no-op rather
+    than an error or a re-triggered unlock."""
+    client = get_supabase_client()
+
+    progress_rows = client.table("hunt_progress").select("*").eq("character_id", str(character_id)).execute().data
+    if not progress_rows:
+        raise NotFoundError(f"Hunt progress row for character {character_id} not found")
+
+    if progress_rows[0]["unlocked_at"] is None:
+        client.table("hunt_progress").update({"unlocked_at": datetime.now(timezone.utc).isoformat()}).eq(
+            "character_id", str(character_id)
+        ).execute()
+
+    return get_character(character_id)
 
 
 def complete_challenge(challenge_id: UUID) -> HuntCharacter:

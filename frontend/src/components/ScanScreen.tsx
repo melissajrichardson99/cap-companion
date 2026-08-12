@@ -7,6 +7,7 @@ import './ScanScreen.css'
 interface ScanScreenProps {
   code: string
   onCompleteChallenge: (challengeId: string) => Promise<HuntCharacter>
+  onUnlockCharacter: (characterId: string) => Promise<HuntCharacter>
   onPlayMinigame: (challengeId: string, minigameSlug: string) => void
   onClose: () => void
 }
@@ -23,7 +24,7 @@ type ScanState =
 // ScanEntryModal decodes/accepts one) and routes to the matching screen.
 // Reusing HuntChallengeModal as-is means a scanned hunt character gets the
 // exact same challenge flow as opening it from the Scavenger Hunt tab.
-export function ScanScreen({ code, onCompleteChallenge, onPlayMinigame, onClose }: ScanScreenProps) {
+export function ScanScreen({ code, onCompleteChallenge, onUnlockCharacter, onPlayMinigame, onClose }: ScanScreenProps) {
   const [state, setState] = useState<ScanState>({ status: 'loading' })
 
   useEffect(() => {
@@ -34,10 +35,15 @@ export function ScanScreen({ code, onCompleteChallenge, onPlayMinigame, onClose 
       .then((result) => {
         if (cancelled) return
         if (result.type === 'hunt_character') {
-          setState({ status: 'hunt_character', character: result.target })
-        } else {
-          setState({ status: 'encyclopedia_entry', entry: result.target })
+          // Unlocking is idempotent server-side, so re-scanning an
+          // already-unlocked character is a no-op here too -- it just lands
+          // back on the same challenge flow, no error or re-triggered unlock.
+          return onUnlockCharacter(result.target.id).then((character) => {
+            if (cancelled) return
+            setState({ status: 'hunt_character', character })
+          })
         }
+        setState({ status: 'encyclopedia_entry', entry: result.target })
       })
       .catch((err) => {
         if (cancelled) return
@@ -46,6 +52,10 @@ export function ScanScreen({ code, onCompleteChallenge, onPlayMinigame, onClose 
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on `code`
+    // only, same as before: callback props from App.tsx aren't stable
+    // references across renders and re-running this on every parent
+    // re-render would re-fetch/re-unlock needlessly.
   }, [code])
 
   if (state.status === 'loading') {

@@ -212,6 +212,7 @@ export interface HuntCharacter {
   challenges: HuntChallenge[]
   challenges_completed: number[]
   completed_at: string | null
+  unlocked: boolean
 }
 
 export type EncyclopediaStatus = 'placeholder' | 'published'
@@ -354,6 +355,8 @@ export const api = {
   listHuntCharacters: () => request<HuntCharacter[]>('/hunt/characters'),
   completeHuntChallenge: (challengeId: string) =>
     request<HuntCharacter>(`/hunt/challenges/${challengeId}/complete`, { method: 'POST' }),
+  unlockHuntCharacter: (characterId: string) =>
+    request<HuntCharacter>(`/hunt/characters/${characterId}/unlock`, { method: 'POST' }),
   resolveScanCode: (code: string) => request<ScanResult>(`/scan/${encodeURIComponent(code)}`),
   createStaffRequest: (type: StaffRequestType, locationNodeId: string | null) =>
     request<StaffRequest>('/staff-requests', {

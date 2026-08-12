@@ -304,6 +304,9 @@ class HuntCharacter(BaseModel):
     # BingoCard.milestones_achieved -- order_index values (1-3) completed.
     challenges_completed: list[int] = Field(default_factory=list)
     completed_at: datetime | None = None
+    # False until a guest scans/enters this character's QR code
+    # (hunt_progress.unlocked_at is not null) -- gates challenge access.
+    unlocked: bool = False
 
 
 class EncyclopediaStatus(StrEnum):

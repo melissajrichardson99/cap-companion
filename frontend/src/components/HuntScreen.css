@@ -66,3 +66,27 @@
 .hunt-character-complete .hunt-character-status {
   color: var(--cap-color-adventure-green);
 }
+
+.hunt-character-locked {
+  opacity: 0.7;
+  filter: grayscale(0.3);
+}
+
+.hunt-character-locked .hunt-character-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--cap-color-body-text);
+}
+
+.hunt-character-lock-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.hunt-locked-prompt p {
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}

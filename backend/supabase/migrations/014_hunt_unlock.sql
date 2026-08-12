@@ -1,0 +1,32 @@
+-- CAP Companion App — migration 014: Scavenger Hunt lock/unlock via QR scan
+--
+-- Flips Scavenger Hunt characters from always-open to locked-until-scanned.
+-- Adds a single unlocked_at timestamptz to hunt_progress rather than a new
+-- table: hunt_progress already has exactly one row per character (unique
+-- character_id), so this is the same "denormalized onto the existing
+-- per-character progress row" pattern as challenges_completed/completed_at,
+-- not a new join. NULL = locked, set once (monotonically, like completed_at)
+-- the first time a guest scans/enters that character's code -- app/services/
+-- hunt.py's unlock_character() is idempotent, so re-scanning an
+-- already-unlocked character is a no-op, not an error or a re-trigger.
+--
+-- No new session/guest-tracking concept: unlock state is global, same "one
+-- device per family visit" shared-kiosk scope as the rest of this app's
+-- state (bingo, coins, hunt progress itself -- see migration 013's header).
+-- It resets alongside challenges_completed/completed_at in both the guest-
+-- facing Reset Session flow (app/services/session_reset.py) and the dev-only
+-- reset_demo_data.py script.
+--
+-- The QR/manual-code scanning mechanism itself (scannable_codes, migration
+-- 009) is unchanged -- this migration only adds the lock gate on top of the
+-- existing scan-resolution flow.
+--
+-- Per the project's established gotcha (seed.sql edits don't reach the live
+-- DB -- see migrations 004-013's headers), this migration is what actually
+-- applies the change to the live database; seed.sql/schema.sql are updated
+-- separately to match.
+--
+-- Run this in the Supabase SQL editor against the live project.
+-- Safe to run more than once: ADD COLUMN IF NOT EXISTS.
+
+alter table hunt_progress add column if not exists unlocked_at timestamptz;
