@@ -33,17 +33,35 @@
 }
 
 .scan-entry-video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
+/* Overlays the video (stacked via z-index, not conditional mounting) while
+   permission is pending or unavailable -- see ScanEntryModal.tsx for why the
+   video element itself is always mounted underneath. */
 .scan-entry-viewfinder-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   padding: 0 20px;
+  background: #000;
+}
+
+.scan-entry-status-text {
+  margin: 0;
+  font-family: var(--cap-font-body);
+  font-size: 13px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .scan-entry-camera-icon {
@@ -138,6 +156,12 @@
 
 .scan-entry-manual-row input {
   flex: 1;
+  /* A flex item's default min-width is auto (its content size), not 0 -- for
+     a text input that's the browser's intrinsic size-20 width (~200px+),
+     which wins over flex:1's shrink and pushes the Go button past this
+     row's (and on narrow phones, the whole card's) right edge. min-width: 0
+     lets the input actually shrink to fit instead. */
+  min-width: 0;
   font: inherit;
   font-size: 15px;
   padding: 9px 12px;
@@ -159,16 +183,6 @@
 .scan-entry-modal-frame .btn:hover:not(:disabled) {
   box-shadow: var(--cap-shadow-pop);
   transform: translate(-1px, -1px);
-}
-
-.scan-entry-modal-frame .btn-primary {
-  background: var(--cap-color-sunset-orange);
-  border-color: var(--cap-color-outline);
-  color: #fff;
-}
-
-.scan-entry-modal-frame .btn-primary:hover:not(:disabled) {
-  background: var(--cap-color-sunset-orange-deep);
 }
 
 .scan-entry-modal-frame .btn-secondary {

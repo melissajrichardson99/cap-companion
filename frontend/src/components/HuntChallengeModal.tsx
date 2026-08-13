@@ -218,7 +218,7 @@ function MatchingChallenge({
             <button
               type="button"
               key={p.left}
-              className={`btn hunt-matching-item ${matched.has(p.left) ? 'hunt-option-correct' : ''} ${
+              className={`btn hunt-matching-item hunt-matching-term ${matched.has(p.left) ? 'hunt-option-correct' : ''} ${
                 selectedLeft === p.left ? 'hunt-matching-selected' : ''
               }`}
               disabled={disabled || matched.has(p.left)}
@@ -235,7 +235,7 @@ function MatchingChallenge({
               <button
                 type="button"
                 key={right}
-                className={`btn hunt-matching-item ${isMatched ? 'hunt-option-correct' : ''} ${
+                className={`btn hunt-matching-item hunt-matching-meaning ${isMatched ? 'hunt-option-correct' : ''} ${
                   wrongRight === right ? 'hunt-option-wrong' : ''
                 }`}
                 disabled={disabled || isMatched}

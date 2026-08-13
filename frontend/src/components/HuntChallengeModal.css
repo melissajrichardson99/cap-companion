@@ -136,20 +136,15 @@
   text-align: left;
 }
 
-.hunt-option-correct {
-  border-color: var(--cap-color-adventure-green);
-  background: color-mix(in srgb, var(--cap-color-adventure-green) 16%, transparent);
-}
-
-.hunt-option-wrong {
-  border-color: var(--cap-color-adventure-red);
-  background: color-mix(in srgb, var(--cap-color-adventure-red) 12%, transparent);
-}
-
 /* Matching */
 .hunt-matching-columns {
   display: flex;
   gap: 12px;
+  /* Both columns stretch to the row's tallest item (a long meaning phrase),
+     so every term/meaning pill in a row shares one height instead of the
+     meaning column's wrapped, multi-line text towering over the short,
+     single-line terms beside it. */
+  align-items: stretch;
 }
 
 .hunt-matching-column {
@@ -162,6 +157,46 @@
 .hunt-matching-item {
   text-align: left;
   font-size: 14px;
+  line-height: 1.25;
+  /* A floor, not a fixed height -- short terms ("Joey") get a uniform pill
+     instead of shrink-wrapping to their text, while longer wrapped meanings
+     can still grow past it. Centering the (possibly multi-line) label
+     vertically keeps every button's text looking anchored mid-pill rather
+     than pinned to the top edge once it's taller than one line. */
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* Term (left) / meaning (right) base colors -- two distinct brand-accent
+   washes (not the plain white default .btn fill) so the two columns read as
+   two intentionally-different groups of matchable chips, not arbitrary
+   buttons. Both stay clear of red/green/orange, which are reserved for the
+   wrong/correct/selected states below -- defined first so those states
+   (same specificity, later in source order) still win once a pair is
+   selected/matched/wrong. */
+.hunt-matching-term {
+  border-color: var(--cap-color-wood-plank-blue-deep);
+  background: color-mix(in srgb, var(--cap-color-wood-plank-blue) 32%, transparent);
+}
+
+.hunt-matching-meaning {
+  border-color: var(--cap-color-trail-tan);
+  background: color-mix(in srgb, var(--cap-color-trail-tan) 26%, transparent);
+}
+
+/* Shared correct/wrong state, used by both mc-style options and matching
+   items -- placed after the term/meaning base washes above (same
+   specificity) so a matched/wrong item's state color always wins over its
+   column's base tint. */
+.hunt-option-correct {
+  border-color: var(--cap-color-adventure-green);
+  background: color-mix(in srgb, var(--cap-color-adventure-green) 16%, transparent);
+}
+
+.hunt-option-wrong {
+  border-color: var(--cap-color-adventure-red);
+  background: color-mix(in srgb, var(--cap-color-adventure-red) 12%, transparent);
 }
 
 .hunt-matching-selected {
@@ -218,6 +253,10 @@
   font: inherit;
   font-size: 15px;
   flex: 1;
+  /* Same fix as ScanEntryModal's manual-code input: a flex item's default
+     min-width is its content size, not 0, so without this the Submit button
+     can get pushed past the card's edge on narrow phones. */
+  min-width: 0;
   padding: 9px 12px;
   border-radius: 8px;
   border: 1.5px solid var(--cap-color-outline);

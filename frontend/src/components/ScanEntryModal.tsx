@@ -17,9 +17,11 @@ function extractCode(decodedText: string): string {
   return match ? decodeURIComponent(match[1]) : decodedText
 }
 
+type CameraState = 'pending' | 'active' | 'error'
+
 export function ScanEntryModal({ onClose, onCodeSubmitted }: ScanEntryModalProps) {
   const [manualCode, setManualCode] = useState('')
-  const [cameraActive, setCameraActive] = useState(false)
+  const [cameraState, setCameraState] = useState<CameraState>('pending')
   const [cameraError, setCameraError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -31,10 +33,7 @@ export function ScanEntryModal({ onClose, onCodeSubmitted }: ScanEntryModalProps
     rafRef.current = null
     streamRef.current?.getTracks().forEach((track) => track.stop())
     streamRef.current = null
-    setCameraActive(false)
   }
-
-  useEffect(() => stopCamera, [])
 
   const handleDecoded = (decodedText: string) => {
     if (doneRef.current) return
@@ -43,60 +42,89 @@ export function ScanEntryModal({ onClose, onCodeSubmitted }: ScanEntryModalProps
     onCodeSubmitted(extractCode(decodedText))
   }
 
-  const startCamera = async () => {
-    setCameraError(null)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-      setCameraActive(true)
+  // Auto-prompts for camera permission as soon as the modal mounts -- no
+  // "Use Camera" tap required first.
+  useEffect(() => {
+    let cancelled = false
 
-      if ('BarcodeDetector' in window) {
-        const detector = new BarcodeDetector({ formats: ['qr_code'] })
-        const tick = async () => {
-          if (!videoRef.current) return
-          try {
-            const results = await detector.detect(videoRef.current)
-            if (results.length > 0) {
-              handleDecoded(results[0].rawValue)
+    const startCamera = async () => {
+      setCameraState('pending')
+      setCameraError(null)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
+        streamRef.current = stream
+
+        // The <video> element below is always mounted (never conditionally
+        // rendered on cameraState) specifically so this ref is guaranteed to
+        // exist here. It previously only rendered once cameraState flipped
+        // to "active", which meant srcObject was being assigned to a null
+        // ref and the stream never actually reached the video element --
+        // permission granted, decode loop running, but a black screen.
+        const video = videoRef.current
+        if (!video) return
+        video.srcObject = stream
+        await video.play()
+        if (cancelled) return
+        setCameraState('active')
+
+        if ('BarcodeDetector' in window) {
+          const detector = new BarcodeDetector({ formats: ['qr_code'] })
+          const tick = async () => {
+            if (!videoRef.current) return
+            try {
+              const results = await detector.detect(videoRef.current)
+              if (results.length > 0) {
+                handleDecoded(results[0].rawValue)
+                return
+              }
+            } catch {
+              // Transient decode failures between frames are expected -- keep polling.
+            }
+            rafRef.current = requestAnimationFrame(tick)
+          }
+          rafRef.current = requestAnimationFrame(tick)
+        } else {
+          const { default: jsQR } = await import('jsqr')
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d', { willReadFrequently: true })
+          const tick = () => {
+            const tickVideo = videoRef.current
+            if (!tickVideo || !ctx || tickVideo.readyState !== tickVideo.HAVE_ENOUGH_DATA) {
+              rafRef.current = requestAnimationFrame(tick)
               return
             }
-          } catch {
-            // Transient decode failures between frames are expected -- keep polling.
-          }
-          rafRef.current = requestAnimationFrame(tick)
-        }
-        rafRef.current = requestAnimationFrame(tick)
-      } else {
-        const { default: jsQR } = await import('jsqr')
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d', { willReadFrequently: true })
-        const tick = () => {
-          const video = videoRef.current
-          if (!video || !ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {
+            canvas.width = tickVideo.videoWidth
+            canvas.height = tickVideo.videoHeight
+            ctx.drawImage(tickVideo, 0, 0, canvas.width, canvas.height)
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+            const result = jsQR(imageData.data, imageData.width, imageData.height)
+            if (result) {
+              handleDecoded(result.data)
+              return
+            }
             rafRef.current = requestAnimationFrame(tick)
-            return
-          }
-          canvas.width = video.videoWidth
-          canvas.height = video.videoHeight
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-          const result = jsQR(imageData.data, imageData.width, imageData.height)
-          if (result) {
-            handleDecoded(result.data)
-            return
           }
           rafRef.current = requestAnimationFrame(tick)
         }
-        rafRef.current = requestAnimationFrame(tick)
+      } catch (err) {
+        if (cancelled) return
+        setCameraState('error')
+        setCameraError(`Couldn't access the camera: ${err}`)
       }
-    } catch (err) {
-      setCameraError(`Couldn't access the camera: ${err}`)
     }
-  }
+
+    startCamera()
+
+    return () => {
+      cancelled = true
+      stopCamera()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const submitManual = () => {
     const trimmed = manualCode.trim()
@@ -111,16 +139,18 @@ export function ScanEntryModal({ onClose, onCodeSubmitted }: ScanEntryModalProps
       </h2>
 
       <div className="scan-entry-viewfinder">
-        {!cameraActive ? (
+        {/* Always mounted (see the effect above for why) -- shown/hidden via
+            the pending/error overlay stacked on top, not by conditionally
+            rendering the element itself. */}
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <video ref={videoRef} className="scan-entry-video" muted playsInline autoPlay />
+        {cameraState !== 'active' && (
           <div className="scan-entry-viewfinder-placeholder">
             <CameraIcon className="scan-entry-camera-icon" />
-            <button type="button" className="btn btn-primary" onClick={startCamera}>
-              Use Camera
-            </button>
+            <p className="scan-entry-status-text">
+              {cameraState === 'pending' ? 'Waiting for camera permission…' : 'Camera unavailable'}
+            </p>
           </div>
-        ) : (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video ref={videoRef} className="scan-entry-video" muted playsInline />
         )}
         <span className="scan-entry-corner scan-entry-corner-tl" aria-hidden="true" />
         <span className="scan-entry-corner scan-entry-corner-tr" aria-hidden="true" />

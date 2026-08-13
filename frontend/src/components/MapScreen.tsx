@@ -1,8 +1,97 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import type { MapNode, VisitNodeResponse } from '../api'
 import { NodeDetailPopup } from './NodeDetailPopup'
 import { MapPinIcon } from './NavIcons'
 import './MapScreen.css'
+
+// Matches MapScreen.css's mobile pin-shrink breakpoint -- the declutter pass
+// below is tuned against that smaller pin/badge size, so it only needs to
+// run where that size is actually in effect.
+const MOBILE_BREAKPOINT_QUERY = '(max-width: 640px)'
+
+// Minimum on-screen center-to-center clearance (px) between two pins before
+// the declutter pass starts nudging them apart -- sized to comfortably clear
+// a mobile-shrunk pin (20px) plus its badge's reach (~11px past the pin
+// edge), not just the bare pin diameter, so badges clear neighbors too.
+// The badge sits off-center (top-right of the pin, MapScreen.css), so its
+// farthest corner from the pin's own center can be ~4px past a naive
+// pin-radius-only estimate -- padded in here rather than modeled precisely,
+// since a center-to-center minimum can't account for the badge's
+// asymmetric reach in every direction.
+const MIN_PIN_GAP_PX = 40
+// Cap on how far any single pin may be nudged from its true x_pct/y_pct
+// position -- keeps every pin recognizably near its real map location even
+// in the densest clusters, instead of letting the declutter pass drag it
+// arbitrarily far to satisfy spacing.
+const MAX_NUDGE_PX = 28
+
+interface Nudge {
+  dx: number
+  dy: number
+}
+
+// Pure pixel-space repulsion pass: pushes any pin pair closer than
+// MIN_PIN_GAP_PX apart symmetrically along the line between them, a few
+// iterations so a chain of >2 crowded pins (e.g. the Critter Cafe / Granny
+// Ann's Kitchen / Sugar Shack food cluster) all settle apart from each
+// other, not just their nearest neighbor. Operates purely on rendered pixel
+// positions computed from the live container size -- never touches the
+// underlying x_pct/y_pct data, so it's a no-op wherever pins already have
+// room (e.g. this same map at desktop width).
+function computeNudges(
+  nodes: MapNode[],
+  containerSize: { width: number; height: number }
+): Map<string, Nudge> {
+  const points = nodes.map((n) => ({
+    id: n.id,
+    x: (n.x_pct! / 100) * containerSize.width,
+    y: (n.y_pct! / 100) * containerSize.height,
+    dx: 0,
+    dy: 0,
+  }))
+
+  for (let iter = 0; iter < 4; iter++) {
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        const a = points[i]
+        const b = points[j]
+        const ax = a.x + a.dx
+        const ay = a.y + a.dy
+        const bx = b.x + b.dx
+        const by = b.y + b.dy
+        let vx = bx - ax
+        let vy = by - ay
+        let dist = Math.hypot(vx, vy)
+        if (dist < MIN_PIN_GAP_PX) {
+          // Coincident points have no natural push direction -- fall back to
+          // a fixed diagonal so they don't divide by zero and stay stuck.
+          if (dist < 0.01) {
+            vx = 1
+            vy = 1
+            dist = Math.SQRT2
+          }
+          const push = (MIN_PIN_GAP_PX - dist) / 2
+          const ux = vx / dist
+          const uy = vy / dist
+          a.dx -= ux * push
+          a.dy -= uy * push
+          b.dx += ux * push
+          b.dy += uy * push
+        }
+      }
+    }
+  }
+
+  const result = new Map<string, Nudge>()
+  for (const p of points) {
+    result.set(p.id, {
+      dx: Math.max(-MAX_NUDGE_PX, Math.min(MAX_NUDGE_PX, p.dx)),
+      dy: Math.max(-MAX_NUDGE_PX, Math.min(MAX_NUDGE_PX, p.dy)),
+    })
+  }
+  return result
+}
 
 const CATEGORY_LABEL: Record<MapNode['category'], string> = {
   attraction: 'Attraction',
@@ -112,6 +201,47 @@ interface MapScreenProps {
 export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenProps) {
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null)
   const [openLegendCategories, setOpenLegendCategories] = useState<Set<MapNode['category']>>(new Set())
+  const imageWrapRef = useRef<HTMLDivElement | null>(null)
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null)
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches
+  )
+
+  // Tracks the mobile-shrink breakpoint (see MapScreen.css) so the declutter
+  // pass below only runs where its tuning (MIN_PIN_GAP_PX etc.) actually
+  // applies -- desktop keeps its current, already-adequate pin spacing.
+  useEffect(() => {
+    const mql = window.matchMedia(MOBILE_BREAKPOINT_QUERY)
+    const update = () => setIsMobile(mql.matches)
+    update()
+    mql.addEventListener('change', update)
+    return () => mql.removeEventListener('change', update)
+  }, [])
+
+  // The map image scales fluidly with its container (width: 100% in CSS), so
+  // node pixel positions have to be measured live rather than assumed --
+  // re-observes whenever the wrap element (re)mounts, e.g. once loading
+  // finishes and it first appears.
+  useEffect(() => {
+    const el = imageWrapRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect
+      setContainerSize({ width, height })
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [nodes])
+
+  const positioned = useMemo(
+    () => (nodes ?? []).filter((n) => n.parent_node_id == null && n.x_pct != null && n.y_pct != null),
+    [nodes]
+  )
+
+  const nudges = useMemo(() => {
+    if (!isMobile || !containerSize) return new Map<string, Nudge>()
+    return computeNudges(positioned, containerSize)
+  }, [isMobile, containerSize, positioned])
 
   const toggleLegendCategory = (category: MapNode['category']) => {
     setOpenLegendCategories((prev) => {
@@ -140,8 +270,9 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
   // Parented nodes (e.g. Cornhole -> Arcade Pad) are sub-games of their
   // parent, not their own map location — they never get a pin or a
   // fallback-list entry; the parent's popup lists them instead.
+  // (`positioned` -- the same topLevel + placed filter -- is computed above
+  // via useMemo, since the declutter pass needs it before this null check.)
   const topLevel = nodes.filter((n) => n.parent_node_id == null)
-  const positioned = topLevel.filter((n) => n.x_pct != null && n.y_pct != null)
   const unplaced = topLevel.filter((n) => n.x_pct == null || n.y_pct == null)
 
   // selectedNode can go stale after a reload (state/linked_tiles changed) —
@@ -172,17 +303,24 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
 
       <div className="map-scene">
         <div className="map-frame">
-          <div className="map-image-wrap">
+          <div className="map-image-wrap" ref={imageWrapRef}>
             <img src="/park-map.png" alt="Cobb's Adventure Park map" className="map-image" />
             {positioned.map((node) => {
               const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
               const stateNote = node.state !== 'not_visited' ? `, ${node.state.replace('_', ' ')}` : ''
+              const nudge = nudges.get(node.id)
+              const pinStyle = {
+                left: `${node.x_pct}%`,
+                top: `${node.y_pct}%`,
+                '--nudge-x': `${nudge?.dx ?? 0}px`,
+                '--nudge-y': `${nudge?.dy ?? 0}px`,
+              } as CSSProperties
               return (
                 <button
                   type="button"
                   key={node.id}
                   className={`map-pin map-pin-${node.category} map-pin-${node.state}`}
-                  style={{ left: `${node.x_pct}%`, top: `${node.y_pct}%` }}
+                  style={pinStyle}
                   onClick={() => setSelectedNode(node)}
                   aria-label={`${node.name} (${CATEGORY_LABEL[node.category]}${stateNote})`}
                 >

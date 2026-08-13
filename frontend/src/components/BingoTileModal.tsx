@@ -13,6 +13,10 @@ interface BingoTileModalProps {
 // Step 1 of the redesigned tap flow (tech spec 4.1): tapping an open tile
 // shows its challenge here without marking it complete -- only tapping
 // "Completed Challenge" does that (and draws the base minigame).
+//
+// A completed tile opens this same modal read-only (just the label + Close):
+// tile faces no longer carry their text at all on mobile (BingoScreen.css),
+// so this is the only place left to read a completed tile's challenge.
 export function BingoTileModal({ tile, pending, onClose, onCompleteChallenge }: BingoTileModalProps) {
   return (
     <Modal onClose={onClose} labelledBy="bingo-tile-modal-title" className="bingo-tile-modal-frame">
@@ -25,12 +29,20 @@ export function BingoTileModal({ tile, pending, onClose, onCompleteChallenge }: 
         </h2>
         <p className="bingo-tile-modal-description">{tile.label}</p>
         <div className="bingo-tile-modal-actions">
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={pending}>
-            Not Yet
-          </button>
-          <button type="button" className="btn btn-primary" onClick={onCompleteChallenge} disabled={pending}>
-            {pending ? 'Saving…' : 'Completed Challenge'}
-          </button>
+          {tile.completed ? (
+            <button type="button" className="btn btn-primary" onClick={onClose}>
+              Close
+            </button>
+          ) : (
+            <>
+              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={pending}>
+                Not Yet
+              </button>
+              <button type="button" className="btn btn-primary" onClick={onCompleteChallenge} disabled={pending}>
+                {pending ? 'Saving…' : 'Completed Challenge'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </Modal>

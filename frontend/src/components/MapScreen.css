@@ -97,7 +97,11 @@
 
 .map-pin {
   position: absolute;
-  transform: translate(-50%, -50%);
+  /* --nudge-x/--nudge-y (JS-computed, MapScreen.tsx) nudge crowded pins
+     apart just enough to clear their neighbors -- 0px everywhere the
+     declutter pass finds nothing to resolve, so this is a no-op except in
+     the tight clusters it's meant to fix. */
+  transform: translate(calc(-50% + var(--nudge-x, 0px)), calc(-50% + var(--nudge-y, 0px)));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -242,6 +246,45 @@
 .map-pin:hover .map-pin-label,
 .map-pin:focus-visible .map-pin-label {
   opacity: 1;
+}
+
+/* Pins render at a fixed 30px regardless of viewport, but the map image they
+   sit on shrinks to fit the screen -- on a phone-width map image the densest
+   clusters' real x_pct/y_pct gaps (as little as ~11px at a 375px viewport)
+   are narrower than a full-size pin, so pins/badges visually collide. Below
+   this pairs with the JS declutter pass (MapScreen.tsx's computeNudges) --
+   shrinking here reduces how far any pin needs to be nudged, and the nudge
+   pass (tuned against this smaller size) closes whatever gap shrinking alone
+   can't. */
+@media (max-width: 640px) {
+  .map-pin-shape {
+    width: 20px;
+    height: 20px;
+  }
+
+  .map-pin-shape-text {
+    font-size: 8px;
+  }
+
+  .map-pin-tile-badge {
+    top: -7px;
+    right: -7px;
+    min-width: 11px;
+    height: 11px;
+    font-size: 7px;
+  }
+
+  .map-pin-food .map-pin-tile-badge {
+    top: -2px;
+    right: -2px;
+  }
+
+  /* Hover-only label would never be reachable via touch anyway; hiding it
+     avoids a stray offscreen/overlapping tooltip on the rare focus-visible
+     (keyboard) path at this width. */
+  .map-pin-label {
+    display: none;
+  }
 }
 
 .map-unplaced-heading {

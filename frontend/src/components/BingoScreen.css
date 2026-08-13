@@ -110,6 +110,18 @@
   opacity: 0.7;
 }
 
+/* Below this width a tile's full label text no longer fits its face without
+   overflowing/crowding (tech spec mobile pass) -- the label stays in the DOM
+   (BingoScreen.tsx sets aria-label on the button itself, so the accessible
+   name survives this being display:none) but only the icon/checkmark shows;
+   tapping any tile (open or completed) opens BingoTileModal to read the full
+   text instead. */
+@media (max-width: 640px) {
+  .bingo-tile-label {
+    display: none;
+  }
+}
+
 /* Centered on top of .bingo-tile-icon (its positioned parent) so the
    checkmark reads as covering the tan icon circle, not sitting beside it --
    sized a couple px bigger than the icon so it fully hides the tan ring. */

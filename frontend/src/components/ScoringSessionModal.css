@@ -105,6 +105,10 @@
 
 .scoring-player-input {
   flex: 1;
+  /* Same fix as ScanEntryModal's manual-code input: a flex item's default
+     min-width is its content size, not 0, so without this the remove-player
+     button can get pushed past the card's edge on narrow phones. */
+  min-width: 0;
   font: inherit;
   font-size: 15px;
   padding: 8px 12px;

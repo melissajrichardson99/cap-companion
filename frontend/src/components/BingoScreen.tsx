@@ -86,8 +86,9 @@ export function BingoScreen({
                 key={tile.id}
                 className={classes.join(' ')}
                 style={isHighlighted ? { animationDelay: `${shapeIndex! * 0.05}s` } : undefined}
-                disabled={tile.completed || completingTileId !== null}
+                disabled={completingTileId !== null}
                 onClick={() => setSelectedTile(tile)}
+                aria-label={tile.label}
               >
                 <span className="bingo-tile-icon" aria-hidden="true">
                   {tile.completed && <span className="bingo-tile-stamp" aria-hidden="true">✓</span>}

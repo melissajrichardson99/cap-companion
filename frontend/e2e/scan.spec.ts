@@ -90,12 +90,19 @@ test.describe('QR / manual code scanning', () => {
         const canvas = document.createElement('canvas')
         canvas.width = 10
         canvas.height = 10
-        return canvas.captureStream()
+        // A never-painted canvas produces a MediaStream whose video track
+        // never actually delivers frame data in headless Chromium -- even
+        // with a fixed captureStream(fps) rate -- so the <video> element's
+        // play() hangs forever waiting for loadedmetadata. Paint one frame
+        // first so the stream has real pixel data to capture.
+        const ctx = canvas.getContext('2d')
+        ctx.fillStyle = 'green'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        return canvas.captureStream(10)
       }
     })
 
     await openScanEntry(page)
-    await page.getByRole('button', { name: 'Use Camera' }).click()
 
     await expect(page.getByText('Pig — Challenge 1')).toBeVisible()
     await expect(page).toHaveURL(/\/scan\/happy-panda$/)
