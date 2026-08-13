@@ -249,8 +249,18 @@ test.describe('Scavenger Hunt', () => {
     const dialog = await openCharacter(page, 'Pig')
     await expect(dialog.getByText('Pig — Challenge 1')).toBeVisible()
 
-    await dialog.getByRole('button', { name: 'Panting like a dog', exact: true }).click()
+    const wrongTapped = dialog.getByRole('button', { name: 'Panting like a dog', exact: true })
+    const untapped = dialog.getByRole('button', { name: 'Hiding in shade only', exact: true })
+    await wrongTapped.click()
     await expect(dialog.getByText('Not quite — try again.')).toBeVisible()
+    // The tapped (wrong) option's border visually differs from an untapped
+    // one -- same shared .hunt-option-wrong class the True/False buttons use
+    // (verified with an exact color match in the Capybara test above), and
+    // this was silently losing to shared.css's plain .btn border before the
+    // .hunt-modal-inner specificity fix.
+    expect(await wrongTapped.evaluate((el) => getComputedStyle(el).borderColor)).not.toBe(
+      await untapped.evaluate((el) => getComputedStyle(el).borderColor),
+    )
     await dialog.getByRole('button', { name: 'Rolling in mud', exact: true }).click()
 
     await expect(dialog.getByText('Pig — Challenge 2')).toBeVisible()
@@ -263,20 +273,58 @@ test.describe('Scavenger Hunt', () => {
     await expect(characterCard(page, 'Pig').locator('.hunt-character-status')).toHaveText('2/3 challenges completed')
   })
 
-  test('Capybara: park-verified mc + a one-at-a-time true/false set of 3', async ({ page }) => {
-    const dialog = await openCharacter(page, 'Capybara')
+  test('Capybara: park-verified mc + a one-at-a-time true/false set of 3 (answered directly from the /scan/:code screen)', async ({
+    page,
+  }) => {
+    // Stays on the /scan/:code screen throughout (never switches to the Hunt
+    // tab) -- this is the actual guest path (camera app -> printed sign's
+    // URL) and the one ScanScreen.tsx's own local `state.character` snapshot
+    // bug made get stuck re-showing Challenge 1 forever regardless of answer
+    // correctness, since HuntChallengeModal there never saw progress
+    // updates. The Hunt-tab path (openCharacter, used by the Kangaroo test
+    // below) reads reactively from the shared characters list and was never
+    // affected, which is why this distinct path needs its own coverage.
+    await unlockCharacter(page, 'Capybara')
+    const dialog = huntDialog(page)
     await dialog.getByRole('button', { name: 'A herd', exact: true }).click()
 
     await expect(dialog.getByText('Capybara — Challenge 2')).toBeVisible()
     await expect(dialog.getByText('Statement 1 of 3')).toBeVisible()
     await expect(dialog.getByText('Capybaras can stay underwater up to five minutes')).toBeVisible()
 
-    // Wrong answer on statement 1: stays on statement 1.
-    await dialog.getByRole('button', { name: 'False', exact: true }).click()
+    // True/False buttons carry the character's accent as their idle color
+    // (a real applied style, not just a stylesheet rule) -- matches the
+    // per-character theming already proven on the character cards, extended
+    // here to a challenge-screen button type that was left unthemed.
+    const trueButton = dialog.getByRole('button', { name: 'True', exact: true })
+    const falseButton = dialog.getByRole('button', { name: 'False', exact: true })
+    const trueButtonBg = await trueButton.evaluate((el) => getComputedStyle(el).backgroundColor)
+    // Resolves Capybara's --hunt-accent to a real RGB color via a throwaway
+    // probe element (inherits the variable from the same [data-hunt-character]
+    // subtree), so this compares actual rendered colors rather than raw
+    // (possibly still-unresolved) custom-property text.
+    const expectedAccentRgb = await dialog.locator('[data-hunt-character]').evaluate((el) => {
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--hunt-accent)'
+      el.appendChild(probe)
+      const rgb = getComputedStyle(probe).color
+      probe.remove()
+      return rgb
+    })
+    expect(trueButtonBg).toBe(expectedAccentRgb)
+    await expect(trueButton).not.toHaveClass(/hunt-option-(correct|wrong)/)
+
+    // Wrong answer on statement 1: stays on statement 1, and the tapped
+    // (wrong) option highlights red.
+    await falseButton.click()
+    await expect(falseButton).toHaveClass(/hunt-option-wrong/)
     await expect(dialog.getByText('Not quite — try again.')).toBeVisible()
     await expect(dialog.getByText('Statement 1 of 3')).toBeVisible()
 
-    await dialog.getByRole('button', { name: 'True', exact: true }).click()
+    // Correct answer: the tapped option highlights green (briefly, before
+    // auto-advancing to the next statement).
+    await trueButton.click()
+    await expect(trueButton).toHaveClass(/hunt-option-correct/)
     await expect(dialog.getByText('Statement 2 of 3')).toBeVisible()
     await expect(dialog.getByText('Capybaras are the smallest rodent in the world')).toBeVisible()
     await dialog.getByRole('button', { name: 'False', exact: true }).click()
@@ -288,8 +336,14 @@ test.describe('Scavenger Hunt', () => {
     await expect(dialog.getByText('Capybara — Challenge 3')).toBeVisible()
   })
 
-  test('Snake: mc, then an unscramble-to-word step gating a follow-up mc', async ({ page }) => {
-    const dialog = await openCharacter(page, 'Snake')
+  test('Snake: mc, then an unscramble-to-word step gating a follow-up mc (answered directly from the /scan/:code screen)', async ({
+    page,
+  }) => {
+    // Same rationale as the Capybara test above -- stays on /scan/:code
+    // throughout instead of switching to the Hunt tab, exercising the path
+    // that was silently broken by ScanScreen.tsx's stale local snapshot.
+    await unlockCharacter(page, 'Snake')
+    const dialog = huntDialog(page)
     await dialog.getByRole('button', { name: 'By smelling with their tongue', exact: true }).click()
 
     await expect(dialog.getByText('Snake — Challenge 2')).toBeVisible()

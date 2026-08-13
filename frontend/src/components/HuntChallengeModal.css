@@ -177,32 +177,52 @@
    buttons. Both stay clear of red/green/orange, which are reserved for the
    wrong/correct/selected states below -- defined first so those states
    (same specificity, later in source order) still win once a pair is
-   selected/matched/wrong. */
-.hunt-matching-term {
+   selected/matched/wrong.
+   All of these (through .hunt-matching-selected below) are qualified under
+   .hunt-modal-inner, not bare classes -- a bare single-class selector here
+   ties in specificity with shared.css's plain .btn background, and which one
+   wins then depends on unpredictable stylesheet load order (confirmed by a
+   real e2e run: these washes/highlights were silently losing to .btn's plain
+   background). Same fix as .btn-primary above, which already avoided this by
+   being qualified the same way. */
+.hunt-modal-inner .hunt-matching-term {
   border-color: var(--cap-color-wood-plank-blue-deep);
   background: color-mix(in srgb, var(--cap-color-wood-plank-blue) 32%, transparent);
 }
 
-.hunt-matching-meaning {
+.hunt-modal-inner .hunt-matching-meaning {
   border-color: var(--cap-color-trail-tan);
   background: color-mix(in srgb, var(--cap-color-trail-tan) 26%, transparent);
+}
+
+/* True/False buttons are binary CTAs (not one-of-many option chips like
+   hunt-mc-option/hunt-matching-item), so -- same as .btn-primary above --
+   they get the character's accent as their idle look instead of the plain
+   .btn default. Placed here, before the shared correct/wrong state block
+   (same specificity), so tapping either one still wins with green/red
+   instead of staying accent-colored -- same ordering trick as the
+   term/meaning washes above. */
+.hunt-modal-inner .hunt-tf-button {
+  background: var(--hunt-accent, var(--cap-color-sunset-orange));
+  border-color: var(--hunt-accent-deep, var(--cap-color-sunset-orange-deep));
+  color: #fff;
 }
 
 /* Shared correct/wrong state, used by both mc-style options and matching
    items -- placed after the term/meaning base washes above (same
    specificity) so a matched/wrong item's state color always wins over its
    column's base tint. */
-.hunt-option-correct {
+.hunt-modal-inner .hunt-option-correct {
   border-color: var(--cap-color-adventure-green);
   background: color-mix(in srgb, var(--cap-color-adventure-green) 16%, transparent);
 }
 
-.hunt-option-wrong {
+.hunt-modal-inner .hunt-option-wrong {
   border-color: var(--cap-color-adventure-red);
   background: color-mix(in srgb, var(--cap-color-adventure-red) 12%, transparent);
 }
 
-.hunt-matching-selected {
+.hunt-modal-inner .hunt-matching-selected {
   border-color: var(--cap-color-sunset-orange);
   background: color-mix(in srgb, var(--cap-color-sunset-orange) 14%, transparent);
 }

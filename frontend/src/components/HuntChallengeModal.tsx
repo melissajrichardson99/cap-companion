@@ -264,17 +264,29 @@ function TrueFalseSetChallenge({
   onSolved: () => void
 }) {
   const [index, setIndex] = useState(0)
+  const [selected, setSelected] = useState<boolean | null>(null)
   const [wrong, setWrong] = useState(false)
+  // True while a correct-but-not-final answer's green highlight is showing,
+  // before this auto-advances to the next statement -- without this pause,
+  // setIndex/setSelected(null) would land in the very same batched update as
+  // setSelected(value), so the highlight would never actually paint.
+  const [advancing, setAdvancing] = useState(false)
   const statement = content.statements[index]
 
   const answer = (value: boolean) => {
-    if (disabled) return
+    if (disabled || advancing) return
+    setSelected(value)
     if (value === statement.answer) {
       setWrong(false)
       if (index + 1 === content.statements.length) {
         onSolved()
       } else {
-        setIndex(index + 1)
+        setAdvancing(true)
+        setTimeout(() => {
+          setIndex((i) => i + 1)
+          setSelected(null)
+          setAdvancing(false)
+        }, 500)
       }
     } else {
       setWrong(true)
@@ -288,10 +300,24 @@ function TrueFalseSetChallenge({
       </p>
       <p className="hunt-question">{statement.text}</p>
       <div className="hunt-tf-actions">
-        <button type="button" className="btn hunt-tf-button" disabled={disabled} onClick={() => answer(true)}>
+        <button
+          type="button"
+          className={`btn hunt-tf-button ${
+            selected === true ? (statement.answer === true ? 'hunt-option-correct' : 'hunt-option-wrong') : ''
+          }`}
+          disabled={disabled || advancing}
+          onClick={() => answer(true)}
+        >
           True
         </button>
-        <button type="button" className="btn hunt-tf-button" disabled={disabled} onClick={() => answer(false)}>
+        <button
+          type="button"
+          className={`btn hunt-tf-button ${
+            selected === false ? (statement.answer === false ? 'hunt-option-correct' : 'hunt-option-wrong') : ''
+          }`}
+          disabled={disabled || advancing}
+          onClick={() => answer(false)}
+        >
           False
         </button>
       </div>

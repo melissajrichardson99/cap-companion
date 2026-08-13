@@ -339,6 +339,7 @@ function App() {
         <main className="app-main">
           <ScanScreen
             code={code}
+            characters={huntCharacters}
             onCompleteChallenge={completeHuntChallenge}
             onUnlockCharacter={unlockHuntCharacter}
             onPlayMinigame={handlePlayHuntMinigame}

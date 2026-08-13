@@ -7,6 +7,7 @@ import './ScanScreen.css'
 
 interface ScanScreenProps {
   code: string
+  characters: HuntCharacter[] | null
   onCompleteChallenge: (challengeId: string) => Promise<HuntCharacter>
   onUnlockCharacter: (characterId: string) => Promise<HuntCharacter>
   onPlayMinigame: (challengeId: string, minigameSlug: string) => void
@@ -29,7 +30,7 @@ type ScanState =
 // ScanEntryModal decodes/accepts one) and routes to the matching screen.
 // Reusing HuntChallengeModal as-is means a scanned hunt character gets the
 // exact same challenge flow as opening it from the Scavenger Hunt tab.
-export function ScanScreen({ code, onCompleteChallenge, onUnlockCharacter, onPlayMinigame, onClose }: ScanScreenProps) {
+export function ScanScreen({ code, characters, onCompleteChallenge, onUnlockCharacter, onPlayMinigame, onClose }: ScanScreenProps) {
   const [state, setState] = useState<ScanState>({ status: 'loading' })
 
   useEffect(() => {
@@ -107,9 +108,17 @@ export function ScanScreen({ code, onCompleteChallenge, onUnlockCharacter, onPla
   }
 
   if (state.status === 'hunt_character') {
+    // state.character is only the snapshot from when the scan resolved --
+    // completing a challenge (directly, or via a minigame closing back in
+    // App.tsx) updates the shared `characters` list, not this local state,
+    // so this modal would otherwise keep re-showing the same challenge
+    // forever regardless of answers. Prefer the live entry from the shared
+    // list (same source HuntScreen's modal reads from) and only fall back to
+    // the snapshot for the brief window before that list has loaded.
+    const character = characters?.find((c) => c.id === state.character.id) ?? state.character
     return (
       <HuntChallengeModal
-        character={state.character}
+        character={character}
         onClose={onClose}
         onCompleteChallenge={onCompleteChallenge}
         onPlayMinigame={onPlayMinigame}
