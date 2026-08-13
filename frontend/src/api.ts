@@ -124,6 +124,7 @@ export interface GameScoreEvent {
   game_id: string
   label: string
   point_value: number
+  is_miss: boolean
 }
 
 export interface ScoringGame {
@@ -144,6 +145,9 @@ export interface ScoreEntry {
   score_event_id: string
   label: string
   point_value: number
+  // This player's 1-indexed turn number within the session. Not the same
+  // concept as round_number below (that's Tiki-Toss-only win-check rounds).
+  turn_round: number
   created_at: string
 }
 
@@ -159,6 +163,9 @@ export interface ScoreSheetSession {
   entries: ScoreEntry[]
   tied_players: string[]
   round_number: number | null
+  // Turn-based scoring: null once the session is completed.
+  current_player: string | null
+  current_round: number | null
 }
 
 export type HuntSpeciesCategory = 'marsupial' | 'rodent' | 'other'

@@ -150,7 +150,10 @@ create table if not exists game_score_events (
     id          uuid primary key default gen_random_uuid(),
     game_id     uuid not null references scoring_games(id) on delete cascade,
     label       text not null,
-    point_value integer not null check (point_value > 0),
+    -- >= 0, not > 0: a 0-point "Miss" event is seeded per game (migration
+    -- 015) so a missed shot reuses the same events/entries machinery as a
+    -- real score.
+    point_value integer not null check (point_value >= 0),
     sort_order  integer not null default 0,
     created_at  timestamptz not null default now(),
     unique (game_id, label)
@@ -174,6 +177,12 @@ create table if not exists score_entries (
     session_id     uuid not null references score_sheet_sessions(id) on delete cascade,
     player_name    text not null,
     score_event_id uuid not null references game_score_events(id) on delete restrict,
+    -- This player's 1-indexed turn number within the session (their Nth
+    -- turn). NOT the same concept as the Tiki-Toss-only round_number in
+    -- app/services/scoring.py (that's a 10-throw win-check boundary) --
+    -- turn_round is per-player-per-turn and applies to every game, used for
+    -- turn-order enforcement and the round-based export (migration 015).
+    turn_round     integer not null,
     created_at     timestamptz not null default now()
 );
 

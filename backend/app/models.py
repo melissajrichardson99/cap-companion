@@ -227,7 +227,10 @@ class GameScoreEvent(BaseModel):
     id: UUID
     game_id: UUID
     label: str
-    point_value: int = Field(gt=0)
+    point_value: int = Field(ge=0)
+    # Server-computed (point_value == 0), not a stored column -- lets the
+    # frontend style/place the Miss button without string-matching the label.
+    is_miss: bool = False
 
 
 class ScoringGame(BaseModel):
@@ -252,6 +255,11 @@ class ScoreEntry(BaseModel):
     # BingoTile/LinkedTile embedding.
     label: str
     point_value: int
+    # This player's 1-indexed turn number within the session. NOT the same
+    # concept as ScoreSheetSession.round_number below (that's Tiki-Toss-only,
+    # a 10-throw win-check boundary) -- turn_round is per-player-per-turn and
+    # applies to every game. See migration 015's header for the full split.
+    turn_round: int
     created_at: datetime
 
 
@@ -267,8 +275,14 @@ class ScoreSheetSession(BaseModel):
     entries: list[ScoreEntry] = Field(default_factory=list)
     # Only populated when status is a tie state.
     tied_players: list[str] = Field(default_factory=list)
-    # Only meaningful for round-based games (Tiki Toss).
+    # Only meaningful for round-based games (Tiki Toss) -- the win-check
+    # round from app/services/scoring.py, unrelated to current_round below.
     round_number: int | None = None
+    # Turn-based scoring: whose turn it is and which turn-cycle round is in
+    # progress. Both null once the session is completed. Distinct from
+    # round_number above -- see ScoreEntry.turn_round's comment.
+    current_player: str | None = None
+    current_round: int | None = None
 
 
 class CreateSessionRequest(BaseModel):

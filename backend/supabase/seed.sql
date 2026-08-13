@@ -443,6 +443,14 @@ from scoring_games g,
 where g.name = 'Tiki Toss / Ring & Hook'
 on conflict (game_id, label) do nothing;
 
+-- Miss (0 points) -- one per game, so a missed shot reuses the same
+-- events/entries machinery as a real score (migration 015).
+insert into game_score_events (game_id, label, point_value, sort_order)
+select g.id, 'Miss', 0, 99
+from scoring_games g
+where g.name in ('Farm Toss', 'Horse Hoops', 'Cornhole', 'Cornhole Extreme', 'Tiki Toss / Ring & Hook')
+on conflict (game_id, label) do nothing;
+
 -- ---------------------------------------------------------------------------
 -- hunt_characters / hunt_challenges / hunt_progress (Scavenger Hunt).
 -- Matches the live-DB state after migration 008_scavenger_hunt.sql (which is

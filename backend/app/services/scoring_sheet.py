@@ -22,7 +22,13 @@ def _parse_timestamptz(value: str) -> datetime:
 
 
 def _row_to_score_event(row: dict) -> GameScoreEvent:
-    return GameScoreEvent(id=row["id"], game_id=row["game_id"], label=row["label"], point_value=row["point_value"])
+    return GameScoreEvent(
+        id=row["id"],
+        game_id=row["game_id"],
+        label=row["label"],
+        point_value=row["point_value"],
+        is_miss=row["point_value"] == 0,
+    )
 
 
 def _row_to_game(row: dict, events: list[GameScoreEvent]) -> ScoringGame:
@@ -81,10 +87,24 @@ def _entries_for_session(client, session_id: str) -> list[ScoreEntry]:
             score_event_id=r["score_event_id"],
             label=r["game_score_events"]["label"],
             point_value=r["game_score_events"]["point_value"],
+            turn_round=r["turn_round"],
             created_at=_parse_timestamptz(r["created_at"]),
         )
         for r in rows
     ]
+
+
+def _current_turn(entries: list, players: list[str]) -> tuple[str, int]:
+    """Whose turn it is and which turn-cycle round is in progress.
+
+    Turn order is simply `players` in order, fixed for the whole session;
+    only the current index (derived from how many entries exist) advances.
+    Not to be confused with the Tiki-Toss-only round_number computed by
+    scoring_service.evaluate_win -- see ScoreEntry.turn_round's comment.
+    """
+    turn_index = len(entries) % len(players)
+    current_round = len(entries) // len(players) + 1
+    return players[turn_index], current_round
 
 
 def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
@@ -105,6 +125,9 @@ def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
             status=scoring_service.STATUS_WON,
             totals=totals,
             entries=entries,
+            # Game's over -- there's no "current turn" left to report.
+            current_player=None,
+            current_round=None,
         )
 
     game_row = _get_game_row(client, session_row["game_id"])
@@ -144,6 +167,11 @@ def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
             CoinSourceType.SCORING_SHEET_WIN, UUID(session_row["id"]), coins_service.SCORING_SHEET_WIN_AMOUNT
         )
 
+    # None once locked (including just now, if the block above auto-locked
+    # it) -- otherwise still mid-turn-cycle, including during
+    # first_to_bonus_round's provisional-win sudden death.
+    current_player, current_round = (None, None) if session_row["completed_at"] else _current_turn(entries, players)
+
     return ScoreSheetSession(
         id=session_row["id"],
         game_id=session_row["game_id"],
@@ -161,6 +189,8 @@ def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
         entries=entries,
         tied_players=list(result.tied_players),
         round_number=result.round_number,
+        current_player=current_player,
+        current_round=current_round,
     )
 
 
@@ -210,7 +240,8 @@ def record_entry(session_id: UUID, player_name: str, score_event_id: UUID) -> Sc
 
     if session_row["completed_at"]:
         raise ConflictError("This session has already finished -- start a new session to keep playing.")
-    if player_name not in session_row["players"]:
+    players: list[str] = session_row["players"]
+    if player_name not in players:
         raise NotFoundError(f"{player_name!r} is not a player in this session")
 
     event_rows = (
@@ -224,8 +255,19 @@ def record_entry(session_id: UUID, player_name: str, score_event_id: UUID) -> Sc
     if not event_rows:
         raise NotFoundError(f"Score event {score_event_id} not found for this game")
 
+    entries = _entries_for_session(client, str(session_id))
+    expected_player, _ = _current_turn(entries, players)
+    if player_name != expected_player:
+        raise ConflictError(f"It's not {player_name}'s turn -- waiting on {expected_player}.")
+
+    turn_round = sum(1 for e in entries if e.player_name == player_name) + 1
     client.table("score_entries").insert(
-        {"session_id": str(session_id), "player_name": player_name, "score_event_id": str(score_event_id)}
+        {
+            "session_id": str(session_id),
+            "player_name": player_name,
+            "score_event_id": str(score_event_id),
+            "turn_round": turn_round,
+        }
     ).execute()
 
     return _session_from_row(client, session_row)

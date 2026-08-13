@@ -123,6 +123,12 @@
   flex-shrink: 0;
 }
 
+.scoring-setup-hint {
+  font-size: 13px;
+  color: var(--cap-color-body-text);
+  margin: -4px 0 4px;
+}
+
 .scoring-tie-banner {
   font-size: 14px;
   font-weight: 600;
@@ -159,17 +165,41 @@
   margin: 0 0 16px;
 }
 
-.scoring-players {
+/* Turn order strip: current player + next 3 in queue. */
+.scoring-turn-strip {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 0 14px;
 }
 
-.scoring-player-row {
+.scoring-turn-chip {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: var(--cap-radius-pill);
+  border: 1.5px solid var(--cap-color-outline);
+  color: var(--cap-color-ink);
+}
+
+.scoring-turn-chip-current {
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  box-shadow: var(--cap-shadow-pop-sm);
+}
+
+.scoring-turn-chip-queued {
+  background: rgba(255, 255, 255, 0.4);
+  opacity: 0.75;
+}
+
+.scoring-current-player-panel {
   border: 1.5px solid var(--cap-color-outline);
   border-radius: 10px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.4);
+  margin-bottom: 14px;
 }
 
 .scoring-player-header {
@@ -202,10 +232,49 @@
   padding: 7px 12px;
 }
 
-.scoring-last-entry {
-  font-size: 13px;
-  margin: 16px 0 0;
+/* Muted/outline treatment so Miss reads as distinct from a real score. */
+.scoring-miss-btn {
+  background: transparent;
   color: var(--cap-color-body-text);
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.scoring-miss-btn:hover:not(:disabled) {
+  box-shadow: none;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.scoring-confirmation-banner {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0 0;
+  color: var(--cap-color-body-text);
+  transition: opacity 0.15s ease;
+}
+
+.scoring-confirmation-banner.scoring-confirmation-active {
+  color: var(--cap-color-sunset-orange-deep);
+}
+
+/* Always-visible running scores, kept separate from the final-totals table
+   shown on the finished screen even though the styling is shared. */
+.scoring-running-scores {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+}
+
+.scoring-running-scores td {
+  padding: 6px 4px;
+  border-bottom: 1.5px solid var(--cap-color-outline);
+  font-size: 14px;
+  color: var(--cap-color-ink);
+}
+
+.scoring-running-scores-current-row td {
+  font-weight: 700;
+  color: var(--cap-color-sunset-orange-deep);
 }
 
 .scoring-win-banner {

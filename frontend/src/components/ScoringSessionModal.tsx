@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, type GameScoreEvent, type ScoreSheetSession, type ScoringGame } from '../api'
 import { Modal } from './Modal'
 import { ClipboardIcon } from './NavIcons'
+import { buildSummaryHtml } from './scoringSummaryHtml'
 import './ScoringSessionModal.css'
 
 type ModalState = 'setup' | 'playing' | 'finished'
@@ -12,43 +13,32 @@ interface ScoringSessionModalProps {
   onCoinsChanged: () => void
 }
 
-function buildSummaryText(game: ScoringGame, session: ScoreSheetSession): string {
-  const lines: string[] = []
-  lines.push(`Cobb's Adventure Park — ${game.name}`)
-  lines.push(`Players: ${session.players.join(', ')}`)
-  lines.push(`Started: ${new Date(session.created_at).toLocaleString()}`)
-  if (session.completed_at) {
-    lines.push(`Finished: ${new Date(session.completed_at).toLocaleString()}`)
-  }
-  lines.push('')
-  lines.push('Final Score:')
-  for (const player of session.players) {
-    lines.push(`  ${player}: ${session.totals[player] ?? 0}`)
-  }
-  lines.push('')
-  lines.push(session.winner ? `Winner: ${session.winner}` : 'No winner yet.')
-  if (session.entries.length > 0) {
-    lines.push('')
-    lines.push('Score Log:')
-    for (const entry of session.entries) {
-      const time = new Date(entry.created_at).toLocaleTimeString()
-      lines.push(`  ${time}  ${entry.player_name} — ${entry.label} (+${entry.point_value})`)
-    }
-  }
-  return lines.join('\n')
-}
+// Short, clearly-perceptible pause between a score button being tapped and
+// the turn actually advancing -- long enough to register as confirmation,
+// short enough not to slow the game down.
+const TURN_ADVANCE_DELAY_MS = 700
 
 function downloadSummary(game: ScoringGame, session: ScoreSheetSession) {
-  const text = buildSummaryText(game, session)
-  const blob = new Blob([text], { type: 'text/plain' })
+  const html = buildSummaryHtml(game, session)
+  const blob = new Blob([html], { type: 'text/html' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `${game.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-score-sheet.txt`
+  link.download = `${game.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-score-sheet.html`
   document.body.appendChild(link)
   link.click()
   link.remove()
   URL.revokeObjectURL(url)
+}
+
+// Current player plus the next `count` in the fixed turn order, wrapping
+// (and repeating names, if there are fewer players than `count`) so the
+// strip always shows a full queue.
+function upcomingTurnOrder(players: string[], currentPlayer: string | null, count = 4): string[] {
+  if (!currentPlayer || players.length === 0) return []
+  const startIndex = players.indexOf(currentPlayer)
+  if (startIndex === -1) return []
+  return Array.from({ length: count }, (_, i) => players[(startIndex + i) % players.length])
 }
 
 // Every win type except first_to_bonus_round is monotonically final -- once
@@ -82,9 +72,19 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
   const [setupError, setSetupError] = useState<string | null>(null)
   const [entryError, setEntryError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [recordingKey, setRecordingKey] = useState<string | null>(null)
+  // True during the brief confirmation beat between a tap and the turn
+  // actually advancing -- disables every button in the current player's
+  // panel so a second tap can't land mid-transition.
+  const [advancing, setAdvancing] = useState(false)
   const [lastEntryMessage, setLastEntryMessage] = useState<string | null>(null)
   const [finishing, setFinishing] = useState(false)
+  const advanceTimeoutRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (advanceTimeoutRef.current !== null) window.clearTimeout(advanceTimeoutRef.current)
+    }
+  }, [])
 
   const updatePlayerField = (index: number, value: string) => {
     setPlayerInputs((prev) => prev.map((v, i) => (i === index ? value : v)))
@@ -119,23 +119,26 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
     }
   }
 
-  const recordScore = async (playerName: string, event: GameScoreEvent) => {
-    if (!session) return
-    const key = `${playerName}::${event.id}`
-    setRecordingKey(key)
+  const recordScore = async (event: GameScoreEvent) => {
+    if (!session || advancing || !session.current_player) return
+    const playerName = session.current_player
+    setAdvancing(true)
     setEntryError(null)
     try {
       const updated = await api.recordScoreEntry(session.id, playerName, event.id)
-      setSession(updated)
-      setLastEntryMessage(`+${event.point_value} for ${playerName} — ${event.label}`)
-      if (updated.status === 'won' && autoFinishesOnWin(game)) {
-        setModalState('finished')
-        onCoinsChanged()
-      }
+      const message = event.is_miss ? `Miss for ${playerName}` : `+${event.point_value} for ${playerName} — ${event.label}`
+      setLastEntryMessage(message)
+      advanceTimeoutRef.current = window.setTimeout(() => {
+        setSession(updated)
+        setAdvancing(false)
+        if (updated.status === 'won' && autoFinishesOnWin(game)) {
+          setModalState('finished')
+          onCoinsChanged()
+        }
+      }, TURN_ADVANCE_DELAY_MS)
     } catch (err) {
       setEntryError(String(err))
-    } finally {
-      setRecordingKey(null)
+      setAdvancing(false)
     }
   }
 
@@ -183,6 +186,7 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
 
           <div className="scoring-setup">
             <h3 className="scoring-section-title">Players</h3>
+            <p className="scoring-setup-hint">Players take turns in the order entered below.</p>
             {playerInputs.map((value, i) => (
               <div className="scoring-player-input-row" key={i}>
                 <input
@@ -258,6 +262,9 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
 
   const tieMessage = tieBannerText(session)
   const provisionalWin = !autoFinishesOnWin(game) && session.status === 'won'
+  const turnOrder = upcomingTurnOrder(session.players, session.current_player)
+  const normalEvents = game.score_events.filter((event) => !event.is_miss)
+  const missEvent = game.score_events.find((event) => event.is_miss)
 
   return (
     <Modal onClose={onClose} labelledBy="scoring-modal-title" className="scoring-modal-frame">
@@ -277,34 +284,64 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
           <p className="scoring-round-status">Round {(session.round_number ?? 0) + 1} in progress</p>
         )}
 
-        <div className="scoring-players">
-          {session.players.map((player) => (
-            <div className="scoring-player-row" key={player}>
-              <div className="scoring-player-header">
-                <span className="scoring-player-name">{player}</span>
-                <span className="scoring-player-total">{session.totals[player] ?? 0}</span>
-              </div>
-              <div className="scoring-event-buttons">
-                {game.score_events.map((event) => {
-                  const key = `${player}::${event.id}`
-                  return (
-                    <button
-                      type="button"
-                      key={event.id}
-                      className="btn scoring-event-btn"
-                      disabled={recordingKey !== null}
-                      onClick={() => recordScore(player, event)}
-                    >
-                      {recordingKey === key ? '…' : `${event.label} (+${event.point_value})`}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+        <div className="scoring-turn-strip">
+          {turnOrder.map((player, i) => (
+            <span
+              key={`${player}-${i}`}
+              className={`scoring-turn-chip ${i === 0 ? 'scoring-turn-chip-current' : 'scoring-turn-chip-queued'}`}
+            >
+              {player}
+            </span>
           ))}
         </div>
 
-        {lastEntryMessage && <p className="scoring-last-entry">Last: {lastEntryMessage}</p>}
+        <div className="scoring-current-player-panel">
+          <div className="scoring-player-header">
+            <span className="scoring-player-name">{session.current_player}'s turn</span>
+            <span className="scoring-player-total">{session.totals[session.current_player ?? ''] ?? 0}</span>
+          </div>
+          <div className="scoring-event-buttons">
+            {normalEvents.map((event) => (
+              <button
+                type="button"
+                key={event.id}
+                className="btn scoring-event-btn"
+                disabled={advancing}
+                onClick={() => recordScore(event)}
+              >
+                {event.label} (+{event.point_value})
+              </button>
+            ))}
+            {missEvent && (
+              <button
+                type="button"
+                key={missEvent.id}
+                className="btn scoring-event-btn scoring-miss-btn"
+                disabled={advancing}
+                onClick={() => recordScore(missEvent)}
+              >
+                Miss
+              </button>
+            )}
+          </div>
+          {lastEntryMessage && (
+            <p className={`scoring-confirmation-banner${advancing ? ' scoring-confirmation-active' : ''}`}>
+              {lastEntryMessage}
+            </p>
+          )}
+        </div>
+
+        <table className="scoring-running-scores">
+          <tbody>
+            {session.players.map((player) => (
+              <tr key={player} className={player === session.current_player ? 'scoring-running-scores-current-row' : ''}>
+                <td>{player}</td>
+                <td className="scoring-final-totals-score">{session.totals[player] ?? 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
         {entryError && <p className="screen-error">{entryError}</p>}
       </div>
     </Modal>
