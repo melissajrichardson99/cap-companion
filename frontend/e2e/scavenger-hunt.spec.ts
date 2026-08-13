@@ -6,16 +6,17 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 // scan-resolution side of this), all 4 Challenge 2 variants (matching,
 // true_false_set, image_mc, and the 2nd mc used by Pig), wrong-answer retry
 // (no lockout), Challenge 3's deterministic per-character minigame launch
-// (not a random draw), and progress tracking through to a character being
-// marked found. Hits the real dev Supabase project via the backend, same as
-// the other e2e specs -- no mocking. Tests are ordered top-to-bottom and
-// each uses its own character, since hunt_progress (including unlocked_at)
-// is cumulative per character across tests in this file (only reset once by
-// global setup, same as every other spec). Kangaroo may already be unlocked
-// by the time this file runs, since scan.spec.ts (which runs first,
-// alphabetically) also scans its code -- Sloth is the one character no
-// other spec ever touches, so it's used below to assert the locked state
-// deterministically.
+// (not a random draw), progress tracking through to a character being
+// marked found, and the redesign's per-character accent theming + fully
+// anonymous locked state + overall progress indicator. Hits the real dev
+// Supabase project via the backend, same as the other e2e specs -- no
+// mocking. Tests are ordered top-to-bottom and each uses its own character,
+// since hunt_progress (including unlocked_at) is cumulative per character
+// across tests in this file (only reset once by global setup, same as every
+// other spec). Kangaroo/Pig/Capybara are already unlocked by the time this
+// file runs, since scan.spec.ts (which runs first, alphabetically) also
+// scans their codes -- Sloth is the one character no other spec ever
+// touches, so it's used below to assert the locked state deterministically.
 //
 // The guest nav is a closed-by-default hamburger dropdown -- every
 // tab/action click below opens it first via "Open menu", and tab buttons
@@ -29,12 +30,23 @@ const CHARACTER_CODES: Record<string, string> = {
   Sloth: 'sleepy-koala',
 }
 
+const CHARACTER_SLUGS: Record<string, string> = {
+  Kangaroo: 'kangaroo',
+  Pig: 'pig',
+  Capybara: 'capybara',
+  Snake: 'snake',
+  Sloth: 'sloth',
+}
+
 function huntDialog(page: Page): Locator {
   return page.locator('.modal-panel')
 }
 
+// Targets a specific character's card via its data-hunt-character attribute
+// (always present, locked or not) rather than its name text -- a locked
+// card never renders its name, so name-text matching can't find it.
 function characterCard(page: Page, name: string): Locator {
-  return page.locator('.hunt-character-card', { hasText: name })
+  return page.locator(`.hunt-character-card[data-hunt-character="${CHARACTER_SLUGS[name]}"]`)
 }
 
 async function openNavMenu(page: Page): Promise<void> {
@@ -49,12 +61,28 @@ async function openHuntTab(page: Page): Promise<void> {
 
 // Unlocks a character via its QR code (the same code scan.spec.ts scans/
 // manually enters) by deep-linking straight to /scan/:code, exactly as a
-// guest's own camera app would. Confirms the guest lands straight in
-// Challenge 1 as part of unlocking, per the ticket's "scanning unlocks and
-// navigates straight into the first challenge" requirement.
+// guest's own camera app would. A fresh (never-before-unlocked) scan lands
+// on the "character found" popup first -- this dismisses it via "Start
+// Challenges" when present, then confirms the guest lands in Challenge 1
+// either way. That makes this helper work the same whether this is this
+// character's first-ever unlock in the whole suite or a re-scan of one
+// scan.spec.ts already unlocked (order-dependent per the file header above).
 async function unlockCharacter(page: Page, name: string): Promise<void> {
   await page.goto(`/scan/${CHARACTER_CODES[name]}`)
-  await expect(page.getByText(`${name} — Challenge 1`)).toBeVisible()
+  const startButton = page.getByRole('button', { name: 'Start Challenges' })
+  const challengeHeading = page.getByText(`${name} — Challenge 1`)
+  // .catch(() => {}) on each race branch: whichever one loses the race stays
+  // pending and would otherwise reject (element never appears) after the
+  // test's already moved on, producing an unhandled rejection -- attaching a
+  // handler up front makes that safe regardless of which branch wins.
+  await Promise.race([
+    startButton.waitFor({ state: 'visible' }).catch(() => {}),
+    challengeHeading.waitFor({ state: 'visible' }).catch(() => {}),
+  ])
+  if (await startButton.isVisible()) {
+    await startButton.click()
+  }
+  await expect(challengeHeading).toBeVisible()
 }
 
 async function openCharacter(page: Page, name: string): Promise<Locator> {
@@ -65,48 +93,105 @@ async function openCharacter(page: Page, name: string): Promise<Locator> {
 }
 
 test.describe('Scavenger Hunt', () => {
-  test('lists all 5 characters with species labels; locked characters show a scan prompt', async ({ page }) => {
+  test('renders all 5 character cards; a never-scanned character stays fully anonymous', async ({ page }) => {
     await openHuntTab(page)
 
-    for (const name of ['Kangaroo', 'Pig', 'Capybara', 'Snake', 'Sloth']) {
-      await expect(characterCard(page, name)).toBeVisible()
-    }
-
-    await expect(characterCard(page, 'Kangaroo').locator('.hunt-character-species')).toHaveText('Marsupial')
-    await expect(characterCard(page, 'Capybara').locator('.hunt-character-species')).toHaveText('Rodent')
-    await expect(characterCard(page, 'Sloth').locator('.hunt-character-species')).toHaveText('Animal')
+    await expect(page.locator('.hunt-character-card')).toHaveCount(5)
 
     // Sloth is never scanned by any other spec, so it's a reliable
     // always-locked control for the locked-state UI.
-    await expect(characterCard(page, 'Sloth').locator('.hunt-character-status')).toHaveText('Scan to unlock')
-    await expect(characterCard(page, 'Sloth')).toHaveClass(/hunt-character-locked/)
+    const sloth = characterCard(page, 'Sloth')
+    await expect(sloth).toHaveClass(/hunt-character-locked/)
+    await expect(sloth).toContainText('???')
+    await expect(sloth).toContainText('Locked')
+    // No identifying info leaked onto a locked card.
+    await expect(sloth).not.toContainText('Sloth')
+    await expect(sloth.locator('.hunt-character-species')).toHaveCount(0)
+    await expect(sloth.locator('.hunt-character-name')).toHaveCount(0)
   })
 
-  test('a locked character shows a scan prompt instead of its challenges, and does not unlock on its own', async ({
-    page,
-  }) => {
+  test('the overall progress bar tracks the total of 5 and shows 5 per-character dots', async ({ page }) => {
+    await openHuntTab(page)
+    const bar = page.locator('.hunt-overall-progress-track')
+    await expect(bar).toHaveAttribute('aria-valuemin', '0')
+    await expect(bar).toHaveAttribute('aria-valuemax', '5')
+    await expect(page.locator('.hunt-progress-dot')).toHaveCount(5)
+  })
+
+  test('tapping a locked character shows a location hint, not its identity', async ({ page }) => {
     await openHuntTab(page)
     await characterCard(page, 'Sloth').click()
 
     const prompt = page.locator('.modal-panel')
-    await expect(prompt.getByText('Sloth is locked')).toBeVisible()
-    await expect(prompt.getByText(/scan its qr code/i)).toBeVisible()
-    // No challenge content leaked into this prompt.
+    await expect(prompt.getByText("Something's Hiding Here")).toBeVisible()
+    await expect(prompt.getByText(/Somewhere near/)).toBeVisible()
+    // No identity or challenge content leaked into this prompt.
+    await expect(prompt.getByText('Sloth', { exact: true })).toHaveCount(0)
     await expect(prompt.getByText(/Challenge 1/)).toHaveCount(0)
 
     await prompt.getByRole('button', { name: 'Not Yet' }).click()
     await expect(prompt).toHaveCount(0)
     // Still locked -- dismissing the prompt isn't itself an unlock.
-    await expect(characterCard(page, 'Sloth').locator('.hunt-character-status')).toHaveText('Scan to unlock')
+    await expect(characterCard(page, 'Sloth')).toHaveClass(/hunt-character-locked/)
   })
 
-  test('the scan prompt\'s "Scan Now" button opens the scan-entry modal', async ({ page }) => {
+  test('the hint prompt\'s "Scan Now" button opens the scan-entry modal', async ({ page }) => {
     await openHuntTab(page)
     await characterCard(page, 'Sloth').click()
     await page.locator('.modal-panel').getByRole('button', { name: 'Scan Now' }).click()
 
     await expect(page.getByText('Scan a Code')).toBeVisible()
     await expect(page.getByLabel('Code from the sign')).toBeVisible()
+  })
+
+  test('a fresh scan shows the "character found" popup before any challenge starts, and moves the overall progress bar', async ({
+    page,
+  }) => {
+    // Snake is untouched by every other spec, so this scan is guaranteed
+    // fresh regardless of run order.
+    await openHuntTab(page)
+    const bar = page.locator('.hunt-overall-progress-track')
+    const before = Number(await bar.getAttribute('aria-valuenow'))
+
+    await page.goto(`/scan/${CHARACTER_CODES.Snake}`)
+
+    await expect(page.getByText('You found')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Snake' })).toBeVisible()
+    const startButton = page.getByRole('button', { name: 'Start Challenges' })
+    await expect(startButton).toBeVisible()
+    // Challenge content hasn't started yet -- the popup gates it.
+    await expect(page.getByText('Snake — Challenge 1')).toHaveCount(0)
+
+    await startButton.click()
+    await expect(page.getByText('Snake — Challenge 1')).toBeVisible()
+
+    await openHuntTab(page)
+    await expect(bar).toHaveAttribute('aria-valuenow', String(before + 1))
+
+    // Re-scanning the same (now-unlocked) character skips the popup.
+    await page.goto(`/scan/${CHARACTER_CODES.Snake}`)
+    await expect(page.getByText('Snake — Challenge 1')).toBeVisible()
+    await expect(page.getByText('You found')).toHaveCount(0)
+  })
+
+  test('unlocked characters render themed, with distinct accent colors per character', async ({ page }) => {
+    await unlockCharacter(page, 'Kangaroo')
+    await unlockCharacter(page, 'Capybara')
+    await openHuntTab(page)
+
+    const kangaroo = characterCard(page, 'Kangaroo')
+    const capybara = characterCard(page, 'Capybara')
+    await expect(kangaroo).not.toHaveClass(/hunt-character-locked/)
+    await expect(kangaroo.locator('.hunt-character-name')).toHaveText('Kangaroo')
+    await expect(kangaroo.locator('.hunt-character-species')).toHaveText('Marsupial')
+    await expect(capybara.locator('.hunt-character-species')).toHaveText('Rodent')
+
+    const kangarooColor = await kangaroo.evaluate((el) => getComputedStyle(el).borderColor)
+    const capybaraColor = await capybara.evaluate((el) => getComputedStyle(el).borderColor)
+    const lockedColor = await characterCard(page, 'Sloth').evaluate((el) => getComputedStyle(el).borderColor)
+    expect(kangarooColor).not.toBe(capybaraColor)
+    expect(kangarooColor).not.toBe(lockedColor)
+    expect(capybaraColor).not.toBe(lockedColor)
   })
 
   test('Kangaroo: mc -> matching -> minigame, completing the character end to end', async ({ page }) => {
@@ -120,7 +205,7 @@ test.describe('Scavenger Hunt', () => {
 
     await dialog.getByRole('button', { name: 'A mob', exact: true }).click()
     await expect(dialog.getByText('Kangaroo — Challenge 2')).toBeVisible()
-    await expect(characterCard(page, 'Kangaroo').locator('.hunt-character-status')).toHaveText('1/3 challenges')
+    await expect(characterCard(page, 'Kangaroo').locator('.hunt-character-status')).toHaveText('1/3 challenges completed')
 
     // 5-pair matching: click a left term, then its matching right meaning.
     const pairs: [string, string][] = [
@@ -141,7 +226,7 @@ test.describe('Scavenger Hunt', () => {
     }
 
     await expect(dialog.getByText('Kangaroo — Challenge 3')).toBeVisible()
-    await expect(characterCard(page, 'Kangaroo').locator('.hunt-character-status')).toHaveText('2/3 challenges')
+    await expect(characterCard(page, 'Kangaroo').locator('.hunt-character-status')).toHaveText('2/3 challenges completed')
 
     await dialog.getByRole('button', { name: 'Play Now' }).click()
 
@@ -175,7 +260,7 @@ test.describe('Scavenger Hunt', () => {
 
     await expect(dialog.getByText('Pig — Challenge 3')).toBeVisible()
     await expect(dialog.getByRole('button', { name: 'Play Now' })).toBeVisible()
-    await expect(characterCard(page, 'Pig').locator('.hunt-character-status')).toHaveText('2/3 challenges')
+    await expect(characterCard(page, 'Pig').locator('.hunt-character-status')).toHaveText('2/3 challenges completed')
   })
 
   test('Capybara: park-verified mc + a one-at-a-time true/false set of 3', async ({ page }) => {
@@ -234,8 +319,9 @@ test.describe('Scavenger Hunt', () => {
   }) => {
     // Kangaroo was already unlocked AND fully completed (all 3 challenges)
     // by the earlier "Kangaroo: mc -> matching -> minigame" test in this
-    // file. Re-scanning it must not error, re-lock it, or reset its
-    // progress -- just land back on the same "found" state.
+    // file. Re-scanning it must not error, re-lock it, reset its progress,
+    // or show the found popup again -- just land back on the same "found"
+    // state.
     await page.goto(`/scan/${CHARACTER_CODES.Kangaroo}`)
 
     await expect(page.getByText('You found Kangaroo! All 3 challenges complete.')).toBeVisible()

@@ -1,0 +1,52 @@
+.hunt-found-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding-top: var(--cap-space-3);
+}
+
+.hunt-found-emoji {
+  font-size: 64px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.hunt-found-eyebrow {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cap-color-body-text);
+}
+
+.hunt-found-name {
+  margin: 0 0 10px;
+  font-family: var(--cap-font-display);
+  font-size: 26px;
+  color: var(--hunt-accent-deep, var(--cap-color-ink));
+}
+
+.hunt-found-description {
+  margin: 0;
+  font-size: 14px;
+  line-height: 145%;
+  color: var(--cap-color-body-text);
+}
+
+/* .btn-primary's background/hover already picks up the character's accent
+   via .hunt-modal-inner .btn-primary in HuntChallengeModal.css (this modal
+   reuses that shared rule -- --hunt-accent is set on .hunt-modal-inner
+   itself via [data-hunt-character] and inherits down to this button). */
+.hunt-found-actions {
+  justify-content: center;
+  margin-top: 18px;
+  width: 100%;
+}
+
+.hunt-found-actions .btn-primary {
+  flex: 1;
+  max-width: 220px;
+}

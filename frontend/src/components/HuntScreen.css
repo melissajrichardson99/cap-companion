@@ -16,6 +16,109 @@
   margin: 0;
 }
 
+/* ---------------------------------------------------------------------
+   Per-character accent palette. Kept inside the existing fixed brand-hue
+   family (extending it, not clashing with it) -- 4 of the 5 reuse existing
+   tokens from index.css, Pig gets the one new curated token
+   (--cap-color-blossom-pink) added alongside them.
+
+   Applied via [data-hunt-character] (always present, even on a still-locked
+   card, so e2e specs can target a specific character's card without any
+   name/text being rendered) but the *visual* accent rules below are scoped
+   to unlocked cards/modals only (see .hunt-character-card:not(.hunt-
+   character-locked) and the modal rules further down) -- a still-locked
+   card must not visibly leak its accent color, or a guest who's already
+   found a couple of characters could learn the color-to-identity mapping
+   and guess an unfound one before scanning it.
+   --------------------------------------------------------------------- */
+[data-hunt-character='kangaroo'] {
+  --hunt-accent: var(--cap-color-sunset-orange);
+  --hunt-accent-deep: var(--cap-color-sunset-orange-deep);
+}
+
+[data-hunt-character='pig'] {
+  --hunt-accent: var(--cap-color-blossom-pink);
+  --hunt-accent-deep: var(--cap-color-blossom-pink-deep);
+}
+
+[data-hunt-character='capybara'] {
+  --hunt-accent: var(--cap-color-trail-tan);
+  --hunt-accent-deep: color-mix(in srgb, var(--cap-color-trail-tan) 70%, black);
+}
+
+[data-hunt-character='snake'] {
+  --hunt-accent: var(--cap-color-adventure-green);
+  --hunt-accent-deep: color-mix(in srgb, var(--cap-color-adventure-green) 70%, black);
+}
+
+[data-hunt-character='sloth'] {
+  --hunt-accent: var(--cap-color-wood-plank-blue);
+  --hunt-accent-deep: var(--cap-color-wood-plank-blue-deep);
+}
+
+/* ---------------------------------------------------------------------
+   Overall hunt progress -- a fill bar for "X of 5 found" plus a row of
+   per-character dots for at-a-glance found/not-found status. Fraction
+   progress (per-character, "X/3 challenges completed") stays text-only on
+   each card below -- the bar treatment is reserved for this overall view.
+   --------------------------------------------------------------------- */
+.hunt-overall-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.hunt-overall-progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cap-color-ink);
+}
+
+.hunt-overall-progress-track {
+  height: 14px;
+  border-radius: var(--cap-radius-pill);
+  background: rgba(20, 24, 26, 0.12);
+  border: 1.5px solid var(--cap-color-outline);
+  overflow: hidden;
+}
+
+.hunt-overall-progress-fill {
+  height: 100%;
+  border-radius: var(--cap-radius-pill);
+  background: var(--cap-color-adventure-green);
+  transition: width 0.25s ease;
+}
+
+.hunt-progress-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.hunt-progress-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(20, 24, 26, 0.08);
+  color: var(--cap-color-body-text);
+}
+
+/* Found dots pick up their character's accent -- this is fine to reveal
+   (unlike the locked card/hint modal) since the character is already
+   unlocked, so there's no mystery left to protect. */
+.hunt-progress-dot-found {
+  background: var(--hunt-accent);
+  border-color: var(--hunt-accent-deep);
+}
+
 .hunt-character-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -37,6 +140,22 @@
 .hunt-character-card:hover {
   transform: translate(-2px, -2px);
   box-shadow: var(--cap-shadow-pop);
+}
+
+/* Unlocked card accent -- border/name pick up the character's color. Scoped
+   away from .hunt-character-locked so a locked card (which also carries
+   [data-hunt-character] for e2e targeting) never visibly renders it. */
+.hunt-character-card[data-hunt-character]:not(.hunt-character-locked) {
+  border-color: var(--hunt-accent-deep);
+}
+
+.hunt-character-card[data-hunt-character]:not(.hunt-character-locked) .hunt-character-name {
+  color: var(--hunt-accent-deep);
+}
+
+.hunt-character-emoji {
+  font-size: 30px;
+  line-height: 1;
 }
 
 .hunt-character-complete {
@@ -67,16 +186,41 @@
   color: var(--cap-color-adventure-green);
 }
 
-.hunt-character-locked {
-  opacity: 0.7;
-  filter: grayscale(0.3);
+/* ---------------------------------------------------------------------
+   Locked card -- a blacked-out, obscured box. No name/species/emoji is
+   ever rendered into the DOM for a locked character (see HuntScreen.tsx),
+   so there's nothing for this state to leak beyond "an animal is here."
+   --------------------------------------------------------------------- */
+/* .hunt-character-card.hunt-character-locked (two classes, not one) so this
+   reliably outweighs .cap-parchment-card's single-class background rule
+   regardless of CSS source order -- with equal specificity the parchment
+   fill was winning and the "locked" card wasn't actually blacked out. */
+.hunt-character-card.hunt-character-locked {
+  background: var(--cap-color-ink);
+  border-color: var(--cap-color-outline);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 108px;
+}
+
+.hunt-character-card.hunt-character-locked:hover {
+  box-shadow: var(--cap-shadow-pop);
+}
+
+.hunt-character-locked-mark {
+  font-family: var(--cap-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--cap-color-on-header-muted);
 }
 
 .hunt-character-locked .hunt-character-status {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--cap-color-body-text);
+  color: var(--cap-color-on-header-muted);
 }
 
 .hunt-character-lock-icon {
@@ -85,8 +229,13 @@
   flex-shrink: 0;
 }
 
-.hunt-locked-prompt p {
+.hunt-locked-hint-prompt p {
   font-size: 14px;
   color: var(--cap-color-body-text);
   margin: 0;
+}
+
+.hunt-locked-hint-text {
+  font-weight: 700;
+  color: var(--cap-color-ink) !important;
 }

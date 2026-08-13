@@ -6,7 +6,7 @@ service functions -- same pattern as test_passport.py's _pick_title.
 """
 
 from app.services.scoring import ScoreEntryLike
-from app.services.scoring_sheet import _current_turn
+from app.services.scoring_sheet import _current_turn, _round_complete_entries
 
 
 def _entries(*names: str) -> list[ScoreEntryLike]:
@@ -43,3 +43,22 @@ def test_single_player_always_stays_on_that_player():
     player, round_ = _current_turn(_entries("Alice", "Alice", "Alice"), players=["Alice"])
     assert player == "Alice"
     assert round_ == 4
+
+
+def test_round_complete_entries_empty():
+    assert _round_complete_entries([], players=["Alice", "Bob"]) == []
+
+
+def test_round_complete_entries_trims_a_partial_trailing_round():
+    entries = _entries("Alice", "Bob", "Alice")  # round 1 complete, round 2 only Alice has gone
+    assert _round_complete_entries(entries, players=["Alice", "Bob"]) == entries[:2]
+
+
+def test_round_complete_entries_keeps_everything_on_an_exact_round_boundary():
+    entries = _entries("Alice", "Bob", "Alice", "Bob")
+    assert _round_complete_entries(entries, players=["Alice", "Bob"]) == entries
+
+
+def test_round_complete_entries_is_a_no_op_for_a_solo_player():
+    entries = _entries("Alice", "Alice", "Alice")
+    assert _round_complete_entries(entries, players=["Alice"]) == entries

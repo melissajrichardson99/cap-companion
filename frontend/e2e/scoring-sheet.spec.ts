@@ -71,6 +71,18 @@ async function takeTurn(dialog: Locator, buttonName: string, times = 1): Promise
   }
 }
 
+// Item 6: once a game actually ends, a dramatic win/tie moment (Bingo's
+// MilestoneBanner, reused as-is) plays before the existing result screen.
+// Dismissed with a click here rather than waiting out its ~2.8s auto-dismiss
+// timer, to keep tests fast.
+async function dismissWinAnimation(dialog: Locator, expectedText: string): Promise<void> {
+  const banner = dialog.locator('.milestone-banner-blackout')
+  await expect(banner).toContainText(expectedText)
+  await expect(dialog.locator('.scoring-win-headline')).toHaveCount(0)
+  await banner.click()
+  await expect(banner).toHaveCount(0)
+}
+
 test.describe('Scoring Sheet', () => {
   test('lists all 5 documented games with their rules and win conditions, Mini Golf/Archery excluded', async ({
     page,
@@ -153,6 +165,7 @@ test.describe('Scoring Sheet', () => {
     // 15 + 6 = 21 exactly -- clean win, no overshoot needed here.
     await takeTurn(dialog, '6-Point Ring (+6)')
 
+    await dismissWinAnimation(dialog, 'Alice wins!')
     await expect(dialog.locator('.scoring-win-headline')).toContainText('Alice wins!')
     const finalRow = dialog.locator('tr', { hasText: 'Alice' })
     await expect(finalRow.locator('.scoring-final-totals-score')).toHaveText('21')
@@ -165,6 +178,7 @@ test.describe('Scoring Sheet', () => {
     await takeTurn(dialog, '6-Point Ring (+6)', 3) // 18
     await takeTurn(dialog, '6-Point Ring (+6)') // 24 -- overshoots 21 on the last throw
 
+    await dismissWinAnimation(dialog, 'Bob wins!')
     await expect(dialog.locator('.scoring-win-headline')).toContainText('Bob wins!')
     const finalRow = dialog.locator('tr', { hasText: 'Bob' })
     await expect(finalRow.locator('.scoring-final-totals-score')).toHaveText('24')
@@ -200,14 +214,21 @@ test.describe('Scoring Sheet', () => {
 
     // Sudden death: the very next point, however small, wins it outright --
     // but only provisionally (see autoFinishesOnWin / scoring_sheet.py) --
-    // staff confirms with an explicit "Finish Game" tap.
+    // staff confirms with an explicit "Finish Game" tap. Round-boundary win
+    // detection means this doesn't show up the instant Red pulls ahead --
+    // Blue still owes this round's matching turn first.
     await expect(currentPlayerName(dialog)).toContainText("Red Team's turn")
-    await takeTurn(dialog, 'Hit Horse (+1)')
+    await takeTurn(dialog, 'Hit Horse (+1)') // Red 11 -- crosses ahead, but mid-round
 
+    await expect(dialog.locator('.scoring-provisional-win-text')).toHaveCount(0)
+    await expect(currentPlayerName(dialog)).toContainText("Blue Team's turn")
+
+    await takeTurn(dialog, 'Miss') // Blue stays 10 -- completes the round
     await expect(dialog.locator('.scoring-provisional-win-text')).toContainText('Red Team leads with 11')
     await expect(dialog.locator('.scoring-win-headline')).toHaveCount(0)
     await dialog.getByRole('button', { name: 'Finish Game' }).click()
 
+    await dismissWinAnimation(dialog, 'Red Team wins!')
     await expect(dialog.locator('.scoring-win-headline')).toContainText('Red Team wins!')
     const finalRow = dialog.locator('tr', { hasText: 'Red Team' })
     await expect(finalRow.locator('.scoring-final-totals-score')).toHaveText('11')
@@ -221,12 +242,20 @@ test.describe('Scoring Sheet', () => {
     await takeTurn(dialog, 'Hit Horse (+1)') // Gold 1
     await takeTurn(dialog, 'Red Horse Neck (+4)') // Green 8
     await takeTurn(dialog, 'Hit Horse (+1)') // Gold 2
-    await takeTurn(dialog, 'Blue Horse Neck (+2)') // Green 10, well clear of Gold's 2
+    await takeTurn(dialog, 'Blue Horse Neck (+2)') // Green 10, well clear of Gold's 2 -- but mid-round
 
+    // Round-boundary win detection: Green crossed the threshold on their own
+    // turn, but Gold hasn't taken their matching turn in this round yet --
+    // the game must not show a win until Gold does.
+    await expect(dialog.locator('.scoring-provisional-win-text')).toHaveCount(0)
+    await expect(currentPlayerName(dialog)).toContainText("Gold Team's turn")
+
+    await takeTurn(dialog, 'Miss') // Gold stays 2 -- completes the round
     await expect(dialog.locator('.scoring-tie-banner')).toHaveCount(0)
     await expect(dialog.locator('.scoring-provisional-win-text')).toContainText('Green Team leads with 10')
     await dialog.getByRole('button', { name: 'Finish Game' }).click()
 
+    await dismissWinAnimation(dialog, 'Green Team wins!')
     await expect(dialog.locator('.scoring-win-headline')).toContainText('Green Team wins!')
     await expect(dialog.locator('.scoring-tie-banner')).toHaveCount(0)
   })
@@ -275,6 +304,7 @@ test.describe('Scoring Sheet', () => {
       await takeTurn(dialog, 'Nassau (+3)')
     }
 
+    await dismissWinAnimation(dialog, 'Alice wins!')
     await expect(dialog.locator('.scoring-win-headline')).toContainText('Alice wins!')
     const finalRow = dialog.locator('tr', { hasText: 'Alice' })
     await expect(finalRow.locator('.scoring-final-totals-score')).toHaveText('150')
@@ -285,6 +315,7 @@ test.describe('Scoring Sheet', () => {
     await beginSession(dialog, ['Casey'])
 
     await takeTurn(dialog, 'Cornhole (+3)', 7) // 21 exactly
+    await dismissWinAnimation(dialog, 'Casey wins!')
     await expect(dialog.locator('.scoring-win-headline')).toContainText('Casey wins!')
 
     const downloadPromise = page.waitForEvent('download')
@@ -334,6 +365,7 @@ test.describe('Scoring Sheet', () => {
 
     // Now actually win it: 4 x 6 = 24, crossing the 21 threshold at round 59.
     await takeTurn(dialog, '6-Point Ring (+6)', 4)
+    await dismissWinAnimation(dialog, 'Marathon wins!')
     await expect(dialog.locator('.scoring-win-headline')).toContainText('Marathon wins!')
 
     const downloadPromise = page.waitForEvent('download')
@@ -358,5 +390,100 @@ test.describe('Scoring Sheet', () => {
     // present as unparsed markup.
     await expect(filePage.locator('table.round-block')).toHaveCount(6)
     await filePage.close()
+  })
+
+  test('Farm Toss: crossing the threshold mid-round waits for the round to finish before declaring a winner', async ({
+    page,
+  }) => {
+    const dialog = await openGame(page, 'Farm Toss')
+    await beginSession(dialog, ['Xan', 'Yui'])
+
+    await takeTurn(dialog, '6-Point Ring (+6)') // Xan 6
+    await takeTurn(dialog, 'Miss') // Yui 0
+    await takeTurn(dialog, '6-Point Ring (+6)') // Xan 12
+    await takeTurn(dialog, 'Miss') // Yui 0
+    await takeTurn(dialog, '6-Point Ring (+6)') // Xan 18
+    await takeTurn(dialog, 'Miss') // Yui 0
+    await takeTurn(dialog, '3-Point Ring (+3)') // Xan 21 -- crosses the threshold, but mid-round
+
+    // Round-boundary win detection (non-tiebreak game): Xan crossed 21 on
+    // their own turn, but Yui only has 3 turns so far this round -- the
+    // game must not end until Yui's matching 4th turn completes the round.
+    await expect(dialog.locator('.scoring-win-headline')).toHaveCount(0)
+    await expect(dialog.locator('.milestone-banner')).toHaveCount(0)
+    await expect(currentPlayerName(dialog)).toContainText("Yui's turn")
+    await expect(runningScore(dialog, 'Xan')).toHaveText('21')
+
+    await takeTurn(dialog, 'Miss') // Yui 0 -- completes the round; only now does the game end
+    await dismissWinAnimation(dialog, 'Xan wins!')
+    await expect(dialog.locator('.scoring-win-headline')).toContainText('Xan wins!')
+    const finalRow = dialog.locator('tr', { hasText: 'Xan' })
+    await expect(finalRow.locator('.scoring-final-totals-score')).toHaveText('21')
+  })
+
+  test('taking a turn hides the action buttons behind a big result message for the beat, then reveals the next turn', async ({
+    page,
+  }) => {
+    const dialog = await openGame(page, 'Farm Toss')
+    await beginSession(dialog, ['PJ', 'Q'])
+
+    await dialog
+      .locator('.scoring-current-player-panel')
+      .getByRole('button', { name: '6-Point Ring (+6)', exact: true })
+      .click()
+
+    // Buttons genuinely removed from the DOM, not just visually hidden.
+    await expect(dialog.locator('.scoring-event-buttons')).toHaveCount(0)
+    await expect(dialog.locator('.scoring-turn-result-text')).toContainText('PJ scored 6 points!')
+
+    await expect(currentPlayerName(dialog)).toContainText("Q's turn")
+    await expect(dialog.locator('.scoring-turn-result-text')).toHaveCount(0)
+    await expect(dialog.locator('.scoring-event-buttons')).toBeVisible()
+
+    await dialog.locator('.scoring-current-player-panel').getByRole('button', { name: 'Miss', exact: true }).click()
+    await expect(dialog.locator('.scoring-turn-result-text')).toContainText('Maybe next shot, Q!')
+    await expect(currentPlayerName(dialog)).toContainText("PJ's turn")
+  })
+
+  test('scoring buttons use the parchment/sunset-orange palette, turn order shows arrows, and nothing overflows on mobile', async ({
+    page,
+  }) => {
+    for (const viewport of [
+      { width: 1280, height: 800 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport)
+      const dialog = await openGame(page, 'Farm Toss')
+      await beginSession(dialog, ['Amy', 'Bo', 'Cal'])
+
+      // Item 1: the wash-tinted sunset-orange treatment, not the old plain
+      // black-outlined default .btn fill.
+      const scoreButton = dialog
+        .locator('.scoring-current-player-panel')
+        .getByRole('button', { name: '6-Point Ring (+6)', exact: true })
+      const bg = await scoreButton.evaluate((el) => getComputedStyle(el).backgroundColor)
+      expect(bg).not.toBe('rgb(255, 255, 255)')
+      expect(bg).not.toBe('rgba(0, 0, 0, 0)')
+
+      // Item 2: arrows separate the (always-4) turn-order chips.
+      await expect(dialog.locator('.scoring-turn-strip .scoring-turn-chip')).toHaveCount(4)
+      await expect(dialog.locator('.scoring-turn-strip .scoring-turn-arrow')).toHaveCount(3)
+
+      // Item 3: the action buttons stay within the dialog panel's bounds --
+      // no left-hugging overflow, at either viewport size.
+      const panelBox = await dialog.boundingBox()
+      const buttonsBox = await dialog.locator('.scoring-event-buttons').boundingBox()
+      expect(panelBox).not.toBeNull()
+      expect(buttonsBox).not.toBeNull()
+      if (panelBox && buttonsBox) {
+        expect(buttonsBox.x).toBeGreaterThanOrEqual(panelBox.x - 1)
+        expect(buttonsBox.x + buttonsBox.width).toBeLessThanOrEqual(panelBox.x + panelBox.width + 1)
+      }
+
+      const hasHorizontalOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      )
+      expect(hasHorizontalOverflow).toBe(false)
+    }
   })
 })

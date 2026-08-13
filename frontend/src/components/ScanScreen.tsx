@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, type EncyclopediaEntry, type HuntCharacter } from '../api'
 import { EncyclopediaEntryScreen } from './EncyclopediaEntryScreen'
+import { HuntCharacterFoundModal } from './HuntCharacterFoundModal'
 import { HuntChallengeModal } from './HuntChallengeModal'
 import './ScanScreen.css'
 
@@ -16,6 +17,10 @@ type ScanState =
   | { status: 'loading' }
   | { status: 'not_found' }
   | { status: 'error'; message: string }
+  // Shown once, right after a fresh scan unlocks a character -- see the
+  // wasLocked check below. A re-scan of an already-unlocked character skips
+  // straight to 'hunt_character', same as before this redesign.
+  | { status: 'hunt_character_found'; character: HuntCharacter }
   | { status: 'hunt_character'; character: HuntCharacter }
   | { status: 'encyclopedia_entry'; entry: EncyclopediaEntry }
 
@@ -35,12 +40,17 @@ export function ScanScreen({ code, onCompleteChallenge, onUnlockCharacter, onPla
       .then((result) => {
         if (cancelled) return
         if (result.type === 'hunt_character') {
+          // result.target reflects state *before* the unlock call below (the
+          // /scan/:code GET just looks the character up), so this captures
+          // whether this scan is a genuine first-time find.
+          const wasLocked = !result.target.unlocked
           // Unlocking is idempotent server-side, so re-scanning an
           // already-unlocked character is a no-op here too -- it just lands
-          // back on the same challenge flow, no error or re-triggered unlock.
+          // back on the same challenge flow, no error or re-triggered unlock,
+          // and (per wasLocked above) no found-popup either.
           return onUnlockCharacter(result.target.id).then((character) => {
             if (cancelled) return
-            setState({ status: 'hunt_character', character })
+            setState({ status: wasLocked ? 'hunt_character_found' : 'hunt_character', character })
           })
         }
         setState({ status: 'encyclopedia_entry', entry: result.target })
@@ -83,6 +93,16 @@ export function ScanScreen({ code, onCompleteChallenge, onUnlockCharacter, onPla
           Back to the app
         </button>
       </div>
+    )
+  }
+
+  if (state.status === 'hunt_character_found') {
+    return (
+      <HuntCharacterFoundModal
+        character={state.character}
+        onStartChallenges={() => setState({ status: 'hunt_character', character: state.character })}
+        onClose={onClose}
+      />
     )
   }
 

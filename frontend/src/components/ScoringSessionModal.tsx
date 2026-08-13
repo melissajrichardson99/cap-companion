@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, type GameScoreEvent, type ScoreSheetSession, type ScoringGame } from '../api'
+import { api, type GameScoreEvent, type MilestoneEvent, type ScoreSheetSession, type ScoringGame } from '../api'
+import { MilestoneBanner } from './MilestoneBanner'
 import { Modal } from './Modal'
 import { ClipboardIcon } from './NavIcons'
 import { buildSummaryHtml } from './scoringSummaryHtml'
@@ -76,8 +77,15 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
   // actually advancing -- disables every button in the current player's
   // panel so a second tap can't land mid-transition.
   const [advancing, setAdvancing] = useState(false)
-  const [lastEntryMessage, setLastEntryMessage] = useState<string | null>(null)
+  // Set for the same beat as `advancing` -- while non-null, it replaces the
+  // action buttons entirely with a "significant moment" message instead of
+  // showing a small confirmation line alongside them.
+  const [turnResult, setTurnResult] = useState<{ playerName: string; event: GameScoreEvent } | null>(null)
   const [finishing, setFinishing] = useState(false)
+  // Dramatic win/tie moment (reuses Bingo's MilestoneBanner) shown once the
+  // game has actually ended, before the result screen. modalState stays
+  // 'playing' while this is up -- see recordScore/finishGame below.
+  const [resultAnimation, setResultAnimation] = useState<MilestoneEvent | null>(null)
   const advanceTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -126,13 +134,13 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
     setEntryError(null)
     try {
       const updated = await api.recordScoreEntry(session.id, playerName, event.id)
-      const message = event.is_miss ? `Miss for ${playerName}` : `+${event.point_value} for ${playerName} — ${event.label}`
-      setLastEntryMessage(message)
+      setTurnResult({ playerName, event })
       advanceTimeoutRef.current = window.setTimeout(() => {
         setSession(updated)
         setAdvancing(false)
+        setTurnResult(null)
         if (updated.status === 'won' && autoFinishesOnWin(game)) {
-          setModalState('finished')
+          setResultAnimation({ type: 'blackout', message: `🏆 ${updated.winner} wins!`, tile_ids: [] })
           onCoinsChanged()
         }
       }, TURN_ADVANCE_DELAY_MS)
@@ -149,7 +157,7 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
     try {
       const finished = await api.finishScoreSheetSession(session.id)
       setSession(finished)
-      setModalState('finished')
+      setResultAnimation({ type: 'blackout', message: `🏆 ${finished.winner} wins!`, tile_ids: [] })
       onCoinsChanged()
     } catch (err) {
       setEntryError(String(err))
@@ -158,12 +166,18 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
     }
   }
 
+  const handleResultAnimationDone = () => {
+    setResultAnimation(null)
+    setModalState('finished')
+  }
+
   const startNewSession = () => {
     setSession(null)
     setPlayerInputs(['', ''])
     setSetupError(null)
     setEntryError(null)
-    setLastEntryMessage(null)
+    setTurnResult(null)
+    setResultAnimation(null)
     setModalState('setup')
   }
 
@@ -261,7 +275,13 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
   }
 
   const tieMessage = tieBannerText(session)
-  const provisionalWin = !autoFinishesOnWin(game) && session.status === 'won'
+  // current_player is null once the session has actually completed
+  // (auto-finished or Finish Game already called) -- while resultAnimation
+  // is up, modalState is still 'playing' but there's no live turn left to
+  // show, so this also gates the turn-strip/action-panel/provisional-win
+  // banner below from rendering stale "null's turn" content underneath it.
+  const stillPlaying = session.current_player !== null
+  const provisionalWin = !autoFinishesOnWin(game) && session.status === 'won' && stillPlaying
   const turnOrder = upcomingTurnOrder(session.players, session.current_player)
   const normalEvents = game.score_events.filter((event) => !event.is_miss)
   const missEvent = game.score_events.find((event) => event.is_miss)
@@ -280,56 +300,72 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
             </button>
           </div>
         )}
-        {game.throws_per_round && !tieMessage && (
+        {game.throws_per_round && !tieMessage && stillPlaying && (
           <p className="scoring-round-status">Round {(session.round_number ?? 0) + 1} in progress</p>
         )}
 
-        <div className="scoring-turn-strip">
-          {turnOrder.map((player, i) => (
-            <span
-              key={`${player}-${i}`}
-              className={`scoring-turn-chip ${i === 0 ? 'scoring-turn-chip-current' : 'scoring-turn-chip-queued'}`}
-            >
-              {player}
-            </span>
-          ))}
-        </div>
+        {stillPlaying && (
+          <>
+            <div className="scoring-turn-strip">
+              {turnOrder.flatMap((player, i) => [
+                i > 0 && (
+                  <span key={`arrow-${i}`} className="scoring-turn-arrow" aria-hidden="true">
+                    →
+                  </span>
+                ),
+                <span
+                  key={`${player}-${i}`}
+                  className={`scoring-turn-chip ${i === 0 ? 'scoring-turn-chip-current' : 'scoring-turn-chip-queued'}`}
+                >
+                  {player}
+                </span>,
+              ])}
+            </div>
 
-        <div className="scoring-current-player-panel">
-          <div className="scoring-player-header">
-            <span className="scoring-player-name">{session.current_player}'s turn</span>
-            <span className="scoring-player-total">{session.totals[session.current_player ?? ''] ?? 0}</span>
-          </div>
-          <div className="scoring-event-buttons">
-            {normalEvents.map((event) => (
-              <button
-                type="button"
-                key={event.id}
-                className="btn scoring-event-btn"
-                disabled={advancing}
-                onClick={() => recordScore(event)}
-              >
-                {event.label} (+{event.point_value})
-              </button>
-            ))}
-            {missEvent && (
-              <button
-                type="button"
-                key={missEvent.id}
-                className="btn scoring-event-btn scoring-miss-btn"
-                disabled={advancing}
-                onClick={() => recordScore(missEvent)}
-              >
-                Miss
-              </button>
-            )}
-          </div>
-          {lastEntryMessage && (
-            <p className={`scoring-confirmation-banner${advancing ? ' scoring-confirmation-active' : ''}`}>
-              {lastEntryMessage}
-            </p>
-          )}
-        </div>
+            <div className="scoring-current-player-panel">
+              <div className="scoring-player-header">
+                <span className="scoring-player-name">{session.current_player}'s turn</span>
+                <span className="scoring-player-total">{session.totals[session.current_player ?? ''] ?? 0}</span>
+              </div>
+              {turnResult ? (
+                <div className="scoring-turn-result" role="status">
+                  <p
+                    className={`scoring-turn-result-text${turnResult.event.is_miss ? ' scoring-turn-result-miss' : ''}`}
+                  >
+                    {turnResult.event.is_miss
+                      ? `Maybe next shot, ${turnResult.playerName}!`
+                      : `${turnResult.playerName} scored ${turnResult.event.point_value} point${turnResult.event.point_value === 1 ? '' : 's'}!`}
+                  </p>
+                </div>
+              ) : (
+                <div className="scoring-event-buttons">
+                  {normalEvents.map((event) => (
+                    <button
+                      type="button"
+                      key={event.id}
+                      className="btn scoring-event-btn"
+                      disabled={advancing}
+                      onClick={() => recordScore(event)}
+                    >
+                      {event.label} (+{event.point_value})
+                    </button>
+                  ))}
+                  {missEvent && (
+                    <button
+                      type="button"
+                      key={missEvent.id}
+                      className="btn scoring-event-btn scoring-miss-btn"
+                      disabled={advancing}
+                      onClick={() => recordScore(missEvent)}
+                    >
+                      Miss
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         <table className="scoring-running-scores">
           <tbody>
@@ -344,6 +380,7 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
 
         {entryError && <p className="screen-error">{entryError}</p>}
       </div>
+      {resultAnimation && <MilestoneBanner event={resultAnimation} onDone={handleResultAnimationDone} />}
     </Modal>
   )
 }

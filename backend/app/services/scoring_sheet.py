@@ -7,6 +7,7 @@ split as milestone.py (pure) / map_bingo.py (orchestration).
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -107,6 +108,21 @@ def _current_turn(entries: list, players: list[str]) -> tuple[str, int]:
     return players[turn_index], current_round
 
 
+def _round_complete_entries(entries: list[ScoreEntry], players: list[str]) -> list[ScoreEntry]:
+    """Entries through the last turn-cycle round every player has completed.
+
+    Win/tie status is only ever decided from this truncated view -- a player
+    crossing the threshold mid-round, before the rest of the round's players
+    have taken their turn, must not end the game early. Live totals and turn
+    order (_current_turn) are unaffected -- they still use the full entry
+    list, only the win-check's input is trimmed.
+    """
+    if not players:
+        return entries
+    complete_count = (len(entries) // len(players)) * len(players)
+    return entries[:complete_count]
+
+
 def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
     entries = _entries_for_session(client, session_row["id"])
     players: list[str] = session_row["players"]
@@ -131,13 +147,23 @@ def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
         )
 
     game_row = _get_game_row(client, session_row["game_id"])
+    round_entries = _round_complete_entries(entries, players)
     result = scoring_service.evaluate_win(
         win_condition_type=game_row["win_condition_type"],
-        entries=[scoring_service.ScoreEntryLike(e.player_name, e.point_value) for e in entries],
+        entries=[scoring_service.ScoreEntryLike(e.player_name, e.point_value) for e in round_entries],
         players=players,
         threshold=game_row["win_threshold"],
         throws_per_round=game_row["throws_per_round"],
     )
+    # Win/tie status above is round-gated (see _round_complete_entries), but
+    # displayed totals (running-scores table, current player's own total,
+    # "leads with X" text) must keep updating every single turn, not just at
+    # round boundaries -- so they're recomputed from the full entry list and
+    # overlaid onto the round-gated result.
+    live_totals = scoring_service.compute_totals(
+        [scoring_service.ScoreEntryLike(e.player_name, e.point_value) for e in entries], players
+    )
+    result = replace(result, totals=live_totals)
 
     # first_to and first_to_round_tiebreak are monotonically final: once
     # either fires "won", no later entry can ever undo it (first_to's win

@@ -165,12 +165,24 @@
   margin: 0 0 16px;
 }
 
-/* Turn order strip: current player + next 3 in queue. */
+/* Turn order strip: current player + next 3 in queue. `safe center` centers
+   the chips when they fit and falls back to start-aligned + scrollable if a
+   long queue overflows -- plain `center` would make the overflowing start of
+   the strip unreachable by scroll. */
 .scoring-turn-strip {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: safe center;
+  gap: 6px;
   overflow-x: auto;
   margin: 0 0 14px;
+}
+
+.scoring-turn-arrow {
+  flex-shrink: 0;
+  color: var(--cap-color-body-text);
+  font-weight: 700;
+  opacity: 0.6;
 }
 
 .scoring-turn-chip {
@@ -224,37 +236,80 @@
 .scoring-event-buttons {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
 
-.scoring-event-btn {
+/* Sunset-orange wash, same "many small action buttons" recipe as
+   HuntChallengeModal's answer-choice buttons -- brings these in line with
+   the rest of the app's parchment/sunset-orange chrome instead of the plain
+   black-outlined default .btn fill. Scoped under .scoring-modal-inner (same
+   0,2,0 specificity as this file's .btn/.btn-primary overrides below) so it
+   reliably wins over shared.css's same-specificity `.btn { background:
+   var(--bg) }` regardless of CSS import/bundle order -- an unscoped
+   .scoring-event-btn tied with .btn and silently lost to it, which is what
+   actually produced the plain white/black default pill look in the first
+   place. */
+.scoring-modal-inner .scoring-event-btn {
   font-size: 13px;
   padding: 7px 12px;
+  border-color: var(--cap-color-sunset-orange-deep);
+  background: color-mix(in srgb, var(--cap-color-sunset-orange) 18%, transparent);
+  color: var(--cap-color-ink);
+}
+
+.scoring-modal-inner .scoring-event-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cap-color-sunset-orange) 30%, transparent);
 }
 
 /* Muted/outline treatment so Miss reads as distinct from a real score. */
-.scoring-miss-btn {
+.scoring-modal-inner .scoring-miss-btn {
   background: transparent;
   color: var(--cap-color-body-text);
   border-style: dashed;
   box-shadow: none;
 }
 
-.scoring-miss-btn:hover:not(:disabled) {
+.scoring-modal-inner .scoring-miss-btn:hover:not(:disabled) {
   box-shadow: none;
   background: rgba(0, 0, 0, 0.05);
 }
 
-.scoring-confirmation-banner {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 12px 0 0;
-  color: var(--cap-color-body-text);
-  transition: opacity 0.15s ease;
+/* Post-turn "significant moment" beat -- replaces .scoring-event-buttons
+   entirely while a turn's result is showing (see recordScore/turnResult in
+   ScoringSessionModal.tsx), not a small line shown alongside them. */
+.scoring-turn-result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 8px 12px;
+  text-align: center;
 }
 
-.scoring-confirmation-banner.scoring-confirmation-active {
+.scoring-turn-result-text {
+  margin: 0;
+  font-family: var(--cap-font-display);
+  font-size: 18px;
+  font-weight: 700;
   color: var(--cap-color-sunset-orange-deep);
+  animation: scoring-turn-result-pop 0.25s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+/* Lighter/gentler tone for a Miss -- encouraging, not deflating. */
+.scoring-turn-result-text.scoring-turn-result-miss {
+  color: var(--cap-color-ink);
+}
+
+@keyframes scoring-turn-result-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Always-visible running scores, kept separate from the final-totals table

@@ -80,6 +80,14 @@
   --cap-color-adventure-green: #3b7801;
   --cap-color-acid-yellow: #eaff00;
 
+  /* Scavenger Hunt per-character accent (Pig) -- a dusty rose curated to
+     sit inside the same warm/earthy family as sunset-orange/trail-tan
+     rather than a new arbitrary hue. See HuntScreen.css's
+     [data-hunt-character] block for the full 5-character palette (the
+     other 4 characters reuse existing tokens above). */
+  --cap-color-blossom-pink: #cf6a8c;
+  --cap-color-blossom-pink-deep: #a84e6c;
+
   /* A distinct dark red for the Contact Staff CTA -- separate from
      adventure-red (the bright, fixed pin/legend red) so staff contact
      reads as its own "urgent" action rather than reusing map iconography. */

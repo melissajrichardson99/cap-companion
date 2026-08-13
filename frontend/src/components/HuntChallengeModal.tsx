@@ -7,6 +7,7 @@ import type {
   HuntMcContent,
   HuntTrueFalseSetContent,
 } from '../api'
+import { HUNT_CHARACTER_CONTENT } from '../huntCharacterContent'
 import { Modal } from './Modal'
 import { SearchIcon } from './NavIcons'
 import './HuntChallengeModal.css'
@@ -25,6 +26,7 @@ interface HuntChallengeModalProps {
 export function HuntChallengeModal({ character, onClose, onCompleteChallenge, onPlayMinigame }: HuntChallengeModalProps) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const slug = HUNT_CHARACTER_CONTENT[character.name].slug
 
   const currentChallenge = character.challenges
     .slice()
@@ -46,7 +48,7 @@ export function HuntChallengeModal({ character, onClose, onCompleteChallenge, on
   if (!currentChallenge) {
     return (
       <Modal onClose={onClose} labelledBy="hunt-modal-title" className="hunt-modal-frame">
-        <div className="hunt-modal-inner">
+        <div className="hunt-modal-inner" data-hunt-character={slug}>
           <h2 id="hunt-modal-title" className="hunt-modal-title">
             <span className="hunt-modal-icon-badge" aria-hidden="true">
               <SearchIcon />
@@ -69,7 +71,7 @@ export function HuntChallengeModal({ character, onClose, onCompleteChallenge, on
 
   return (
     <Modal onClose={onClose} labelledBy="hunt-modal-title" className="hunt-modal-frame">
-      <div className="hunt-modal-inner">
+      <div className="hunt-modal-inner" data-hunt-character={slug}>
         <h2 id="hunt-modal-title" className="hunt-modal-title">
           <span className="hunt-modal-icon-badge" aria-hidden="true">
             <SearchIcon />

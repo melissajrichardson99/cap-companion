@@ -45,7 +45,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--cap-color-adventure-green);
+  /* Falls back to the original fixed green when no [data-hunt-character]
+     ancestor is present (the anonymous locked-hint modal in HuntScreen.tsx
+     deliberately never sets that attribute, so it stays neutral). */
+  background: var(--hunt-accent, var(--cap-color-adventure-green));
   border: 2px solid var(--cap-color-outline);
   color: #fff;
 }
@@ -111,13 +114,13 @@
 }
 
 .hunt-modal-inner .btn-primary {
-  background: var(--cap-color-sunset-orange);
+  background: var(--hunt-accent, var(--cap-color-sunset-orange));
   border-color: var(--cap-color-outline);
   color: #fff;
 }
 
 .hunt-modal-inner .btn-primary:hover:not(:disabled) {
-  background: var(--cap-color-sunset-orange-deep);
+  background: var(--hunt-accent-deep, var(--cap-color-sunset-orange-deep));
 }
 
 .hunt-modal-inner .btn-secondary {
