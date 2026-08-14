@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { api, type PassportSession } from '../api'
 import { Modal } from './Modal'
 import { PassportIcon } from './NavIcons'
+import { PassportReviewModal } from './PassportReviewModal'
 import './PassportModal.css'
 
 interface PassportModalProps {
@@ -15,6 +16,12 @@ interface PassportModalProps {
 // snapshot the backend just computed and stored, not a live view -- closing
 // and reopening this modal always starts a fresh "form" step rather than
 // remembering the last passport.
+//
+// A successful generation inserts one more step before the result card:
+// PassportReviewModal, the review-prompt popup. reviewPromptDismissed lives
+// in this component's own state (not anywhere persistent), so it resets
+// every time PassportModal remounts -- the prompt reappears after every
+// passport a family generates in the session, not just the first.
 export function PassportModal({ onClose }: PassportModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [familyLabel, setFamilyLabel] = useState('')
@@ -22,6 +29,7 @@ export function PassportModal({ onClose }: PassportModalProps) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<PassportSession | null>(null)
+  const [reviewPromptDismissed, setReviewPromptDismissed] = useState(false)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -34,6 +42,10 @@ export function PassportModal({ onClose }: PassportModalProps) {
       .then(setSession)
       .catch((err) => setError(String(err)))
       .finally(() => setSubmitting(false))
+  }
+
+  if (session && !reviewPromptDismissed) {
+    return <PassportReviewModal onDismiss={() => setReviewPromptDismissed(true)} />
   }
 
   if (session) {

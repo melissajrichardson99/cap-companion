@@ -132,3 +132,31 @@
   font-size: 14px;
   color: var(--cap-color-ink);
 }
+
+.home-review-text {
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}
+
+.home-page .home-review-btn {
+  align-self: flex-start;
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 9px 18px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.home-page .home-review-btn:hover {
+  background: var(--cap-color-sunset-orange-deep);
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}

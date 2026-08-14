@@ -3,6 +3,7 @@ import { api, type PhotoSubmission } from '../api'
 import {
   ANIMAL_SHOW_TIMES,
   ANNOUNCEMENTS,
+  GOOGLE_REVIEW_URL,
   PARK_HOURS_TEXT,
   PARK_OPEN_DAYS,
   PARK_WEATHER_LOCATION,
@@ -121,6 +122,22 @@ export function HomePage() {
           </ul>
         </section>
       )}
+
+      <section className="home-card cap-parchment-card">
+        <h2 className="home-section-title">Leave a Review, Get a Treat!</h2>
+        <p className="home-review-text">
+          Enjoyed your visit? Leave us a review on Google and grab a free treat from the General Store — just show
+          your review at the counter!
+        </p>
+        <a
+          className="btn home-review-btn"
+          href={GOOGLE_REVIEW_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          ⭐ Leave a Google Review
+        </a>
+      </section>
     </div>
   )
 }

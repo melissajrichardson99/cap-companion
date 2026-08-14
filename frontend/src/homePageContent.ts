@@ -40,3 +40,9 @@ export const PARK_WEATHER_LOCATION = {
   latitude: 51.0447,
   longitude: -114.0719,
 }
+
+// Google review link for the "Leave a Review, Get a Treat!" card. Redemption
+// (free General Store item) is honor-system, handled face-to-face at the
+// counter -- entirely outside the app, no tracking here.
+export const GOOGLE_REVIEW_URL =
+  'https://www.google.com/search?sxsrf=APpeQns_oPJCBvpypNTZ931Hb-38Ga3ljg:1786723860289&q=cobbs+adventure+park+reviews&si=APenkKm7iecQ4G6P-TsbSMFKIQtv3EFIqRAFw-i8uEbk55Z-_w6AwaS0TAFvbTEXr-lcuo1zEqcud4eoM3brwIlk1_ninFOt4QSd8Y1ptoN-F7XSVNyQQNyaOx9dCoOVHUMKRYkIYBLZn0oeaV0aOKdl2ycEl4O9ow%3D%3D'

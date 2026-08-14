@@ -73,6 +73,23 @@ test('weather fetch failure degrades gracefully without blocking the rest of the
   await expect(page.getByText(ANIMAL_SHOW_TIMES.join('  •  '))).toBeVisible()
 })
 
+test('review card CTA opens the Google review link in a new tab without navigating away', async ({ page, context }) => {
+  await page.goto('/')
+  const reviewLink = page.getByRole('link', { name: /Leave a Google Review/ })
+  await expect(reviewLink).toBeVisible()
+  await expect(reviewLink).toHaveAttribute('target', '_blank')
+  await expect(reviewLink).toHaveAttribute('rel', /noopener/)
+  await expect(reviewLink).toHaveAttribute('href', /^https:\/\/www\.google\.com\/search\?/)
+
+  const [newPage] = await Promise.all([context.waitForEvent('page'), reviewLink.click()])
+  await newPage.waitForLoadState('domcontentloaded')
+  expect(newPage.url()).toContain('google.com')
+  await newPage.close()
+
+  // Clicking the CTA didn't navigate the original tab away from Home.
+  await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
+})
+
 test('navbar logo returns to Home from another screen', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()

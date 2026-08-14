@@ -43,7 +43,16 @@ function passportDialog(page: Page) {
   return page.getByRole('dialog')
 }
 
+// Guest nav lives in a hamburger dropdown that starts closed on every fresh
+// page load and re-closes itself after every selection -- see
+// cap-companion-nav-menu-e2e-regression memory. Every nav-driven navigation
+// below needs this clicked immediately first.
+async function openMenu(page: Page) {
+  await page.getByRole('button', { name: 'Open menu' }).click()
+}
+
 async function generatePassport(page: Page, familyLabel: string, photoPath?: string): Promise<PassportSession> {
+  await openMenu(page)
   await page.getByRole('button', { name: 'Generate Passport' }).click()
   const dialog = passportDialog(page)
   await dialog.locator('.passport-family-label-input').fill(familyLabel)
@@ -58,6 +67,11 @@ async function generatePassport(page: Page, familyLabel: string, photoPath?: str
     dialog.getByRole('button', { name: 'Generate Passport' }).click(),
   ])
   const session = (await response.json()) as PassportSession
+
+  // A review-prompt popup appears first on every successful generation --
+  // dismiss it (its own flow is covered separately below) to reach the card.
+  await dialog.getByRole('button', { name: 'Maybe later' }).click()
+
   await expect(dialog.locator('.passport-card-title')).toHaveText(session.stats.title)
   return session
 }
@@ -99,7 +113,8 @@ test.describe('Family Passport', () => {
 
     // Bingo: complete any one open tile (+2 coins, same "first open tile"
     // approach as cobb-coins.spec.ts -- the exact tile doesn't matter here).
-    await page.getByRole('button', { name: 'Bingo Card' }).click()
+    await openMenu(page)
+    await page.getByRole('menuitemradio', { name: 'Bingo Card' }).click()
     await page.locator('.bingo-tile-open').first().click()
     await page.getByRole('button', { name: 'Completed Challenge' }).click()
     // Completing a tile draws a minigame asynchronously. Dismiss it via the
@@ -114,7 +129,8 @@ test.describe('Family Passport', () => {
     // Puzzle Timer: "Right Turn Only" -- untouched by puzzle-timer.spec.ts
     // (which only exercises Math Maze / Big Mystery Maze), so no risk of
     // double-counting an already-completed attempt from that file.
-    await page.getByRole('button', { name: 'Puzzles' }).click()
+    await openMenu(page)
+    await page.getByRole('menuitemradio', { name: 'Puzzles' }).click()
     const rightTurnCard = page.locator('.puzzle-card', { hasText: 'Right Turn Only' })
     await rightTurnCard.getByRole('button', { name: 'Standard' }).click()
     const puzzleDialog = page.getByRole('dialog')
@@ -127,7 +143,8 @@ test.describe('Family Passport', () => {
     // Scoring Sheet: win "Cornhole Extreme" (first_to 21, auto-locks on
     // win -- no separate Finish Game tap needed) -- untouched by
     // scoring-sheet.spec.ts (Farm Toss/Horse Hoops/Cornhole/Tiki Toss only).
-    await page.getByRole('button', { name: 'Scoring Sheet' }).click()
+    await openMenu(page)
+    await page.getByRole('menuitemradio', { name: 'Scoring Sheet' }).click()
     const cornholeExtremeCard = page
       .locator('.scoring-game-card')
       .filter({ has: page.getByRole('heading', { name: 'Cornhole Extreme', exact: true }) })
@@ -158,5 +175,84 @@ test.describe('Family Passport', () => {
     // challenge (out of 9) could ever contribute on their own, so scoring
     // should come out strongest regardless of any earlier-spec residue.
     expect(final.stats.title).toBe('Sharpshooter Family')
+  })
+
+  test.describe('review-prompt popup', () => {
+    test('appears immediately after generation, before the passport card', async ({ page }) => {
+      await page.goto('/')
+      await openMenu(page)
+      await page.getByRole('button', { name: 'Generate Passport' }).click()
+      const dialog = passportDialog(page)
+      await dialog.locator('.passport-family-label-input').fill(`Review Prompt Family ${Date.now()}`)
+
+      await Promise.all([
+        page.waitForResponse(
+          (res: Response) => res.url().includes('/passport/generate') && res.request().method() === 'POST',
+        ),
+        dialog.getByRole('button', { name: 'Generate Passport' }).click(),
+      ])
+
+      await expect(dialog.getByRole('heading', { name: 'Leave a Review, Get a Treat!' })).toBeVisible()
+      await expect(dialog.locator('.passport-card-title')).toHaveCount(0)
+    })
+
+    test('CTA opens the Google review link in a genuine new tab, and the popup survives to be dismissed after', async ({
+      page,
+      context,
+    }) => {
+      await page.goto('/')
+      await openMenu(page)
+      await page.getByRole('button', { name: 'Generate Passport' }).click()
+      const dialog = passportDialog(page)
+      await dialog.locator('.passport-family-label-input').fill(`Review CTA Family ${Date.now()}`)
+
+      const [response] = await Promise.all([
+        page.waitForResponse(
+          (res: Response) => res.url().includes('/passport/generate') && res.request().method() === 'POST',
+        ),
+        dialog.getByRole('button', { name: 'Generate Passport' }).click(),
+      ])
+      const session = (await response.json()) as PassportSession
+
+      const reviewLink = dialog.getByRole('link', { name: /Leave a Google Review/ })
+      await expect(reviewLink).toBeVisible()
+      await expect(reviewLink).toHaveAttribute('target', '_blank')
+      await expect(reviewLink).toHaveAttribute('rel', /noopener/)
+      await expect(reviewLink).toHaveAttribute('href', /^https:\/\/www\.google\.com\/search\?/)
+
+      const [newPage] = await Promise.all([context.waitForEvent('page'), reviewLink.click()])
+      await newPage.waitForLoadState('domcontentloaded')
+      expect(newPage.url()).toContain('google.com')
+      await newPage.close()
+
+      // Clicking the CTA didn't dismiss the popup or navigate the original tab away.
+      await expect(dialog.getByRole('heading', { name: 'Leave a Review, Get a Treat!' })).toBeVisible()
+      expect(page.url()).not.toContain('google.com')
+
+      // Dismissing afterward -- without ever leaving a review -- still reveals
+      // the completed passport, not a dead end.
+      await dialog.getByRole('button', { name: 'Maybe later' }).click()
+      await expect(dialog.locator('.passport-card-title')).toHaveText(session.stats.title)
+    })
+
+    test('generating a second passport in the same session shows the prompt again, not just once', async ({ page }) => {
+      await page.goto('/')
+      await generatePassport(page, `Repeat Family One ${Date.now()}`)
+      await passportDialog(page).getByRole('button', { name: 'Close' }).click()
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+
+      await openMenu(page)
+      await page.getByRole('button', { name: 'Generate Passport' }).click()
+      const dialog = passportDialog(page)
+      await dialog.locator('.passport-family-label-input').fill(`Repeat Family Two ${Date.now()}`)
+      await Promise.all([
+        page.waitForResponse(
+          (res: Response) => res.url().includes('/passport/generate') && res.request().method() === 'POST',
+        ),
+        dialog.getByRole('button', { name: 'Generate Passport' }).click(),
+      ])
+
+      await expect(dialog.getByRole('heading', { name: 'Leave a Review, Get a Treat!' })).toBeVisible()
+    })
   })
 })

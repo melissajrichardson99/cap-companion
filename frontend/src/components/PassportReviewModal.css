@@ -1,0 +1,48 @@
+.passport-review-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding-top: var(--cap-space-3);
+}
+
+.passport-review-emoji {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.passport-review-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cap-color-sunset-orange-deep);
+}
+
+.passport-review-title {
+  font-family: var(--cap-font-display);
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: var(--cap-color-ink);
+}
+
+.passport-review-text {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 145%;
+  color: var(--cap-color-body-text);
+}
+
+.passport-review-cta {
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+
+.passport-review-dismiss {
+  width: 100%;
+}
