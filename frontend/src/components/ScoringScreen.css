@@ -3,6 +3,48 @@
   flex-direction: column;
   gap: 16px;
   font-family: var(--cap-font-body);
+  position: relative;
+  isolation: isolate;
+}
+
+/* Light leaf accents (visual language rollout) -- same SVG/technique as
+   HomePage.css, kept subtle since this is dense functional content. */
+.scoring-screen::before,
+.scoring-screen::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.scoring-screen::before {
+  width: 170px;
+  height: 170px;
+  top: 40px;
+  right: -30px;
+  opacity: 0.09;
+  transform: rotate(22deg);
+}
+
+.scoring-screen::after {
+  width: 170px;
+  height: 170px;
+  bottom: 10px;
+  left: -35px;
+  opacity: 0.09;
+  transform: rotate(-140deg);
+}
+
+@media (max-width: 640px) {
+  .scoring-screen::before,
+  .scoring-screen::after {
+    width: 110px;
+    height: 110px;
+    opacity: 0.07;
+  }
 }
 
 .scoring-loading {
@@ -78,10 +120,14 @@
   height: 20px;
 }
 
+/* Visual language rollout: header-green + bold like .cap-section-title, kept
+   at card-scale size (not the full 22px) since this repeats once per game
+   card in a grid rather than standing alone as a page section header. */
 .scoring-game-name {
   font-family: var(--cap-font-display);
+  font-weight: 700;
   font-size: 17px;
-  color: var(--cap-color-ink);
+  color: var(--cap-color-header-green);
   margin: 0;
 }
 

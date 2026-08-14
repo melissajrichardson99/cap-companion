@@ -4,11 +4,64 @@
 .staff-page {
   min-height: 100svh;
   box-sizing: border-box;
+  /* width:100% (not just max-width) matters here: .staff-page mounts as the
+     sole child of #root (index.css, flex-direction:column), and a flex
+     item's auto left/right margins (from margin:0 auto below) suppress the
+     default cross-axis stretch, shrink-wrapping to content instead of
+     filling #root -- same #app-root bug as App.css, fixed the same way. */
+  width: 100%;
   max-width: 860px;
   margin: 0 auto;
   padding: var(--cap-space-5);
   font-family: var(--cap-font-body);
   background: var(--cap-color-page-bg);
+  position: relative;
+  isolation: isolate;
+  /* Same reasoning as #app-root's overflow-x:hidden (App.css) -- this
+     screen's own leaf accents below hang a few px past the edge via
+     negative offsets, which .staff-page (standalone, outside #app-root)
+     needs to clip itself since it doesn't inherit that fix. */
+  overflow-x: hidden;
+}
+
+/* Very light leaf accents (visual language rollout) -- kept minimal since
+   this is a dense, staff-only functional screen, not a guest-facing one. */
+.staff-page::before,
+.staff-page::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.staff-page::before {
+  width: 150px;
+  height: 150px;
+  top: 30px;
+  right: -30px;
+  opacity: 0.07;
+  transform: rotate(22deg);
+}
+
+.staff-page::after {
+  width: 150px;
+  height: 150px;
+  bottom: 10px;
+  left: -30px;
+  opacity: 0.07;
+  transform: rotate(-140deg);
+}
+
+@media (max-width: 640px) {
+  .staff-page::before,
+  .staff-page::after {
+    width: 100px;
+    height: 100px;
+    opacity: 0.06;
+  }
 }
 
 .staff-page-loading {

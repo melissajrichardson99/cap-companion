@@ -23,12 +23,48 @@
     inset 0 -3px 6px rgba(0, 0, 0, 0.35);
 }
 
+/* Paper-grain texture (visual language rollout, same SVG as shared.css's
+   .cap-parchment-card) -- no added box-shadow here, the wood frame above
+   already owns the shadow for this nested surface. */
 .puzzle-modal-inner {
-  background: var(--cap-color-parchment);
+  position: relative;
+  isolation: isolate;
+  background-color: var(--cap-color-parchment);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   border: 2px solid var(--cap-color-outline);
   border-radius: calc(var(--cap-radius-md) - 4px);
   padding: var(--cap-space-4);
   font-family: var(--cap-font-body);
+}
+
+/* Small corner leaf accents (visual language rollout) */
+.puzzle-modal-inner::before,
+.puzzle-modal-inner::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.puzzle-modal-inner::before {
+  width: 60px;
+  height: 60px;
+  bottom: -10px;
+  right: -8px;
+  opacity: 0.09;
+  transform: rotate(205deg);
+}
+
+.puzzle-modal-inner::after {
+  width: 40px;
+  height: 40px;
+  bottom: -6px;
+  left: -6px;
+  opacity: 0.07;
+  transform: rotate(140deg);
 }
 
 .puzzle-modal-title {
@@ -37,7 +73,8 @@
   gap: var(--cap-space-3);
   font-family: var(--cap-font-display);
   font-size: 19px;
-  color: var(--cap-color-ink);
+  font-weight: 700;
+  color: var(--cap-color-header-green);
   margin: 0 0 8px;
 }
 

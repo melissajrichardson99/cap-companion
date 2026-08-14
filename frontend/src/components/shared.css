@@ -86,9 +86,54 @@
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
+/* Subtle paper-grain texture (SVG feTurbulence noise) layered over the flat
+   parchment fill, plus a softened, larger "sticker-pop" shadow for more
+   depth than a flat pop -- lifted verbatim from HomePage.css's .home-card,
+   now the shared baseline for every parchment surface app-wide (visual
+   language rollout). background-color/background-image kept separate (not
+   the `background` shorthand) so per-state overrides elsewhere (e.g.
+   .hunt-character-locked) can swap the fill without silently losing this
+   texture -- see those rules for the same reasoning. */
 .cap-parchment-card {
-  background: var(--cap-color-parchment);
+  position: relative;
+  isolation: isolate;
+  background-color: var(--cap-color-parchment);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   border: 2px solid var(--cap-color-outline);
   border-radius: var(--cap-radius-md);
-  box-shadow: var(--cap-shadow-pop-sm);
+  box-shadow:
+    var(--cap-shadow-pop),
+    0 8px 18px rgba(20, 24, 26, 0.14);
+}
+
+/* Shared card/section-title treatment (visual language rollout) -- matches
+   HomePage's .home-section-title exactly. Never applied to .cap-sign-board
+   (that stays the wood-plank page title) or to per-item data labels that
+   carry their own accent-color system (e.g. Scavenger Hunt's character
+   names, which must stay --hunt-accent-deep-colored). */
+.cap-section-title {
+  font-family: var(--cap-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
+  margin: 0;
+}
+
+/* Shared leaf/foliage accent (visual language rollout) -- same SVG sprig art
+   and bottom-weighted, low-opacity placement technique as HomePage.css.
+   Apply to a container's ::before/::after (with position:relative;
+   isolation:isolate on that container) or to dedicated elements for pages
+   that need more than two clusters, same as HomePage does for its extra
+   bottom clusters. Never applied to .cap-sign-board or Bingo's wood-plank
+   surface -- fixed decorative art still fights variable-length sign text,
+   and the wood-plank game-board keeps its distinct "physical object"
+   identity. */
+.cap-foliage-accent {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
 }

@@ -1,4 +1,13 @@
 #app-root {
+  /* width:100% (not just max-width) matters here: #app-root is a flex item
+     of #root (index.css, flex-direction:column), and a flex item's auto
+     left/right margins (from margin:0 auto below) suppress the default
+     cross-axis stretch. Without an explicit width, #app-root shrink-wraps to
+     its content's max-content size instead of filling #root -- invisible on
+     pages with inherently wide content (Home, Map) but collapsing the whole
+     page, header included, on pages whose content is intrinsically narrow
+     (e.g. Scavenger Hunt's auto-fill character grid). */
+  width: 100%;
   max-width: 900px;
   margin: 0 auto;
   /* min-height: 100% (percentage of #root) silently did nothing: #root
@@ -16,6 +25,15 @@
   text-align: left;
   font-family: var(--cap-font-body);
   background: var(--cap-color-page-bg);
+  /* The visual-language rollout's page-level leaf accents (MapScreen.css,
+     ScoringScreen.css, etc.) intentionally hang a few px past their
+     container's edge via negative right/left offsets -- fine on desktop
+     where #app-root has room to spare, but on mobile widths the container is
+     nearly viewport-edge-to-edge, so that overhang was adding to the page's
+     actual scrollable width (caught by scoring-sheet.spec.ts's horizontal-
+     overflow check). Purely decorative (pointer-events:none, z-index:-1), so
+     clipping the sliver that spills past the edge costs nothing. */
+  overflow-x: hidden;
 }
 
 .app-header {

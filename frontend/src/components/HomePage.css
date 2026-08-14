@@ -1,23 +1,211 @@
 .home-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 16px;
   font-family: var(--cap-font-body);
+  isolation: isolate;
+}
+
+/* Foliage accents (redesign, item 8; round 2 added more clusters, weighted
+   toward the page's bottom half per feedback that the original two-cluster
+   treatment read as too sparse) -- this was originally a deliberate,
+   Home-Page-only exception to the "no leaf/vine decoration" rule that used
+   to govern .cap-sign-board and the rest of the app's frames. That rule has
+   since been reversed app-wide (visual language rollout) -- every other
+   screen now has its own page/card-level leaf clusters following this same
+   technique (see MapScreen.css, HuntScreen.css, etc.). The sign-board itself
+   is still the one exception left: fixed decorative art still fights
+   variable-length title text there, so .cap-sign-board stays undecorated
+   everywhere, Home included. Every cluster sits behind the cards,
+   non-interactive and faded so they read as ambient texture rather than
+   competing art. */
+.home-page::before,
+.home-page::after,
+.home-foliage {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.home-page::before {
+  width: 220px;
+  height: 220px;
+  top: -20px;
+  right: -40px;
+  opacity: 0.16;
+  transform: rotate(18deg);
+}
+
+.home-page::after {
+  width: 220px;
+  height: 220px;
+  bottom: -30px;
+  left: -50px;
+  opacity: 0.16;
+  transform: rotate(-150deg);
+}
+
+/* Three extra bottom-weighted clusters (page-background emphasis toward the
+   lower portion, per feedback) -- real elements rather than more pseudo-
+   selectors since ::before/::after are already spoken for above and each of
+   these needs its own independent position across a page that can run
+   longer than any single 220px box. */
+.home-foliage-bottom-left-lower {
+  width: 190px;
+  height: 190px;
+  bottom: 8%;
+  left: -55px;
+  opacity: 0.13;
+  transform: rotate(-40deg);
+}
+
+.home-foliage-bottom-center {
+  width: 260px;
+  height: 190px;
+  bottom: -35px;
+  left: 50%;
+  opacity: 0.13;
+  transform: translateX(-50%) rotate(95deg);
+}
+
+.home-foliage-bottom-right {
+  width: 220px;
+  height: 220px;
+  bottom: -25px;
+  right: -45px;
+  opacity: 0.15;
+  transform: rotate(205deg);
+}
+
+@media (max-width: 640px) {
+  .home-page::before,
+  .home-page::after,
+  .home-foliage {
+    width: 130px;
+    height: 130px;
+    opacity: 0.12;
+  }
+
+  .home-foliage-bottom-center {
+    width: 190px;
+    height: 130px;
+  }
 }
 
 .home-card {
+  position: relative;
+  /* Own stacking context so the leaf pseudo-elements below (z-index:-1) sit
+     behind this card's text/image content but in front of whatever's behind
+     the card itself -- same technique .home-page uses for its page-level
+     clusters. */
+  isolation: isolate;
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* Subtle paper-grain texture layered over the parchment fill (cap-parchment-card
+     sets background-color; this only adds background-image so it composes
+     cleanly regardless of stylesheet load order) plus a softened, larger
+     "sticker-pop" shadow for more depth than the shared cap-shadow-pop-sm. */
+  background-color: var(--cap-color-parchment);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+  box-shadow:
+    var(--cap-shadow-pop),
+    0 8px 18px rgba(20, 24, 26, 0.14);
+}
+
+/* Per-card leaf accents (redesign round 2, item 8) -- small sprigs at the
+   bottom corners of every card, echoing the page-level clusters above at a
+   smaller scale so individual cards don't read as bare next to a busier
+   page background. Bottom-weighted per feedback; kept off the top corners
+   so they never compete with each card's title/icon. */
+.home-card::before,
+.home-card::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.home-card::before {
+  width: 85px;
+  height: 85px;
+  bottom: -16px;
+  right: -12px;
+  opacity: 0.13;
+  transform: rotate(205deg);
+}
+
+.home-card::after {
+  width: 55px;
+  height: 55px;
+  bottom: -8px;
+  left: -8px;
+  opacity: 0.1;
+  transform: rotate(140deg);
+}
+
+/* Two-line "Welcome to / [Park Name]" sign layout, Home-page only -- other
+   cap-sign-board screens stay single-line. Compound selector + parent scope
+   so this reliably beats shared.css's single-class rule regardless of CSS
+   bundle load order (see CSS specificity vs. load-order gotcha). */
+.home-page .cap-sign-board.home-sign-board {
+  line-height: 1.15;
+}
+
+.home-sign-board-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.home-sign-board-line1 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* Sized to match line1's own font-size (not the shared .cap-sign-board-icon's
+   24px, sized for single-line signs) so the house sits inline with "Welcome
+   to" instead of floating oversized beside the whole two-line block. */
+.home-sign-board-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.home-sign-board-line2 {
+  font-size: 28px;
+  font-weight: 700;
 }
 
 .home-section-title {
   font-family: var(--cap-font-display);
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--cap-color-ink);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
   margin: 0;
+}
+
+.home-today-photo {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--cap-radius-sm);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
 }
 
 .home-today-row {
@@ -86,9 +274,44 @@
 }
 
 .home-schedule-times {
-  font-size: 14px;
-  color: var(--cap-color-body-text);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0;
+}
+
+/* A tan shade a step darker than the parent .cap-parchment-card fill
+   (--cap-color-parchment, rgb(240 222 192)) -- distinct enough to read as
+   its own chip without leaving the parchment palette. */
+.home-schedule-time-chip {
+  background: #e2cba0;
+  border: 1px solid rgba(20, 24, 26, 0.15);
+  border-radius: var(--cap-radius-sm);
+  padding: 3px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cap-color-body-text);
+  white-space: nowrap;
+}
+
+/* Shared two-column layout for the Photo-of-the-Day/CTA pair and the
+   Announcements/Google-Review pair -- stacks back to one column on the same
+   640px breakpoint MapScreen/BingoScreen already use for mobile. */
+.home-side-by-side {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.home-side-by-side > .home-card {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .home-side-by-side {
+    flex-direction: column;
+  }
 }
 
 .home-photo-empty {
@@ -117,6 +340,43 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--cap-color-sunset-orange-deep);
+}
+
+.home-photo-cta-card {
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.home-photo-cta-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--cap-color-header-green);
+}
+
+.home-cta-text {
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}
+
+.home-page .home-photo-cta-btn {
+  align-self: flex-start;
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 9px 18px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.home-page .home-photo-cta-btn:hover {
+  background: var(--cap-color-sunset-orange-deep);
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
 }
 
 .home-announcements-list {

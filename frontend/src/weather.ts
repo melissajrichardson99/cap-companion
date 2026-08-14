@@ -4,7 +4,7 @@
 // hits a public third-party host directly.
 
 export interface CurrentWeather {
-  temperatureF: number
+  temperatureC: number
   description: string
   emoji: string
 }
@@ -26,15 +26,16 @@ function describeWeatherCode(code: number): { description: string; emoji: string
 }
 
 export async function fetchCurrentWeather(latitude: number, longitude: number): Promise<CurrentWeather> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&temperature_unit=fahrenheit&timezone=auto`
+  // Park is in Canada -- Celsius, not Open-Meteo's imperial default.
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&temperature_unit=celsius&timezone=auto`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Open-Meteo request failed: ${res.status}`)
   const data = await res.json()
-  const temperatureF = data?.current?.temperature_2m
+  const temperatureC = data?.current?.temperature_2m
   const code = data?.current?.weather_code
-  if (typeof temperatureF !== 'number' || typeof code !== 'number') {
+  if (typeof temperatureC !== 'number' || typeof code !== 'number') {
     throw new Error('Open-Meteo response missing current weather fields')
   }
   const { description, emoji } = describeWeatherCode(code)
-  return { temperatureF, description, emoji }
+  return { temperatureC, description, emoji }
 }

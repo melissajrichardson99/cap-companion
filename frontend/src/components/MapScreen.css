@@ -22,6 +22,49 @@
      shared token instead of repeating the hex, now that the token itself is
      this color, so the two can't drift apart again. */
   background-color: var(--cap-color-page-bg);
+  position: relative;
+  isolation: isolate;
+}
+
+/* Bottom-weighted leaf accents (visual language rollout) -- same SVG/
+   technique as HomePage.css's page-level clusters. Map is an open-content
+   screen so it gets the fuller two-cluster treatment. */
+.map-screen::before,
+.map-screen::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.map-screen::before {
+  width: 210px;
+  height: 210px;
+  top: 70px;
+  right: -35px;
+  opacity: 0.14;
+  transform: rotate(20deg);
+}
+
+.map-screen::after {
+  width: 210px;
+  height: 210px;
+  bottom: 30px;
+  left: -40px;
+  opacity: 0.14;
+  transform: rotate(-140deg);
+}
+
+@media (max-width: 640px) {
+  .map-screen::before,
+  .map-screen::after {
+    width: 130px;
+    height: 130px;
+    opacity: 0.1;
+  }
 }
 
 .map-loading,
@@ -287,11 +330,12 @@
   }
 }
 
+/* Visual language rollout: same treatment as .cap-section-title (shared.css) */
 .map-unplaced-heading {
   font-family: var(--cap-font-display);
-  font-weight: 600;
-  font-size: 20px;
-  color: var(--cap-color-ink);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--cap-color-header-green);
   margin: 0 0 var(--cap-space-3);
 }
 
@@ -442,10 +486,12 @@
   color: var(--cap-color-ink);
 }
 
+/* Visual language rollout: same treatment as .cap-section-title (shared.css) */
 .map-legend-header-title {
   font-family: var(--cap-font-display);
-  font-weight: 600;
-  font-size: 18px;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--cap-color-header-green);
 }
 
 .map-legend-header-count {

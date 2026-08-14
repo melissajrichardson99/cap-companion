@@ -375,7 +375,14 @@ function App() {
       </header>
 
       <main className="app-main">
-        {showHome && <HomePage />}
+        {showHome && (
+          <HomePage
+            onBrowsePhotos={() => {
+              setShowHome(false)
+              setActiveTab('photos')
+            }}
+          />
+        )}
         {!showHome && activeTab === 'map' && (
           <MapScreen nodes={nodes} error={nodesError} onReload={reloadNodes} onVisitResult={handleVisitResult} />
         )}

@@ -2,12 +2,29 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
-import { ANIMAL_SHOW_TIMES, ANNOUNCEMENTS, PARK_HOURS_TEXT, TRACTOR_RIDE_TIMES } from '../src/homePageContent'
+import {
+  ANIMAL_SHOW_TIMES,
+  ANNOUNCEMENTS,
+  PARK_HOURS_TEXT,
+  TRACTOR_RIDE_TIMES_EAST,
+  TRACTOR_RIDE_TIMES_WEST,
+} from '../src/homePageContent'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
 
 const HOME_HEADING = /Welcome to Cobb's Adventure Park/
+
+// Schedule times render as individual chips (not a single joined string), so
+// assertions locate a block by its heading and check its chips' texts as an
+// array -- exact per-chip match, since (now that West's edge times are
+// trimmed) West's hourly chips fully overlap Animal Shows' as substrings.
+function scheduleChips(page: Page, headingSubstring: string) {
+  return page
+    .locator('.home-schedule-block')
+    .filter({ has: page.locator('.home-schedule-heading', { hasText: headingSubstring }) })
+    .locator('.home-schedule-time-chip')
+}
 
 // The Favorite Photo tab lives inside the guest nav's dropdown panel, which
 // starts closed on every fresh page load -- same gotcha as favorite-photo.spec.ts.
@@ -50,8 +67,9 @@ test('root route lands on Home with schedule, hours, and announcements from conf
   await page.goto('/')
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
   await expect(page.getByText(PARK_HOURS_TEXT)).toBeVisible()
-  await expect(page.getByText(ANIMAL_SHOW_TIMES.join('  •  '))).toBeVisible()
-  await expect(page.getByText(TRACTOR_RIDE_TIMES.join('  •  '))).toBeVisible()
+  await expect(scheduleChips(page, 'Animal Shows')).toHaveText(ANIMAL_SHOW_TIMES)
+  await expect(scheduleChips(page, 'Tractor Rides — West')).toHaveText(TRACTOR_RIDE_TIMES_WEST)
+  await expect(scheduleChips(page, 'Tractor Rides — East')).toHaveText(TRACTOR_RIDE_TIMES_EAST)
   for (const announcement of ANNOUNCEMENTS) {
     await expect(page.getByText(announcement.text)).toBeVisible()
   }
@@ -70,7 +88,7 @@ test('weather fetch failure degrades gracefully without blocking the rest of the
   // The rest of the page still rendered despite the blocked weather call.
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
   await expect(page.getByText(PARK_HOURS_TEXT)).toBeVisible()
-  await expect(page.getByText(ANIMAL_SHOW_TIMES.join('  •  '))).toBeVisible()
+  await expect(scheduleChips(page, 'Animal Shows')).toHaveText(ANIMAL_SHOW_TIMES)
 })
 
 test('review card CTA opens the Google review link in a new tab without navigating away', async ({ page, context }) => {

@@ -2,19 +2,29 @@
 // UI/DB table by design -- Melissa edits these values directly whenever the
 // schedule, hours, or announcements change.
 
+// Single named constant for the "Today at Cobb's" card photo so swapping in
+// a real park photo later is trivial -- either replace the file at this
+// public/ path in place, or point this string at a new one. A plain public/
+// path (not a src/assets ES import) deliberately, since this file is also
+// imported directly by e2e specs under Node/Playwright, which doesn't share
+// Vite's asset-import pipeline.
+export const TODAY_CARD_PHOTO_SRC = '/today-photo-placeholder.svg'
+
 export const ANIMAL_SHOW_TIMES: string[] = ['12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM']
 
-export const TRACTOR_RIDE_TIMES: string[] = [
+// Tractor Rides run from two separate locations (Home Page redesign): West
+// departs on the hour, East on the half hour, both spanning the park's
+// operating hours below (Wed-Sun, 11 AM - 5 PM) rather than a hardcoded
+// guess. West deliberately excludes the 11 AM/5 PM edge times (opening/
+// closing hour) -- interior on-the-hour departures only.
+export const TRACTOR_RIDE_TIMES_WEST: string[] = ['12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM']
+
+export const TRACTOR_RIDE_TIMES_EAST: string[] = [
   '11:30 AM',
-  '12:00 PM',
   '12:30 PM',
-  '1:00 PM',
   '1:30 PM',
-  '2:00 PM',
   '2:30 PM',
-  '3:00 PM',
   '3:30 PM',
-  '4:00 PM',
   '4:30 PM',
 ]
 
