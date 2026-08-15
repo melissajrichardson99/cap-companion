@@ -35,6 +35,31 @@ const WING_COLOR := Color(0.85, 0.92, 0.75, 0.75)
 const FLASH_COLOR := Color(1.0, 0.95, 0.4)
 const BACKGROUND_COLOR := Color(0.11, 0.16, 0.1)
 
+# --- Layout rects (design canvas is 400x600, see project.godot). Purely
+# cosmetic - mirrors card_flip_pairs/mini_snake's SIGN_RECT-style layout
+# consts. PLAY_TOP/PLAY_BOTTOM above stay untouched since gameplay (spawn
+# ranges, off-screen culling) is anchored to them; the sign plank fits in
+# the 0..PLAY_TOP strip that already existed for TopBar.
+const SIGN_RECT := Rect2(4, 4, 392, 56)
+const STAT_PILL_RECT := Rect2(14, 14, 150, 36)
+const GAMEOVER_OUTER_RECT := Rect2(30, 195, 340, 250)
+const GAMEOVER_INNER_RECT := Rect2(44, 209, 312, 222)
+
+# --- Brand palette. Mirrors frontend/src/index.css's --cap-* tokens so this
+# game's chrome reads as the same parchment/wood UI system as the rest of
+# the app instead of a one-off style.
+const COLOR_OUTLINE := Color("#14181a")
+const COLOR_PARCHMENT := Color("#f0decc")
+const COLOR_PAGE_BG := Color("#e8d9bb")
+const COLOR_WOOD_LIGHT := Color("#a9773f")
+const COLOR_WOOD_MID := Color("#8a5a2f")
+const COLOR_WOOD_DARK := Color("#6e4523")
+const COLOR_INK := Color("#1e2b2e")
+const COLOR_HEADER_GREEN := Color("#144f05")
+const COLOR_ADVENTURE_GREEN := Color("#3b7801")
+const COLOR_SUNSET_ORANGE := Color("#f38630")
+const COLOR_SUNSET_ORANGE_DEEP := Color("#bc6825")
+
 @onready var spawn_timer: Timer = $SpawnTimer
 @onready var time_label: Label = $UI/TopBar/TimeLabel
 @onready var catch_label: Label = $UI/TopBar/CatchLabel
@@ -66,6 +91,7 @@ var round_token: int = 0
 
 func _ready() -> void:
 	randomize()
+	_style_ui()
 	spawn_timer.timeout.connect(_on_spawn_timer_timeout)
 	restart_button.pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
@@ -233,6 +259,12 @@ func _end_game(won: bool) -> void:
 		result_label.text = "Time's Up!"
 	score_result_label.text = "Bugs caught: %d/%d" % [catch_count, TARGET_CATCHES]
 	game_over_layer.visible = true
+	# _end_game can be reached either from _process (which already queues a
+	# redraw most frames) or directly from swipe input handling, which never
+	# touches queue_redraw itself - force one here so the game-over wood
+	# panel/parchment pill (painted in _draw, gated on game_over_layer.visible)
+	# actually appears the moment the round ends either way.
+	queue_redraw()
 	_notify_host_complete()
 
 func _on_exit_pressed() -> void:
@@ -254,9 +286,109 @@ func _update_labels() -> void:
 	catch_label.text = "Caught: %d/%d" % [catch_count, TARGET_CATCHES]
 
 func _draw() -> void:
+	_draw_page_bg()
 	draw_rect(Rect2(Vector2(0, PLAY_TOP), Vector2(VIEWPORT_WIDTH, PLAY_BOTTOM - PLAY_TOP)), BACKGROUND_COLOR, true)
 	for bug in bugs:
 		_draw_bug(bug)
+	_draw_sign_plank()
+	if game_over_layer.visible:
+		_draw_game_over_panel()
+
+func _draw_page_bg() -> void:
+	var vp := get_viewport_rect().size
+	draw_rect(Rect2(Vector2.ZERO, vp), COLOR_PAGE_BG, true)
+
+func _draw_sign_plank() -> void:
+	_draw_wood_panel(SIGN_RECT, 12.0)
+	_draw_parchment_pill(STAT_PILL_RECT, 10.0)
+
+func _draw_game_over_panel() -> void:
+	_draw_wood_panel(GAMEOVER_OUTER_RECT, 18.0)
+	_draw_parchment_pill(GAMEOVER_INNER_RECT, 14.0)
+
+# --- Shared panel drawing helpers (verbatim from card_flip_pairs/Main.gd's
+# convention, adjusted only in the rects passed to them). -------------------
+
+func _draw_wood_panel(rect: Rect2, radius: float) -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = COLOR_WOOD_MID
+	sb.set_corner_radius_all(int(radius))
+	sb.border_width_top = 3
+	sb.border_width_bottom = 3
+	sb.border_width_left = 3
+	sb.border_width_right = 3
+	sb.border_color = COLOR_OUTLINE
+	# Hard "pop" shadow (no blur), matching --cap-shadow-pop's flat offset.
+	var shadow_sb := StyleBoxFlat.new()
+	shadow_sb.bg_color = COLOR_OUTLINE
+	shadow_sb.set_corner_radius_all(int(radius))
+	draw_style_box(shadow_sb, Rect2(rect.position + Vector2(3, 3), rect.size))
+	draw_style_box(sb, rect)
+	# Faint top highlight band to fake the light-to-dark wood gradient
+	# without needing a texture resource.
+	var highlight := Rect2(rect.position + Vector2(4, 4), Vector2(rect.size.x - 8, rect.size.y * 0.4))
+	var hl_sb := StyleBoxFlat.new()
+	hl_sb.bg_color = Color(COLOR_WOOD_LIGHT.r, COLOR_WOOD_LIGHT.g, COLOR_WOOD_LIGHT.b, 0.5)
+	hl_sb.corner_radius_top_left = int(radius) - 2
+	hl_sb.corner_radius_top_right = int(radius) - 2
+	draw_style_box(hl_sb, highlight)
+
+func _draw_parchment_pill(rect: Rect2, radius: float = 12.0) -> void:
+	var shadow_sb := StyleBoxFlat.new()
+	shadow_sb.bg_color = COLOR_OUTLINE
+	shadow_sb.set_corner_radius_all(int(radius))
+	draw_style_box(shadow_sb, Rect2(rect.position + Vector2(2, 2), rect.size))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = COLOR_PARCHMENT
+	sb.set_corner_radius_all(int(radius))
+	sb.border_width_top = 2
+	sb.border_width_bottom = 2
+	sb.border_width_left = 2
+	sb.border_width_right = 2
+	sb.border_color = COLOR_OUTLINE
+	draw_style_box(sb, rect)
+
+# ---------------------------------------------------------------------------
+# UI node styling - applied once in _ready() to real Control/Button nodes
+# (which need to stay real nodes for input + text layout) rather than
+# folded into _draw().
+# ---------------------------------------------------------------------------
+
+func _style_ui() -> void:
+	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
+	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
+	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
+	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
+	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
+	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
+
+	time_label.add_theme_color_override("font_color", COLOR_INK)
+	catch_label.add_theme_color_override("font_color", COLOR_INK)
+	status_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	status_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	status_label.add_theme_constant_override("shadow_offset_x", 1)
+	status_label.add_theme_constant_override("shadow_offset_y", 1)
+
+	result_label.add_theme_color_override("font_color", COLOR_INK)
+	score_result_label.add_theme_color_override("font_color", COLOR_INK)
+
+func _style_round_button(btn: Button, bg: Color, border: Color, radius: int) -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = bg
+	normal.set_corner_radius_all(radius)
+	normal.set_border_width_all(2)
+	normal.border_color = border
+	var hover := normal.duplicate()
+	hover.bg_color = bg.lightened(0.1)
+	var pressed := normal.duplicate()
+	pressed.bg_color = bg.darkened(0.15)
+	btn.add_theme_stylebox_override("normal", normal)
+	btn.add_theme_stylebox_override("hover", hover)
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("focus", normal)
+	btn.add_theme_color_override("font_color", Color(1, 1, 1))
+	btn.add_theme_color_override("font_hover_color", Color(1, 1, 1))
+	btn.add_theme_color_override("font_pressed_color", Color(1, 1, 1))
 
 func _draw_bug(bug: Dictionary) -> void:
 	var pos: Vector2 = bug["pos"]

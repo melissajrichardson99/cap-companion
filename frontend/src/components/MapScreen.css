@@ -28,7 +28,14 @@
 
 /* Bottom-weighted leaf accents (visual language rollout) -- same SVG/
    technique as HomePage.css's page-level clusters. Map is an open-content
-   screen so it gets the fuller two-cluster treatment. */
+   screen so it gets the fuller two-cluster treatment.
+   Offsets are non-negative (unlike other screens' corner accents) because
+   .map-screen's own negative margins (above) already push this screen's box
+   flush to #app-root's edges -- there's no padding gutter left for a
+   negative offset to hang into, so one here lands directly on #app-root's
+   overflow:hidden boundary and gets sliced by a hard vertical/horizontal
+   line instead of just quietly clipping an unnoticeable sliver. Keeping the
+   whole leaf shape inside .map-screen's own box avoids that cut. */
 .map-screen::before,
 .map-screen::after {
   content: '';
@@ -44,7 +51,7 @@
   width: 250px;
   height: 250px;
   top: 60px;
-  right: -40px;
+  right: 12px;
   opacity: 0.2;
   transform: rotate(20deg);
 }
@@ -53,7 +60,7 @@
   width: 250px;
   height: 250px;
   bottom: 20px;
-  left: -45px;
+  left: 12px;
   opacity: 0.2;
   transform: rotate(-140deg);
 }
@@ -124,12 +131,33 @@
     inset 0 -3px 6px rgba(0, 0, 0, 0.35);
 }
 
-.map-image-wrap {
+/* Clips + rounds the zoomed/panned content -- kept separate from
+   .map-image-wrap (below) because that element carries the pinch-zoom
+   transform: transforming an overflow:hidden box scales its own clip region
+   along with its content, which is wrong for a viewport that's supposed to
+   stay a fixed window onto zoomed/panned content underneath it. */
+.map-zoom-viewport {
   position: relative;
   width: 100%;
   border-radius: clamp(10px, 2.4vw, 20px);
   overflow: hidden;
   box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.15);
+  /* Pinch/pan is handled entirely by our own pointer-event math (MapScreen.tsx)
+     -- touch-action:none stops the browser's native page-pinch-zoom/scroll
+     from fighting it inside this element, while the rest of the page keeps
+     normal scroll/zoom untouched. */
+  touch-action: none;
+  user-select: none;
+}
+
+/* Pinch-zoom target: MapScreen.tsx sets this element's `transform` directly
+   (translate + scale). Pins are positioned via % of THIS box (see .map-pin
+   below), so scaling/panning it scales and repositions the image and every
+   pin together automatically -- no per-pin recalculation needed. */
+.map-image-wrap {
+  position: relative;
+  width: 100%;
+  transform-origin: 0 0;
 }
 
 .map-image {

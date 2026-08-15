@@ -75,6 +75,12 @@ var obstacles: Array = []
 
 var player_lane: int = 1
 var player_x: float = 0.0
+# Tracks which way the alpaca last actively moved so _draw_player can mirror
+# the sprite to face its direction of travel. Only updated while player_x is
+# still catching up to the target lane's x (see _physics_process) - holds its
+# last value once movement completes so the sprite doesn't flip back to a
+# "default" facing and look like idle jitter while stationary.
+var facing_dir: int = 1
 var elapsed_time: float = 0.0
 var dodged_count: int = 0
 var is_running: bool = false
@@ -141,6 +147,8 @@ func _physics_process(delta: float) -> void:
 		return
 	elapsed_time += delta
 	var target_x: float = _lane_x(player_lane)
+	if not is_equal_approx(player_x, target_x):
+		facing_dir = 1 if target_x > player_x else -1
 	player_x = move_toward(player_x, target_x, LANE_MOVE_SPEED * delta)
 
 	var player_rect := Rect2(Vector2(player_x - PLAYER_SIZE.x / 2.0, PLAYER_Y - PLAYER_SIZE.y / 2.0), PLAYER_SIZE)
@@ -328,7 +336,23 @@ func _draw_player() -> void:
 	var h := box.size.y + 46.0
 	var w := h * tex_size.x / tex_size.y
 	var rect := Rect2(Vector2(body_center.x - w / 2.0, box.position.y + box.size.y - h), Vector2(w, h))
-	draw_texture_rect(ALPACA_TEXTURE, rect, false)
+	# ALPACA_TEXTURE's native art faces LEFT (verified against a real render
+	# of the raw PNG: front legs/chest sit left-of-center, the fluffy rump +
+	# back legs trail off to the right) - so the unflipped draw already
+	# matches leftward travel, and only rightward travel needs the mirror.
+	if facing_dir > 0:
+		# Mirror via a canvas transform around the sprite's own horizontal
+		# center, not a negative-size Rect2 - verified against real
+		# screenshots that neither a negative-width *destination* rect passed
+		# to draw_texture_rect nor a negative-width *source* rect passed to
+		# draw_texture_rect_region actually renders a flipped (or any) image
+		# in this Web export; draw_set_transform with scale.x = -1 does.
+		draw_set_transform(Vector2(body_center.x, 0.0), 0.0, Vector2(-1.0, 1.0))
+		var local_rect := Rect2(Vector2(rect.position.x - body_center.x, rect.position.y), rect.size)
+		draw_texture_rect(ALPACA_TEXTURE, local_rect, false)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	else:
+		draw_texture_rect(ALPACA_TEXTURE, rect, false)
 
 # --- Shared panel drawing helpers -------------------------------------------
 

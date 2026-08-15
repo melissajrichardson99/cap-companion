@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { MapNode, VisitNodeResponse } from '../api'
 import { NodeDetailPopup } from './NodeDetailPopup'
 import { MapPinIcon } from './NavIcons'
@@ -29,6 +29,36 @@ const MAX_NUDGE_PX = 28
 interface Nudge {
   dx: number
   dy: number
+}
+
+const MIN_ZOOM = 1
+const MAX_ZOOM = 3
+// Below this, a pointer-down-to-up gesture counts as a tap (lets the pin's
+// own onClick fire); at or above it, the gesture was a real drag/pinch and
+// the resulting click needs to be suppressed so panning the map never
+// accidentally opens whatever pin happened to be under the finger.
+const DRAG_THRESHOLD_PX = 4
+// How long after a drag/pinch gesture ends to keep suppressing the
+// synthetic click some browsers fire on pointerup -- just long enough to
+// cover that click, not so long a fast deliberate tap right after gets
+// eaten.
+const CLICK_SUPPRESS_MS = 300
+
+interface GestureState {
+  pointers: Map<number, { x: number; y: number }>
+  pinchStartDist: number
+  pinchStartScale: number
+  panStart: { x: number; y: number } | null
+  pointerStart: { x: number; y: number } | null
+  moved: boolean
+}
+
+function clampPan(x: number, y: number, scale: number, size: { width: number; height: number }): { x: number; y: number } {
+  // At scale 1 this collapses minX/minY to 0, so pan is forced to (0, 0) --
+  // panning only ever does something once actually zoomed in.
+  const minX = size.width * (1 - scale)
+  const minY = size.height * (1 - scale)
+  return { x: Math.min(0, Math.max(minX, x)), y: Math.min(0, Math.max(minY, y)) }
 }
 
 // Pure pixel-space repulsion pass: pushes any pin pair closer than
@@ -202,10 +232,132 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null)
   const [openLegendCategories, setOpenLegendCategories] = useState<Set<MapNode['category']>>(new Set())
   const imageWrapRef = useRef<HTMLDivElement | null>(null)
+  const viewportRef = useRef<HTMLDivElement | null>(null)
   const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null)
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches
   )
+
+  // Pinch-to-zoom/pan. scale/pan transform the whole .map-image-wrap (image
+  // + pins together, since pins are its children) rather than tracking each
+  // pin's zoomed position separately -- one transform, everything scales and
+  // repositions in lockstep automatically.
+  //
+  // zoomRef is the authoritative value gesture math reads/writes; zoom
+  // (state) only exists to trigger a re-render for the visual `transform`.
+  // A rapid burst of pointer events (a fast real pinch, or several dispatched
+  // synchronously in one tick) can fire multiple handler calls before React
+  // re-renders in between -- reading `zoom` (state) inside those handlers
+  // would close over a stale value from before the burst, since setState
+  // updates don't apply until the next render. The ref is updated
+  // synchronously on every event, so each handler always sees the latest
+  // value regardless of how many events land before React catches up.
+  const zoomRef = useRef({ scale: MIN_ZOOM, pan: { x: 0, y: 0 } })
+  const [zoom, setZoomState] = useState(zoomRef.current)
+  const setZoom = (next: { scale: number; pan: { x: number; y: number } }) => {
+    zoomRef.current = next
+    setZoomState(next)
+  }
+  const gestureRef = useRef<GestureState>({
+    pointers: new Map(),
+    pinchStartDist: 0,
+    pinchStartScale: MIN_ZOOM,
+    panStart: null,
+    pointerStart: null,
+    moved: false,
+  })
+  // Sidesteps the synthetic click some browsers fire on pointerup even after
+  // real pointer movement -- checked in a capture-phase click handler so a
+  // drag/pinch gesture that ends on top of a pin never opens that pin.
+  const suppressClickUntilRef = useRef(0)
+
+  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const g = gestureRef.current
+    // Best-effort: capture keeps receiving move/up events even if the finger
+    // slides off this element. Wrapped because a throw here (e.g. no active
+    // pointer session for the given id) would otherwise abort the rest of
+    // this handler before the pointer ever gets registered below, silently
+    // breaking gesture tracking for that finger.
+    try {
+      ;(e.target as Element).setPointerCapture?.(e.pointerId)
+    } catch {
+      // Gesture tracking below still works without capture; it just won't
+      // keep tracking a finger that slides off this element entirely.
+    }
+    g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (g.pointers.size === 1) {
+      g.pointerStart = { x: e.clientX, y: e.clientY }
+      g.panStart = { ...zoomRef.current.pan }
+      g.moved = false
+    } else if (g.pointers.size === 2) {
+      const pts = Array.from(g.pointers.values())
+      g.pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      g.pinchStartScale = zoomRef.current.scale
+      g.moved = true
+    }
+  }
+
+  const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const g = gestureRef.current
+    if (!g.pointers.has(e.pointerId)) return
+    g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (!containerSize) return
+    const viewportEl = viewportRef.current
+    if (!viewportEl) return
+
+    if (g.pointers.size === 2) {
+      e.preventDefault()
+      const rect = viewportEl.getBoundingClientRect()
+      const pts = Array.from(g.pointers.values())
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      const midX = (pts[0].x + pts[1].x) / 2 - rect.left
+      const midY = (pts[0].y + pts[1].y) / 2 - rect.top
+      const rawScale = g.pinchStartScale * (g.pinchStartDist > 0 ? dist / g.pinchStartDist : 1)
+      const newScale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, rawScale))
+      // Keep the point under the pinch midpoint fixed as scale changes,
+      // rather than always zooming from a corner/center regardless of where
+      // the user's fingers actually are.
+      const current = zoomRef.current
+      const contentX = (midX - current.pan.x) / current.scale
+      const contentY = (midY - current.pan.y) / current.scale
+      const newPan = clampPan(midX - contentX * newScale, midY - contentY * newScale, newScale, containerSize)
+      setZoom({ scale: newScale, pan: newPan })
+    } else if (g.pointers.size === 1 && g.panStart && g.pointerStart) {
+      e.preventDefault()
+      const dx = e.clientX - g.pointerStart.x
+      const dy = e.clientY - g.pointerStart.y
+      if (Math.abs(dx) > DRAG_THRESHOLD_PX || Math.abs(dy) > DRAG_THRESHOLD_PX) g.moved = true
+      const current = zoomRef.current
+      setZoom({
+        scale: current.scale,
+        pan: clampPan(g.panStart.x + dx, g.panStart.y + dy, current.scale, containerSize),
+      })
+    }
+  }
+
+  const handlePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const g = gestureRef.current
+    g.pointers.delete(e.pointerId)
+    if (g.pointers.size === 1) {
+      // Dropped from a pinch back to a single finger -- restart the pan
+      // baseline from here so the image doesn't jump.
+      const [, remaining] = Array.from(g.pointers.entries())[0]
+      g.pointerStart = { x: remaining.x, y: remaining.y }
+      g.panStart = { ...zoomRef.current.pan }
+    }
+    if (g.pointers.size === 0) {
+      if (g.moved) suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS
+      g.panStart = null
+      g.pointerStart = null
+    }
+  }
+
+  const handleClickCapture = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (Date.now() < suppressClickUntilRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
 
   // Tracks the mobile-shrink breakpoint (see MapScreen.css) so the declutter
   // pass below only runs where its tuning (MIN_PIN_GAP_PX etc.) actually
@@ -303,44 +455,58 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
 
       <div className="map-scene">
         <div className="map-frame">
-          <div className="map-image-wrap" ref={imageWrapRef}>
-            <img src="/park-map.png" alt="Cobb's Adventure Park map" className="map-image" />
-            {positioned.map((node) => {
-              const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
-              const stateNote = node.state !== 'not_visited' ? `, ${node.state.replace('_', ' ')}` : ''
-              const nudge = nudges.get(node.id)
-              const pinStyle = {
-                left: `${node.x_pct}%`,
-                top: `${node.y_pct}%`,
-                '--nudge-x': `${nudge?.dx ?? 0}px`,
-                '--nudge-y': `${nudge?.dy ?? 0}px`,
-              } as CSSProperties
-              return (
-                <button
-                  type="button"
-                  key={node.id}
-                  className={`map-pin map-pin-${node.category} map-pin-${node.state}`}
-                  style={pinStyle}
-                  onClick={() => setSelectedNode(node)}
-                  aria-label={`${node.name} (${CATEGORY_LABEL[node.category]}${stateNote})`}
-                >
-                  {uncompletedCount > 0 && (
-                    <span className="map-pin-tile-badge" aria-hidden="true">
-                      {uncompletedCount}
+          <div
+            className="map-zoom-viewport"
+            ref={viewportRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onClickCapture={handleClickCapture}
+          >
+            <div
+              className="map-image-wrap"
+              ref={imageWrapRef}
+              style={{ transform: `translate(${zoom.pan.x}px, ${zoom.pan.y}px) scale(${zoom.scale})` }}
+            >
+              <img src="/park-map.png" alt="Cobb's Adventure Park map" className="map-image" />
+              {positioned.map((node) => {
+                const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
+                const stateNote = node.state !== 'not_visited' ? `, ${node.state.replace('_', ' ')}` : ''
+                const nudge = nudges.get(node.id)
+                const pinStyle = {
+                  left: `${node.x_pct}%`,
+                  top: `${node.y_pct}%`,
+                  '--nudge-x': `${nudge?.dx ?? 0}px`,
+                  '--nudge-y': `${nudge?.dy ?? 0}px`,
+                } as CSSProperties
+                return (
+                  <button
+                    type="button"
+                    key={node.id}
+                    className={`map-pin map-pin-${node.category} map-pin-${node.state}`}
+                    style={pinStyle}
+                    onClick={() => setSelectedNode(node)}
+                    aria-label={`${node.name} (${CATEGORY_LABEL[node.category]}${stateNote})`}
+                  >
+                    {uncompletedCount > 0 && (
+                      <span className="map-pin-tile-badge" aria-hidden="true">
+                        {uncompletedCount}
+                      </span>
+                    )}
+                    <svg className="map-pin-shape" viewBox="0 0 30 30" width="30" height="30" aria-hidden="true">
+                      <PinShapeVector category={node.category} />
+                      <text className="map-pin-shape-text" x="15" y="15" textAnchor="middle" dominantBaseline="central">
+                        {pinShapeContent(node)}
+                      </text>
+                    </svg>
+                    <span className="map-pin-label" aria-hidden="true">
+                      {node.name}
                     </span>
-                  )}
-                  <svg className="map-pin-shape" viewBox="0 0 30 30" width="30" height="30" aria-hidden="true">
-                    <PinShapeVector category={node.category} />
-                    <text className="map-pin-shape-text" x="15" y="15" textAnchor="middle" dominantBaseline="central">
-                      {pinShapeContent(node)}
-                    </text>
-                  </svg>
-                  <span className="map-pin-label" aria-hidden="true">
-                    {node.name}
-                  </span>
-                </button>
-              )
-            })}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>

@@ -34,10 +34,6 @@ export interface AnimalNugget {
 export interface AnimalContent {
   slug: string
   name: string
-  // Unicode has no dedicated wallaby glyph, so Kangaroo and Wallaby
-  // deliberately share 🦘 here -- the hero photo + name are the real
-  // per-animal identifiers, this emoji is just a quick visual accent.
-  emoji: string
   photoCandidates: string[]
   aboutHeading: string
   description: string
@@ -69,7 +65,6 @@ function nuggetImage(slug: string, cardIndex: number): string[] {
 interface AnimalDefinition {
   name: string
   slug: string
-  emoji: string
   aboutHeading: string
   description: string
   facts: AnimalFact[]
@@ -80,7 +75,6 @@ function buildAnimal(def: AnimalDefinition): AnimalContent {
   return {
     slug: def.slug,
     name: def.name,
-    emoji: def.emoji,
     photoCandidates: imageCandidates(def.slug, 1),
     aboutHeading: def.aboutHeading,
     description: def.description,
@@ -98,7 +92,6 @@ const ANIMAL_DEFINITIONS: AnimalDefinition[] = [
   {
     name: 'Capybara',
     slug: 'capybara',
-    emoji: '🦫',
     aboutHeading: "The World's Largest Rodent",
     description:
       'Capybaras are the largest living rodents in the world. They are semi-aquatic animals native to Central and South America, where they live near rivers, ponds, marshes, and other bodies of water. Capybaras are excellent swimmers and spend plenty of time in the water to stay cool and escape danger. They\'re also highly social and usually live in groups.',
@@ -140,7 +133,6 @@ const ANIMAL_DEFINITIONS: AnimalDefinition[] = [
   {
     name: 'Kangaroo',
     slug: 'kangaroo',
-    emoji: '🦘',
     aboutHeading: "Australia's Famous Hoppers",
     description:
       'Kangaroos are large Australian marsupials famous for their powerful hind legs, long tails, and incredible ability to hop. Female kangaroos carry their young, called joeys, in a pouch while they continue developing. Kangaroos are herbivores and spend much of their time grazing on grasses and other plants.',
@@ -182,7 +174,6 @@ const ANIMAL_DEFINITIONS: AnimalDefinition[] = [
   {
     name: 'Alpaca',
     slug: 'alpaca',
-    emoji: '🦙',
     aboutHeading: 'The Fluffy Camelid',
     description:
       'Alpacas are domesticated relatives of camels that originated in the Andes of South America. They were bred by people for thousands of years for their soft, valuable fleece. Alpacas are social herd animals and spend much of their day grazing. Despite their fluffy appearance, they\'re surprisingly hardy animals adapted to life in mountainous environments.',
@@ -224,7 +215,6 @@ const ANIMAL_DEFINITIONS: AnimalDefinition[] = [
   {
     name: 'Emu',
     slug: 'emu',
-    emoji: '🦤',
     aboutHeading: "Australia's Giant Runner",
     description:
       "The emu is Australia's largest bird — and one of the world's largest birds. But there's something it can't do: fly! Instead, emus have long, powerful legs that allow them to run quickly across Australia's varied landscapes. They have three toes on each foot and can travel long distances in search of food.",
@@ -266,7 +256,6 @@ const ANIMAL_DEFINITIONS: AnimalDefinition[] = [
   {
     name: 'Wallaby',
     slug: 'wallaby',
-    emoji: '🦘',
     aboutHeading: 'The Smaller Aussie Hopper',
     description:
       "Wallabies are marsupials from Australia and nearby islands. They're close relatives of kangaroos, but wallabies are generally smaller. Like kangaroos, female wallabies carry their young in a pouch. Wallabies are herbivores and use their powerful hind legs to hop through their environment.",
@@ -308,7 +297,6 @@ const ANIMAL_DEFINITIONS: AnimalDefinition[] = [
   {
     name: 'Goat',
     slug: 'goat',
-    emoji: '🐐',
     aboutHeading: 'Curious, Clever & Climbing',
     description:
       "Goats are domesticated ruminants that have lived alongside people for thousands of years. They're incredibly curious, social animals that love to investigate their surroundings. Unlike sheep and cattle, goats are excellent browsers, meaning they like reaching for leaves, shrubs, and other plants rather than simply grazing on grass.",

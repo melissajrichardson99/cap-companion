@@ -88,9 +88,6 @@ export function AnimalsScreen({ onScanQr }: AnimalsScreenProps) {
             >
               <span className="animal-card-photo">
                 <AnimalImage candidates={animal.photoCandidates} alt="" className="animal-card-photo-img" />
-                <span className="animal-card-emoji" aria-hidden="true">
-                  {animal.emoji}
-                </span>
               </span>
               <span className="animal-card-name">{animal.name}</span>
             </button>

@@ -181,9 +181,14 @@
   margin: 0;
 }
 
+/* Grid, not the previous single-column flex stack -- that laid every
+   challenge button out full-width, one per row, so a card with 3 challenges
+   (e.g. Pyramid Puzzler) took up much more vertical space than its actual
+   content needed. auto-fill lets short labels ("Standard", "Challenge 1")
+   sit 2-3 to a row instead. */
 .puzzle-challenge-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 6px;
   /* Pushes the button group to the bottom of .puzzle-card's flex column, so
      any extra height .puzzle-list's grid row-stretch (default grid
@@ -195,9 +200,8 @@
 .puzzle-challenge-btn {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  text-align: left;
+  justify-content: center;
+  text-align: center;
 }
 
 /* Compound selector (not just .puzzle-challenge-btn) so this reliably beats
@@ -210,6 +214,8 @@
 .puzzle-list .puzzle-challenge-btn {
   font-family: var(--cap-font-body);
   font-weight: 700;
+  font-size: 13px;
+  padding: 7px 10px;
   border-radius: var(--cap-radius-pill);
   border: 2px solid var(--cap-color-outline);
   background: var(--cap-color-sunset-orange);

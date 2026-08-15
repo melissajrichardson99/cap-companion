@@ -42,10 +42,16 @@
   transform: rotate(-150deg);
 }
 
+/* Fixed px (not the 8% this cluster uses on HomePage.css's much taller page)
+   -- Bingo's page is short enough that 8% of its height lands only a few
+   px above .bingo-screen::after's own box, so the two 190px/220px leaf
+   shapes overlapped and compounded their opacity into a visibly darker
+   clump. A fixed offset clear of ::after's span (bottom:-30px, up to 220px
+   tall) holds regardless of how tall this page ends up being. */
 .bingo-foliage-bottom-left-lower {
   width: 190px;
   height: 190px;
-  bottom: 8%;
+  bottom: 200px;
   left: -55px;
   opacity: 0.13;
   transform: rotate(-40deg);

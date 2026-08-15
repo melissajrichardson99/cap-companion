@@ -41,7 +41,7 @@ export function AnimalCardsScreen({ animal, onBack }: AnimalCardsScreenProps) {
         </button>
 
         <div className="animal-card-nugget cap-parchment-card">
-          <AnimalImage candidates={nugget.imageCandidates} alt="" className="animal-card-nugget-image" />
+          <AnimalImage key={index} candidates={nugget.imageCandidates} alt="" className="animal-card-nugget-image" />
           <h3 className="animal-card-nugget-title">{nugget.title}</h3>
           <p className="animal-card-nugget-text">{nugget.text}</p>
         </div>

@@ -16,32 +16,36 @@ offset_right = 400.0
 offset_bottom = 60.0
 
 [node name="TimeLabel" type="Label" parent="UI/TopBar"]
-offset_left = 8.0
-offset_top = 16.0
+offset_left = 22.0
+offset_top = 20.0
 offset_right = 90.0
 offset_bottom = 44.0
+theme_override_font_sizes/font_size = 13
 text = "Time: 30"
 
 [node name="CatchLabel" type="Label" parent="UI/TopBar"]
 offset_left = 90.0
-offset_top = 16.0
-offset_right = 210.0
+offset_top = 20.0
+offset_right = 160.0
 offset_bottom = 44.0
+theme_override_font_sizes/font_size = 13
 text = "Caught: 0/8"
 
 [node name="StatusLabel" type="Label" parent="UI/TopBar"]
-offset_left = 210.0
+offset_left = 172.0
 offset_top = 16.0
-offset_right = 354.0
-offset_bottom = 44.0
+offset_right = 348.0
+offset_bottom = 48.0
 horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 18
 text = "Ready?"
 
 [node name="ExitButton" type="Button" parent="UI/TopBar"]
-offset_left = 354.0
+offset_left = 350.0
 offset_top = 10.0
-offset_right = 400.0
-offset_bottom = 42.0
+offset_right = 388.0
+offset_bottom = 50.0
 text = "X"
 
 [node name="GameOverLayer" type="Control" parent="UI"]

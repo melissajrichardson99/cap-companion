@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { ANIMALS } from '../src/animalContent'
+import { ANIMALS, PLACEHOLDER_PHOTO_SRC } from '../src/animalContent'
 
 // Covers the "Our Animals" feature (rebranded Encyclopedia, Plan.md 2.5/5):
 // the 6-animal list + name search, the individual animal detail page's
@@ -187,6 +187,58 @@ test.describe('Our Animals', () => {
     await page.getByRole('button', { name: 'Back to animal details' }).click()
     await expect(page.getByRole('heading', { name: 'Emu', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'View Information Cards' })).toBeVisible()
+  })
+
+  test('Information Cards: repeated cycling past a missing photo never corrupts an unrelated card\'s image', async ({
+    page,
+  }) => {
+    // Regression test for a bug where AnimalImage's jpg->png->placeholder
+    // fallback `attempt` counter never reset between cards (no `key`), so
+    // once one card's image genuinely 404'd, every card cycled to
+    // afterwards -- including card 1 on wraparound -- permanently inherited
+    // that stale attempt count and rendered the placeholder forever, no
+    // matter how many times the guest cycled through. Goat's card 5 (of 6)
+    // maps to photo 5, which isn't uploaded (see the Photos-tab test above),
+    // making it a real 404 rather than a simulated one.
+    await openAnimalsTab(page)
+    await animalCard(page, 'Goat').click()
+    await page.getByRole('button', { name: 'View Information Cards' }).click()
+
+    const img = page.locator('.animal-card-nugget-image')
+    await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
+    await expect(img).toHaveAttribute('src', '/animals/goat/1.jpg')
+
+    const next = page.getByRole('button', { name: 'Next card' })
+    const prev = page.getByRole('button', { name: 'Previous card' })
+
+    // Cycle forward through 3 full loops (18 clicks) -- passes card 5's
+    // missing photo 6 times, well past the original failure mode's
+    // single-cycle blind spot.
+    for (let i = 0; i < 18; i++) {
+      await next.click()
+      const cardNum = ((i + 1) % 6) + 1
+      await expect(page.locator('.animal-cards-counter')).toHaveText(`Card ${cardNum} of 6`)
+      if (cardNum === 5) {
+        // The missing photo: falls back to the placeholder, but only for
+        // this card -- not proof of the bug by itself.
+        await expect(img).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
+      } else {
+        const photoNum = ((cardNum - 1) % 5) + 1
+        await expect(img).toHaveAttribute('src', `/animals/goat/${photoNum}.jpg`)
+      }
+    }
+
+    // The real assertion: card 1's real photo still renders after extensive
+    // forward cycling through the missing-photo card, not the placeholder.
+    await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
+    await expect(img).toHaveAttribute('src', '/animals/goat/1.jpg')
+
+    // Same check cycling backward through 2 full loops (12 clicks).
+    for (let i = 0; i < 12; i++) {
+      await prev.click()
+    }
+    await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
+    await expect(img).toHaveAttribute('src', '/animals/goat/1.jpg')
   })
 
   test('"Scan a QR Code" opens the existing scan-entry flow', async ({ page }) => {
