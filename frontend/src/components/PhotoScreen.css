@@ -7,11 +7,13 @@
   isolation: isolate;
 }
 
-/* Bottom-weighted leaf accents (visual language rollout) -- same SVG/
-   technique as HomePage.css's page-level clusters. Photo is an open-content
-   screen so it gets the fuller two-cluster treatment. */
+/* Leaf accents, same density as HomePage.css (2 corner pseudo-elements + 3
+   extra bottom-weighted clusters) -- round 4 bumped this up from the
+   lighter 2-cluster treatment earlier rounds gave this screen, to match
+   Home's level. */
 .photo-screen::before,
-.photo-screen::after {
+.photo-screen::after,
+.photo-foliage {
   content: '';
   position: absolute;
   z-index: -1;
@@ -22,29 +24,62 @@
 }
 
 .photo-screen::before {
-  width: 210px;
-  height: 210px;
-  top: 70px;
-  right: -35px;
-  opacity: 0.14;
-  transform: rotate(20deg);
+  width: 220px;
+  height: 220px;
+  top: -20px;
+  right: -40px;
+  opacity: 0.16;
+  transform: rotate(18deg);
 }
 
 .photo-screen::after {
-  width: 210px;
-  height: 210px;
-  bottom: 30px;
-  left: -40px;
-  opacity: 0.14;
-  transform: rotate(-140deg);
+  width: 220px;
+  height: 220px;
+  bottom: -30px;
+  left: -50px;
+  opacity: 0.16;
+  transform: rotate(-150deg);
+}
+
+.photo-foliage-bottom-left-lower {
+  width: 190px;
+  height: 190px;
+  bottom: 8%;
+  left: -55px;
+  opacity: 0.13;
+  transform: rotate(-40deg);
+}
+
+.photo-foliage-bottom-center {
+  width: 260px;
+  height: 190px;
+  bottom: -35px;
+  left: 50%;
+  opacity: 0.13;
+  transform: translateX(-50%) rotate(95deg);
+}
+
+.photo-foliage-bottom-right {
+  width: 220px;
+  height: 220px;
+  bottom: -25px;
+  right: -45px;
+  opacity: 0.15;
+  transform: rotate(205deg);
 }
 
 @media (max-width: 640px) {
   .photo-screen::before,
-  .photo-screen::after {
+  .photo-screen::after,
+  .photo-foliage {
     width: 130px;
     height: 130px;
-    opacity: 0.1;
+    opacity: 0.12;
+  }
+
+  .photo-foliage-bottom-center {
+    width: 190px;
+    height: 130px;
   }
 }
 
@@ -65,6 +100,43 @@
 
 .photo-submit {
   padding: 18px 16px;
+}
+
+/* Per-card leaf accents (round 4), same technique/scale as HomePage's
+   .home-card -- .cap-parchment-card already gave this screen's cards the
+   texture+shadow bump (it's the shared baseline lifted from .home-card), so
+   the leaf accents were the one piece still missing to match Home's level. */
+.photo-submit::before,
+.photo-submit::after,
+.photo-card::before,
+.photo-card::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.photo-submit::before,
+.photo-card::before {
+  width: 85px;
+  height: 85px;
+  bottom: -16px;
+  right: -12px;
+  opacity: 0.13;
+  transform: rotate(205deg);
+}
+
+.photo-submit::after,
+.photo-card::after {
+  width: 55px;
+  height: 55px;
+  bottom: -8px;
+  left: -8px;
+  opacity: 0.1;
+  transform: rotate(140deg);
 }
 
 .photo-submitted-msg {
@@ -123,16 +195,22 @@
 }
 
 .photo-card {
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
+/* Rounded directly on the image itself (not via .photo-card's overflow, as
+   before) -- clipping to a parent's overflow:hidden would also have clipped
+   this round's new corner leaf accents (.photo-card::before/::after above),
+   which need to render past the card's own box the same way every other
+   card's do. .cap-parchment-card's border is 2px, so the image (flush
+   against it, no card padding) is inset by exactly that. */
 .photo-card-image {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   display: block;
+  border-radius: calc(var(--cap-radius-md) - 2px) calc(var(--cap-radius-md) - 2px) 0 0;
 }
 
 .photo-card-footer {

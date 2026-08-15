@@ -31,6 +31,9 @@ export function ScoringScreen({ games, error, onReload, onCoinsChanged }: Scorin
 
   return (
     <div className="scoring-screen">
+      <div className="scoring-foliage scoring-foliage-bottom-left-lower" aria-hidden="true" />
+      <div className="scoring-foliage scoring-foliage-bottom-center" aria-hidden="true" />
+      <div className="scoring-foliage scoring-foliage-bottom-right" aria-hidden="true" />
       <h1 className="cap-sign-board">
         <ClipboardIcon className="cap-sign-board-icon" />
         Scoring Sheet
@@ -38,20 +41,18 @@ export function ScoringScreen({ games, error, onReload, onCoinsChanged }: Scorin
 
       <div className="scoring-game-list">
         {games.map((game) => (
-          <div className="scoring-card-frame" key={game.id}>
-            <div className="scoring-game-card cap-parchment-card">
-              <div className="scoring-game-header">
-                <span className="scoring-icon-badge" aria-hidden="true">
-                  <ClipboardIcon />
-                </span>
-                <h2 className="scoring-game-name">{game.name}</h2>
-              </div>
-              <p className="scoring-game-rules">{game.rules_text}</p>
-              <p className="scoring-game-win-condition">{game.win_condition_text}</p>
-              <button type="button" className="btn scoring-start-btn" onClick={() => setActiveGame(game)}>
-                Start Scoring
-              </button>
+          <div className="scoring-game-card cap-parchment-card" key={game.id}>
+            <div className="scoring-game-header">
+              <span className="scoring-icon-badge" aria-hidden="true">
+                <ClipboardIcon />
+              </span>
+              <h2 className="scoring-game-name">{game.name}</h2>
             </div>
+            <p className="scoring-game-rules">{game.rules_text}</p>
+            <p className="scoring-game-win-condition">{game.win_condition_text}</p>
+            <button type="button" className="btn scoring-start-btn" onClick={() => setActiveGame(game)}>
+              Start Scoring
+            </button>
           </div>
         ))}
       </div>

@@ -37,7 +37,9 @@
   font-family: var(--cap-font-body);
 }
 
-/* Small corner leaf accents (visual language rollout) */
+/* Small corner leaf accents (visual language rollout) -- offsets capped at
+   the wood frame's own 8px padding (.puzzle-modal-frame above), see
+   ContactStaffModal.css's identical comment for why. */
 .puzzle-modal-inner::before,
 .puzzle-modal-inner::after {
   content: '';
@@ -50,19 +52,19 @@
 }
 
 .puzzle-modal-inner::before {
-  width: 60px;
-  height: 60px;
-  bottom: -10px;
+  width: 75px;
+  height: 75px;
+  bottom: -8px;
   right: -8px;
-  opacity: 0.09;
+  opacity: 0.13;
   transform: rotate(205deg);
 }
 
 .puzzle-modal-inner::after {
-  width: 40px;
-  height: 40px;
-  bottom: -6px;
-  left: -6px;
+  width: 50px;
+  height: 50px;
+  bottom: -8px;
+  left: -8px;
   opacity: 0.07;
   transform: rotate(140deg);
 }

@@ -35,19 +35,19 @@
 }
 
 /* Wooden sign-board screen title + parchment content card -- shared surface
-   pair for screens on the new cap-* brand pass (currently Bingo and
-   Puzzles). No leaf/vine (or any) decoration on the sign by design -- a
-   flat plank keeps it legible at any title length instead of fighting fixed
-   decorative art around variable text, same reasoning MapScreen's
-   .map-scene comment gives for dropping its illustrated scene image. */
+   pair used as every screen's page title. No leaf/vine (or any) decoration
+   on the sign by design -- a flat plank keeps it legible at any title length
+   instead of fighting fixed decorative art around variable text, same
+   reasoning MapScreen's .map-scene comment gives for dropping its
+   illustrated scene image. */
 .cap-sign-board {
   align-self: center;
   margin: 0 0 var(--cap-space-5);
   padding: var(--cap-space-3) var(--cap-space-6);
   /* Same wood-grain gradient recipe as .map-frame/.nav-menu-frame (and
-     Puzzles' .puzzle-card-frame) instead of the flat --cap-color-sign-board
-     fill, so every title sign reads as the same wood chrome as the rest of
-     the app's frames. */
+     Bingo's wood-plank .bingo-content board) instead of the flat
+     --cap-color-sign-board fill, so every title sign reads as the same wood
+     chrome as the rest of the app's frames. */
   background:
     repeating-linear-gradient(
       100deg,

@@ -19,7 +19,21 @@
   max-width: 440px;
   width: 100%;
   max-height: 85vh;
-  overflow-y: auto;
+  /* Same reasoning as #app-root's overflow fix (App.css): the wood-frame
+     modals' (ContactStaffModal, PuzzleChallengeModal, etc.) corner leaf
+     accents hang past their own box via negative offsets, and this plain
+     `overflow-y: auto` (the pre-existing rule) paired with a still-'visible'
+     overflow-x made the UA compute that visible axis as 'auto' too (CSS
+     Overflow §3) -- turning this panel into its own horizontal scroll area
+     too. Confirmed via a real Playwright measurement (scrollWidth/Height
+     exceeding clientWidth/Height by ~10-20px on every wood-frame modal)
+     before this fix. Shorthand `overflow: hidden` on both axes (not
+     overflow-y: auto) because every real modal's content measures far under
+     the 85vh cap even on a short phone (max observed ~310px vs a ~570px+
+     cap, checked across every Bingo/Hunt/Puzzle/Scoring/Passport/Contact
+     modal) -- the only thing overflow-y:auto was ever actually catching was
+     this same decorative leaf bleed, on the vertical axis. */
+  overflow: hidden;
   padding: 24px;
   text-align: left;
   animation: modal-panel-in 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.1);

@@ -10,7 +10,10 @@
   padding: var(--cap-space-5);
   font-family: var(--cap-font-body);
   background: var(--cap-color-page-bg);
-  overflow-x: hidden;
+  /* Shorthand (not overflow-x only) so overflow-y doesn't get auto-computed
+     into an accidental nested scroll container -- see #app-root's comment
+     in App.css for the full explanation. */
+  overflow: hidden;
 }
 
 /* Same wood-grain frame recipe as .contact-staff-modal-frame/.map-frame --
@@ -65,20 +68,20 @@
 }
 
 .staff-login-inner::before {
-  width: 55px;
-  height: 55px;
-  bottom: -10px;
-  right: -8px;
-  opacity: 0.08;
+  width: 70px;
+  height: 70px;
+  bottom: -12px;
+  right: -10px;
+  opacity: 0.11;
   transform: rotate(205deg);
 }
 
 .staff-login-inner::after {
-  width: 36px;
-  height: 36px;
-  bottom: -6px;
-  left: -6px;
-  opacity: 0.06;
+  width: 46px;
+  height: 46px;
+  bottom: -8px;
+  left: -8px;
+  opacity: 0.09;
   transform: rotate(140deg);
 }
 

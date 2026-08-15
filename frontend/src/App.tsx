@@ -359,7 +359,7 @@ function App() {
           <BrandLogo onClick={() => setShowHome(true)} />
           <NavMenu
             tabs={TABS}
-            activeTab={activeTab}
+            activeTab={showHome ? null : activeTab}
             onSelectTab={(tab) => {
               setShowHome(false)
               setActiveTab(tab)

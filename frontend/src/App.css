@@ -27,13 +27,23 @@
   background: var(--cap-color-page-bg);
   /* The visual-language rollout's page-level leaf accents (MapScreen.css,
      ScoringScreen.css, etc.) intentionally hang a few px past their
-     container's edge via negative right/left offsets -- fine on desktop
-     where #app-root has room to spare, but on mobile widths the container is
+     container's edge via negative offsets -- fine on desktop where
+     #app-root has room to spare, but on mobile widths the container is
      nearly viewport-edge-to-edge, so that overhang was adding to the page's
      actual scrollable width (caught by scoring-sheet.spec.ts's horizontal-
      overflow check). Purely decorative (pointer-events:none, z-index:-1), so
-     clipping the sliver that spills past the edge costs nothing. */
-  overflow-x: hidden;
+     clipping the sliver that spills past the edge costs nothing.
+     Shorthand `overflow: hidden` (not just overflow-x), because setting
+     only overflow-x away from its 'visible' default forces the UA to
+     compute the still-'visible' overflow-y as 'auto' (CSS Overflow §3) --
+     turning #app-root into its own accidental nested scroll container
+     wherever a decorative accent's negative offset (e.g. HomePage.css's
+     .home-foliage-bottom-center, bottom:-35px) pokes past its box, instead
+     of the page just scrolling normally at the viewport. Clipping both axes
+     avoids that phantom inner scrollbar entirely -- real page content is
+     never clipped by this since #app-root's own height is content-sized
+     (min-height only), so nothing legitimate ever overflows it vertically. */
+  overflow: hidden;
 }
 
 .app-header {

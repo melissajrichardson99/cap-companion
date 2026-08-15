@@ -35,7 +35,12 @@
 }
 
 /* Small corner leaf accents (visual language rollout) -- kept faint and
-   bottom-only so the red urgency identity above still reads first. */
+   bottom-only so the red urgency identity above still reads first. Offsets
+   capped at the wood frame's own 8px padding (.contact-staff-modal-frame
+   above) so the leaf's peek-past-the-corner effect never pokes past the
+   modal-panel's own box -- see Modal.css's overflow-x comment for why that
+   matters (a bigger poke was spuriously triggering the modal's scrollbar
+   even on content that fit). */
 .contact-staff-modal-inner::before,
 .contact-staff-modal-inner::after {
   content: '';
@@ -48,20 +53,20 @@
 }
 
 .contact-staff-modal-inner::before {
-  width: 60px;
-  height: 60px;
-  bottom: -10px;
+  width: 72px;
+  height: 72px;
+  bottom: -8px;
   right: -8px;
-  opacity: 0.09;
+  opacity: 0.12;
   transform: rotate(205deg);
 }
 
 .contact-staff-modal-inner::after {
-  width: 40px;
-  height: 40px;
-  bottom: -6px;
-  left: -6px;
-  opacity: 0.07;
+  width: 48px;
+  height: 48px;
+  bottom: -8px;
+  left: -8px;
+  opacity: 0.09;
   transform: rotate(140deg);
 }
 

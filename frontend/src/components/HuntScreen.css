@@ -21,29 +21,29 @@
 }
 
 .hunt-screen::before {
-  width: 190px;
-  height: 190px;
-  top: 50px;
-  right: -35px;
-  opacity: 0.12;
+  width: 230px;
+  height: 230px;
+  top: 40px;
+  right: -40px;
+  opacity: 0.18;
   transform: rotate(20deg);
 }
 
 .hunt-screen::after {
-  width: 190px;
-  height: 190px;
-  bottom: 20px;
-  left: -40px;
-  opacity: 0.12;
+  width: 230px;
+  height: 230px;
+  bottom: 10px;
+  left: -45px;
+  opacity: 0.18;
   transform: rotate(-140deg);
 }
 
 @media (max-width: 640px) {
   .hunt-screen::before,
   .hunt-screen::after {
-    width: 120px;
-    height: 120px;
-    opacity: 0.09;
+    width: 140px;
+    height: 140px;
+    opacity: 0.13;
   }
 }
 
@@ -109,6 +109,18 @@
   flex-direction: column;
   gap: 8px;
   padding: 14px 16px;
+  width: 100%;
+}
+
+/* Lines the progress bar's width up with the 2-card desktop grid below it
+   (see .hunt-character-grid) instead of spanning the full screen width above
+   a visibly narrower grid. Mobile keeps the full-width bar unchanged -- the
+   grid below is already full-width there too (1 card per row). */
+@media (min-width: 641px) {
+  .hunt-overall-progress {
+    max-width: 654px;
+    margin: 0 auto;
+  }
 }
 
 .hunt-overall-progress-label {
@@ -173,7 +185,20 @@
   gap: 14px;
 }
 
+/* Desktop: exactly 2 cards per row (fixed 2-column track, not auto-fill) --
+   matches .hunt-overall-progress's 654px cap above so the grid and the
+   progress bar it sits under read as the same width. Mobile is untouched:
+   below this breakpoint the auto-fill rule above already yields 1 card per
+   row at typical phone widths. */
+@media (min-width: 641px) {
+  .hunt-character-grid {
+    grid-template-columns: repeat(2, minmax(240px, 320px));
+  }
+}
+
 .hunt-character-card {
+  position: relative;
+  isolation: isolate;
   font: inherit;
   color: var(--cap-color-ink);
   cursor: pointer;
@@ -188,6 +213,39 @@
 .hunt-character-card:hover {
   transform: translate(-2px, -2px);
   box-shadow: var(--cap-shadow-pop);
+}
+
+/* Per-card leaf accents (density pass), same technique as HomePage's
+   .home-card::before/::after -- scoped away from .hunt-character-locked so
+   the flat blacked-out locked box (deliberately undecorated) never renders
+   them. */
+.hunt-character-card[data-hunt-character]:not(.hunt-character-locked)::before,
+.hunt-character-card[data-hunt-character]:not(.hunt-character-locked)::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.hunt-character-card[data-hunt-character]:not(.hunt-character-locked)::before {
+  width: 70px;
+  height: 70px;
+  bottom: -14px;
+  right: -10px;
+  opacity: 0.13;
+  transform: rotate(205deg);
+}
+
+.hunt-character-card[data-hunt-character]:not(.hunt-character-locked)::after {
+  width: 46px;
+  height: 46px;
+  bottom: -6px;
+  left: -6px;
+  opacity: 0.1;
+  transform: rotate(140deg);
 }
 
 /* Unlocked card accent -- border/name pick up the character's color. Scoped

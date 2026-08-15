@@ -21,29 +21,29 @@
 }
 
 .collectibles-screen::before {
-  width: 190px;
-  height: 190px;
-  top: 50px;
-  right: -35px;
-  opacity: 0.12;
+  width: 230px;
+  height: 230px;
+  top: 40px;
+  right: -40px;
+  opacity: 0.18;
   transform: rotate(20deg);
 }
 
 .collectibles-screen::after {
-  width: 190px;
-  height: 190px;
-  bottom: 20px;
-  left: -40px;
-  opacity: 0.12;
+  width: 230px;
+  height: 230px;
+  bottom: 10px;
+  left: -45px;
+  opacity: 0.18;
   transform: rotate(-140deg);
 }
 
 @media (max-width: 640px) {
   .collectibles-screen::before,
   .collectibles-screen::after {
-    width: 120px;
-    height: 120px;
-    opacity: 0.09;
+    width: 140px;
+    height: 140px;
+    opacity: 0.13;
   }
 }
 
@@ -86,12 +86,45 @@
 }
 
 .collectible-card {
+  position: relative;
+  isolation: isolate;
   padding: 18px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 8px;
+}
+
+/* Per-card leaf accents (density pass), same technique as HomePage's
+   .home-card::before/::after. */
+.collectible-card::before,
+.collectible-card::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.collectible-card::before {
+  width: 65px;
+  height: 65px;
+  bottom: -13px;
+  right: -9px;
+  opacity: 0.13;
+  transform: rotate(205deg);
+}
+
+.collectible-card::after {
+  width: 42px;
+  height: 42px;
+  bottom: -6px;
+  left: -6px;
+  opacity: 0.1;
+  transform: rotate(140deg);
 }
 
 .collectible-icon {

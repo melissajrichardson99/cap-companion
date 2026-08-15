@@ -37,6 +37,9 @@ export function PuzzleScreen({ puzzles, error, onReload, onCoinsChanged }: Puzzl
 
   return (
     <div className="puzzle-screen">
+      <div className="puzzle-foliage puzzle-foliage-bottom-left-lower" aria-hidden="true" />
+      <div className="puzzle-foliage puzzle-foliage-bottom-center" aria-hidden="true" />
+      <div className="puzzle-foliage puzzle-foliage-bottom-right" aria-hidden="true" />
       <h1 className="cap-sign-board">
         <PuzzlePieceIcon className="cap-sign-board-icon" />
         Floor Puzzles
@@ -44,27 +47,25 @@ export function PuzzleScreen({ puzzles, error, onReload, onCoinsChanged }: Puzzl
 
       <div className="puzzle-list">
         {puzzles.map((puzzle) => (
-          <div className="puzzle-card-frame" key={puzzle.id}>
-            <div className="puzzle-card cap-parchment-card">
-              <div className="puzzle-card-header">
-                <span className="puzzle-icon-badge" aria-hidden="true">
-                  <PuzzlePieceIcon />
-                </span>
-                <h2 className="puzzle-name">{puzzle.name}</h2>
-              </div>
-              <p className="puzzle-rules">{puzzle.rules_text}</p>
-              <div className="puzzle-challenge-list">
-                {puzzle.challenges.map((challenge) => (
-                  <button
-                    type="button"
-                    key={challenge.id}
-                    className="btn puzzle-challenge-btn"
-                    onClick={() => setActive({ puzzle, challenge })}
-                  >
-                    <span className="puzzle-challenge-label">{challenge.label}</span>
-                  </button>
-                ))}
-              </div>
+          <div className="puzzle-card cap-parchment-card" key={puzzle.id}>
+            <div className="puzzle-card-header">
+              <span className="puzzle-icon-badge" aria-hidden="true">
+                <PuzzlePieceIcon />
+              </span>
+              <h2 className="puzzle-name">{puzzle.name}</h2>
+            </div>
+            <p className="puzzle-rules">{puzzle.rules_text}</p>
+            <div className="puzzle-challenge-list">
+              {puzzle.challenges.map((challenge) => (
+                <button
+                  type="button"
+                  key={challenge.id}
+                  className="btn puzzle-challenge-btn"
+                  onClick={() => setActive({ puzzle, challenge })}
+                >
+                  <span className="puzzle-challenge-label">{challenge.label}</span>
+                </button>
+              ))}
             </div>
           </div>
         ))}

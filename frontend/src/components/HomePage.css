@@ -336,6 +336,18 @@
   box-shadow: var(--cap-shadow-pop-sm);
 }
 
+/* Desktop-only height reduction (round 4): at 420px tall, the photo made its
+   side-by-side "Browse & Vote" companion card (.home-photo-cta-card, whose
+   content is just an icon/title/text/button) look disproportionately barren
+   next to it. Scoped to the same 641px+ desktop breakpoint the rest of the
+   app uses (.home-side-by-side stacks the two cards below 640px instead of
+   sitting them side by side), so mobile keeps the full-size photo. */
+@media (min-width: 641px) {
+  .home-photo-image {
+    max-height: 240px;
+  }
+}
+
 .home-photo-caption {
   font-size: 13px;
   font-weight: 600;

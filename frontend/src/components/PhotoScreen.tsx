@@ -54,6 +54,9 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
 
   return (
     <div className="photo-screen">
+      <div className="photo-foliage photo-foliage-bottom-left-lower" aria-hidden="true" />
+      <div className="photo-foliage photo-foliage-bottom-center" aria-hidden="true" />
+      <div className="photo-foliage photo-foliage-bottom-right" aria-hidden="true" />
       <h1 className="cap-sign-board">
         <CameraIcon className="cap-sign-board-icon" />
         Favorite Photo

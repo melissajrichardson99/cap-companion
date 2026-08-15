@@ -66,6 +66,9 @@ export function BingoScreen({
 
   return (
     <div className="bingo-screen">
+      <div className="bingo-foliage bingo-foliage-bottom-left-lower" aria-hidden="true" />
+      <div className="bingo-foliage bingo-foliage-bottom-center" aria-hidden="true" />
+      <div className="bingo-foliage bingo-foliage-bottom-right" aria-hidden="true" />
       <h1 className="cap-sign-board">
         <GridIcon className="cap-sign-board-icon" />
         Bingo Card

@@ -34,7 +34,9 @@
 }
 
 /* Corner leaf accents (visual language rollout) -- Family Passport is a
-   celebratory wrap-up screen, so slightly fuller than other modals. */
+   celebratory wrap-up screen, so slightly fuller than other modals. Offsets
+   capped at the wood frame's own 8px padding (.passport-modal-frame above),
+   see ContactStaffModal.css's identical comment for why. */
 .passport-modal-inner::before,
 .passport-modal-inner::after {
   content: '';
@@ -47,20 +49,20 @@
 }
 
 .passport-modal-inner::before {
-  width: 75px;
-  height: 75px;
-  bottom: -12px;
-  right: -10px;
-  opacity: 0.12;
+  width: 90px;
+  height: 90px;
+  bottom: -8px;
+  right: -8px;
+  opacity: 0.15;
   transform: rotate(205deg);
 }
 
 .passport-modal-inner::after {
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
   bottom: -8px;
   left: -8px;
-  opacity: 0.09;
+  opacity: 0.12;
   transform: rotate(140deg);
 }
 

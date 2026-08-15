@@ -10,7 +10,9 @@ export interface NavMenuTab<T extends string> {
 
 interface NavMenuProps<T extends string> {
   tabs: NavMenuTab<T>[]
-  activeTab: T
+  // null while on Home -- Home isn't itself one of `tabs` (it's reached via
+  // the logo, not the dropdown), so no tab should render as active there.
+  activeTab: T | null
   onSelectTab: (tab: T) => void
   coinTotal: number
   onScanQr: () => void
