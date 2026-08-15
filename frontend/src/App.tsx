@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api, type BingoCard, type CoinsSummary, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { AnimalsScreen } from './components/AnimalsScreen'
 import { BingoScreen } from './components/BingoScreen'
 import { BrandLogo } from './components/BrandLogo'
 import { CollectiblesScreen } from './components/CollectiblesScreen'
@@ -10,7 +11,7 @@ import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
 import { NavMenu } from './components/NavMenu'
-import { CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, SearchIcon } from './components/NavIcons'
+import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, SearchIcon } from './components/NavIcons'
 import { PassportModal } from './components/PassportModal'
 import { PhotoScreen } from './components/PhotoScreen'
 import { PuzzleScreen } from './components/PuzzleScreen'
@@ -24,7 +25,7 @@ import { getVoterSessionId } from './voterSession'
 import './components/shared.css'
 import './App.css'
 
-type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'collectibles' | 'photos'
+type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'animals' | 'collectibles' | 'photos'
 
 const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   { key: 'map', label: 'Map', icon: <MapPinIcon /> },
@@ -32,6 +33,7 @@ const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   { key: 'puzzles', label: 'Puzzles', icon: <PuzzlePieceIcon /> },
   { key: 'scoring', label: 'Scoring Sheet', icon: <ClipboardIcon /> },
   { key: 'hunt', label: 'Scavenger Hunt', icon: <SearchIcon /> },
+  { key: 'animals', label: 'Our Animals', icon: <BinocularsIcon /> },
   { key: 'collectibles', label: 'Collectibles', icon: <PawIcon /> },
   { key: 'photos', label: 'Favorite Photo', icon: <CameraIcon /> },
 ]
@@ -419,6 +421,7 @@ function App() {
             onScanQr={() => setShowScanEntry(true)}
           />
         )}
+        {!showHome && activeTab === 'animals' && <AnimalsScreen onScanQr={() => setShowScanEntry(true)} />}
         {!showHome && activeTab === 'collectibles' && (
           <CollectiblesScreen summary={coinsSummary} error={coinsError} onReload={reloadCoins} />
         )}

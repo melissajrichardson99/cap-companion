@@ -1,0 +1,182 @@
+.animals-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: var(--cap-font-body);
+  position: relative;
+  isolation: isolate;
+}
+
+/* Bottom-weighted leaf accents (visual language rollout) -- same SVG/
+   technique as HomePage.css's page-level clusters. */
+.animals-screen::before,
+.animals-screen::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.animals-screen::before {
+  width: 230px;
+  height: 230px;
+  top: 40px;
+  right: -40px;
+  opacity: 0.18;
+  transform: rotate(20deg);
+}
+
+.animals-screen::after {
+  width: 230px;
+  height: 230px;
+  bottom: 10px;
+  left: -45px;
+  opacity: 0.18;
+  transform: rotate(-140deg);
+}
+
+@media (max-width: 640px) {
+  .animals-screen::before,
+  .animals-screen::after {
+    width: 140px;
+    height: 140px;
+    opacity: 0.13;
+  }
+}
+
+.animals-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--cap-radius-pill);
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.animals-search-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--cap-color-body-text);
+}
+
+.animals-search-input {
+  font: inherit;
+  font-size: 15px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--cap-color-ink);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.animals-empty {
+  color: var(--cap-color-body-text);
+  padding: 12px 0;
+}
+
+/* Same auto-fill/minmax + justify-content:center idiom as Collectibles'
+   grid on desktop -- but that idiom doesn't reliably yield 2 columns at
+   actual phone widths (auto-fill's implicit track count undershoots to 1
+   column at the ~340px content width #app-root leaves after .app-main's
+   padding, confirmed by measuring Collectibles' own grid at 390px viewport).
+   The design spec for this screen explicitly calls for 2 columns on mobile,
+   so below 640px this switches to a fixed 2-column track instead of
+   depending on auto-fill's undershoot-prone sizing. */
+.animals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 190px));
+  justify-content: center;
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .animals-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+.animal-card {
+  position: relative;
+  isolation: isolate;
+  font: inherit;
+  color: var(--cap-color-ink);
+  cursor: pointer;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.animal-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--cap-shadow-pop);
+}
+
+.animal-card-photo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--cap-radius-sm);
+  overflow: hidden;
+  border: 1.5px solid var(--cap-color-outline);
+}
+
+.animal-card-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.animal-card-emoji {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 22px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+.animal-card-name {
+  font-family: var(--cap-font-display);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Compound selector so this reliably beats shared.css's plain .btn
+   regardless of CSS bundle load order (same fix Puzzles/Scoring/Photo use
+   for their primary buttons). */
+.animals-screen .animals-scan-cta {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.animals-screen .animals-scan-cta:hover {
+  background: var(--cap-color-sunset-orange-deep);
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+.animals-scan-cta-icon {
+  width: 18px;
+  height: 18px;
+}

@@ -1,0 +1,178 @@
+.animal-cards-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--cap-font-body);
+  position: relative;
+  isolation: isolate;
+}
+
+/* Bottom-weighted leaf accents (visual language rollout) -- same SVG/
+   technique as HomePage.css's page-level clusters. */
+.animal-cards-screen::before,
+.animal-cards-screen::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.animal-cards-screen::before {
+  width: 230px;
+  height: 230px;
+  top: 40px;
+  right: -40px;
+  opacity: 0.18;
+  transform: rotate(20deg);
+}
+
+.animal-cards-screen::after {
+  width: 230px;
+  height: 230px;
+  bottom: 10px;
+  left: -45px;
+  opacity: 0.18;
+  transform: rotate(-140deg);
+}
+
+@media (max-width: 640px) {
+  .animal-cards-screen::before,
+  .animal-cards-screen::after {
+    width: 140px;
+    height: 140px;
+    opacity: 0.13;
+  }
+}
+
+.animal-cards-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.animal-cards-back-btn,
+.animal-cards-header-spacer {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.animal-cards-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--cap-color-ink);
+  cursor: pointer;
+}
+
+.animal-cards-back-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.animal-cards-title {
+  flex: 1 1 auto;
+  text-align: center;
+  font-family: var(--cap-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
+  margin: 0;
+}
+
+.animal-cards-counter {
+  font-family: var(--cap-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cap-color-sunset-orange-deep);
+  margin: 0;
+}
+
+.animal-cards-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.animal-cards-arrow {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.animal-cards-arrow:hover {
+  background: var(--cap-color-sunset-orange-deep);
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+.animal-cards-arrow svg {
+  width: 20px;
+  height: 20px;
+}
+
+.animal-card-nugget {
+  flex: 1 1 auto;
+  max-width: 400px;
+  min-height: 300px;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.animal-card-nugget-image {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--cap-radius-sm);
+  border: 1.5px solid var(--cap-color-outline);
+}
+
+.animal-card-nugget-title {
+  font-family: var(--cap-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
+  margin: 0;
+}
+
+.animal-card-nugget-text {
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .animal-cards-nav {
+    gap: 6px;
+  }
+
+  .animal-cards-arrow {
+    width: 36px;
+    height: 36px;
+  }
+}

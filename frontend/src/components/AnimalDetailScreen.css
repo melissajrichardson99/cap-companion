@@ -1,0 +1,222 @@
+.animal-detail-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: var(--cap-font-body);
+  position: relative;
+  isolation: isolate;
+}
+
+/* Bottom-weighted leaf accents (visual language rollout) -- same SVG/
+   technique as HomePage.css's page-level clusters. */
+.animal-detail-screen::before,
+.animal-detail-screen::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.animal-detail-screen::before {
+  width: 230px;
+  height: 230px;
+  top: 40px;
+  right: -40px;
+  opacity: 0.18;
+  transform: rotate(20deg);
+}
+
+.animal-detail-screen::after {
+  width: 230px;
+  height: 230px;
+  bottom: 10px;
+  left: -45px;
+  opacity: 0.18;
+  transform: rotate(-140deg);
+}
+
+@media (max-width: 640px) {
+  .animal-detail-screen::before,
+  .animal-detail-screen::after {
+    width: 140px;
+    height: 140px;
+    opacity: 0.13;
+  }
+}
+
+.animal-detail-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.animal-detail-back-btn,
+.animal-detail-favorite-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--cap-color-ink);
+}
+
+.animal-detail-back-btn {
+  cursor: pointer;
+}
+
+.animal-detail-back-btn svg,
+.animal-detail-favorite-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Non-interactive by design -- see AnimalDetailScreen.tsx's comment. Muted
+   fill + default cursor so it doesn't visually invite a tap. */
+.animal-detail-favorite-btn {
+  cursor: default;
+  color: var(--cap-color-body-text);
+  opacity: 0.7;
+}
+
+.animal-detail-title {
+  flex: 1 1 auto;
+  text-align: center;
+  font-family: var(--cap-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
+  margin: 0;
+}
+
+.animal-detail-hero {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: var(--cap-radius-md);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+}
+
+.animal-detail-tabs {
+  display: flex;
+  gap: var(--cap-space-2);
+}
+
+.animal-detail-tab {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 9px 16px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--cap-color-ink);
+  cursor: pointer;
+}
+
+.animal-detail-tab-active {
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+}
+
+.animal-detail-about,
+.animal-detail-photos {
+  position: relative;
+  isolation: isolate;
+  padding: 18px 16px;
+}
+
+.animal-detail-about {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.animal-detail-about-heading {
+  font-family: var(--cap-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
+  margin: 0;
+}
+
+.animal-detail-description {
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}
+
+.animal-detail-facts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.animal-detail-facts-table tr {
+  border-bottom: 1px solid rgba(20, 24, 26, 0.14);
+}
+
+.animal-detail-facts-table tr:last-child {
+  border-bottom: none;
+}
+
+.animal-detail-facts-table th,
+.animal-detail-facts-table td {
+  text-align: left;
+  padding: 8px 4px;
+  vertical-align: top;
+}
+
+.animal-detail-facts-table th {
+  width: 42%;
+  font-family: var(--cap-font-display);
+  font-weight: 600;
+  color: var(--cap-color-ink);
+}
+
+.animal-detail-facts-table td {
+  color: var(--cap-color-body-text);
+}
+
+/* Compound selector so this reliably beats shared.css's plain .btn
+   regardless of CSS bundle load order (same fix Puzzles/Scoring/Photo use
+   for their primary buttons). */
+.animal-detail-about .animal-detail-cards-btn {
+  align-self: flex-start;
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.animal-detail-about .animal-detail-cards-btn:hover {
+  background: var(--cap-color-sunset-orange-deep);
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+.animal-detail-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.animal-detail-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--cap-radius-sm);
+  border: 1.5px solid var(--cap-color-outline);
+}

@@ -137,3 +137,49 @@ export function PassportIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+// Binoculars -- used for the "Our Animals" nav tab, distinct from PawIcon
+// (Collectibles) since this feature is about wildlife-watching/learning, not
+// earned badges. Nothing else in the app covers this shape.
+export function BinocularsIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <rect x="2" y="9" width="6" height="7.5" rx="1.5" />
+      <rect x="12" y="9" width="6" height="7.5" rx="1.5" />
+      <line x1="8" y1="12.2" x2="12" y2="12.2" />
+      <path d="M4.5 9L6 3l2 0.5-1 5.5" />
+      <path d="M15.5 9L14 3l-2 0.5 1 5.5" />
+    </svg>
+  )
+}
+
+// Outline heart -- the "Our Animals" detail page's favorite icon. Rendered
+// non-interactive/decorative for this pass (no favoriting concept exists
+// yet anywhere in the app) -- see AnimalDetailScreen.tsx. Nothing else in
+// the app covers this shape.
+export function HeartIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M10 17.3c-.25 0-.5-.09-.7-.27C6.1 14 2.5 10.8 2.5 7.3 2.5 4.7 4.5 2.6 7 2.6c1.4 0 2.7.65 3 1.75.3-1.1 1.6-1.75 3-1.75 2.5 0 4.5 2.1 4.5 4.7 0 3.5-3.6 6.7-6.8 9.73-.2.18-.45.27-.7.27z" />
+    </svg>
+  )
+}
+
+// Left/right chevrons -- reused for the "Our Animals" detail/cards screens'
+// back button and flashcard prev/next navigation. Nothing else in the app
+// covers this shape.
+export function ChevronLeftIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M12.5 3.5L6.5 10l6 6.5" />
+    </svg>
+  )
+}
+
+export function ChevronRightIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M7.5 3.5L13.5 10l-6 6.5" />
+    </svg>
+  )
+}
