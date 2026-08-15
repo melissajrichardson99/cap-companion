@@ -16,11 +16,11 @@ const PLAY_BOTTOM := 500.0
 const BIN_TOP := PLAY_BOTTOM
 const BIN_BOTTOM := VIEWPORT_HEIGHT
 
-const ITEM_RADIUS := 18.0
+const ITEM_RADIUS := 24.0
 const BIN_ICON_RADIUS := 19.0
 const BIN_ICON_Y := BIN_TOP + 36.0
 
-const FALL_SPEED := 140.0
+const FALL_SPEED := 200.0
 const SPAWN_INTERVAL := 2.6
 const GRAB_RADIUS := 42.0
 

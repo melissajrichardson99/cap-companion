@@ -57,6 +57,23 @@ export function NavMenu<T extends string>({
     }
   }, [open])
 
+  // The always-mounted panel above (position:absolute, closed state still
+  // laid out just transformed/faded) sits inside #app-root's scrollable-
+  // overflow region even while closed. Focusing a panel button -- opening
+  // the menu, then any close path (tab select, action click, Escape, outside
+  // click) that shifts focus back -- makes the browser auto-scroll #app-root
+  // (overflow:hidden, App.css, but still programmatically scrollable) to
+  // keep the newly/previously focused element in view, leaving a stray
+  // scrollLeft/scrollTop that persists app-wide since nothing else resets it.
+  // Invisible on screens whose content sits inset from #app-root's edges,
+  // but it clips anything flush against them (e.g. Map's border foliage,
+  // AnimalsScreen's flush header). Reset on every close instead of leaving
+  // each screen to work around it individually.
+  useEffect(() => {
+    if (open) return
+    document.getElementById('app-root')?.scrollTo({ left: 0, top: 0 })
+  }, [open])
+
   const selectTab = (tab: T) => {
     onSelectTab(tab)
     setOpen(false)

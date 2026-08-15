@@ -4,8 +4,11 @@ export_presets.cfg::TextFile::-1::1785605973::0::1::::<><><>0<>0<><>::
 README.md::TextFile::-1::1785606042::0::1::::<><><>0<>0<><>::
 ::res://assets/::1786390659
 kangaroo.png::CompressedTexture2D::1594062174892749567::1786314652::1786390659::1::::<><><>0<>0<>b0482f59a9caae5f250275b02b251ab5<>res://.godot/imported/kangaroo.png-d7d6116ced33c58df084ee104b122430.ctex::
-::res://export_web/::1786390879
+::res://export_web/::1786832619
+index.apple-touch-icon.png::CompressedTexture2D::118398833622572758::1786832609::1786833867::1::::<><><>0<>0<>627a768cc495364059561ec7233e960a<>res://.godot/imported/index.apple-touch-icon.png-c440b50297e22d994c134e7e971727e0.ctex::
+index.icon.png::CompressedTexture2D::7668777522024431727::1786832609::1786833867::1::::<><><>0<>0<>6077ae692028d6c86060b849bb08b571<>res://.godot/imported/index.icon.png-4c9fa4de9d1411a549ce5d2870d126d7.ctex::
+index.png::CompressedTexture2D::1945597804714466738::1786832609::1786833867::1::::<><><>0<>0<>59882ed6515e2c163477a60e290d0d31<>res://.godot/imported/index.png-fdb518240498790eb22b61d9607fb8b5.ctex::
 ::res://scenes/::1786309259
 Main.tscn::PackedScene::-1::1786309259::0::1::::<><><>0<>0<><>::res://scripts/Main.gd
-::res://scripts/::1786390871
-Main.gd::GDScript::201404954113894459::1786390871::0::1::::<>Node2D<><>0<>0<><>::
+::res://scripts/::1786833855
+Main.gd::GDScript::201404954113894459::1786833855::0::1::::<>Node2D<><>0<>0<><>::

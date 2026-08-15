@@ -217,14 +217,47 @@ func _draw_hills() -> void:
 	# Gentle wavy hill silhouette well below every platform top (max rise
 	# stays under the lowest platform y_top of 390) so it never pokes above
 	# ground segments — purely a background landscape band, not foliage.
+	# Drawn as one band per platform run (not a single band spanning the
+	# whole level) because the wavy top line's low points dip low enough to
+	# read as solid ground -- a continuous band would visually paper over
+	# every pit gap between platforms with what looks like ground, hiding the
+	# real hazard underneath.
+	#
+	# Each band is clipped to EXACTLY its own platform's x-range -- no margin
+	# extending into a neighboring gap. A prior version capped the margin at
+	# "half the neighboring gap", which sounds conservative but isn't: the
+	# two bands on either side of a gap each claim half of it, so together
+	# they cover the gap's *entire* width with zero sky showing through --
+	# exactly the floating-hill bug this was supposed to prevent, just
+	# split across two bands instead of one. Only the outer edges of the
+	# level (before the first platform, after the last) get a margin, since
+	# there's no gap/pit there to bridge.
+	for i in range(PLATFORMS.size()):
+		var seg: Array = PLATFORMS[i]
+		var y_top: float = seg[2]
+		if y_top < GROUND_Y:
+			# Floating platform (raised above GROUND_Y, suspended over a pit on
+			# both sides) has no real ground-level hill nearby to draw -- the
+			# band's geometry is always anchored to GROUND_Y, so drawing one
+			# here would hang a sliver of greenery in the pit below the
+			# platform instead of on solid ground.
+			continue
+		var left: float = seg[0]
+		var right: float = seg[0] + seg[1]
+		var margin_left := 50.0 if i == 0 else 0.0
+		var margin_right := 50.0 if i == PLATFORMS.size() - 1 else 0.0
+		_draw_hill_band(left - margin_left, right + margin_right)
+
+func _draw_hill_band(x_start: float, x_end: float) -> void:
 	var points := PackedVector2Array()
-	points.append(Vector2(-50.0, GROUND_Y + 4.0))
-	var x := -50.0
-	while x <= LEVEL_WIDTH + 50.0:
+	points.append(Vector2(x_start, GROUND_Y + 4.0))
+	var x := x_start
+	while x <= x_end:
 		var y: float = GROUND_Y - 15.0 - 10.0 * sin(x * 0.006)
 		points.append(Vector2(x, y))
 		x += 90.0
-	points.append(Vector2(LEVEL_WIDTH + 50.0, GROUND_Y + 4.0))
+	points.append(Vector2(x_end, GROUND_Y - 15.0 - 10.0 * sin(x_end * 0.006)))
+	points.append(Vector2(x_end, GROUND_Y + 4.0))
 	draw_colored_polygon(points, COLOR_HILL_FAR)
 
 func _draw_platform(segment: Array) -> void:

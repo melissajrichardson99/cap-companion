@@ -11,20 +11,24 @@ import './MapScreen.css'
 const MOBILE_BREAKPOINT_QUERY = '(max-width: 640px)'
 
 // Minimum on-screen center-to-center clearance (px) between two pins before
-// the declutter pass starts nudging them apart -- sized to comfortably clear
-// a mobile-shrunk pin (20px) plus its badge's reach (~11px past the pin
-// edge), not just the bare pin diameter, so badges clear neighbors too.
-// The badge sits off-center (top-right of the pin, MapScreen.css), so its
-// farthest corner from the pin's own center can be ~4px past a naive
-// pin-radius-only estimate -- padded in here rather than modeled precisely,
-// since a center-to-center minimum can't account for the badge's
-// asymmetric reach in every direction.
-const MIN_PIN_GAP_PX = 40
+// the declutter pass starts nudging them apart -- sized to the mobile-shrunk
+// pin's own diameter (20px) plus a few px of breathing room, not a generously
+// padded "comfort" value. At mobile map-image widths (~300px, ~35 nodes) a
+// larger threshold like the previous 40px counts nearly every pin on the map
+// as "too close" to some neighbor, so the repulsion pass below ends up
+// nudging the entire node set instead of just genuinely overlapping pairs --
+// confirmed by simulating this pass against live position data, where 40px
+// triggered on all 35 nodes vs. 16 at this value. Badge overlap is a lesser
+// concern already covered by the food category's own tighter badge offset
+// (see .map-pin-food .map-pin-tile-badge in MapScreen.css).
+const MIN_PIN_GAP_PX = 24
 // Cap on how far any single pin may be nudged from its true x_pct/y_pct
 // position -- keeps every pin recognizably near its real map location even
 // in the densest clusters, instead of letting the declutter pass drag it
-// arbitrarily far to satisfy spacing.
-const MAX_NUDGE_PX = 28
+// arbitrarily far to satisfy spacing. Sized well under MIN_PIN_GAP_PX so a
+// fully-capped nudge still lands close to true position rather than at an
+// arbitrary far corner.
+const MAX_NUDGE_PX = 10
 
 interface Nudge {
   dx: number
@@ -448,6 +452,8 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
 
   return (
     <div className="map-screen">
+      <div className="map-foliage map-foliage-top-left" aria-hidden="true" />
+      <div className="map-foliage map-foliage-bottom-right" aria-hidden="true" />
       <h1 className="cap-sign-board">
         <MapPinIcon className="cap-sign-board-icon" />
         Park Map

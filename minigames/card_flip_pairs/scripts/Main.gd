@@ -87,21 +87,17 @@ func _ready() -> void:
 	_start_game()
 
 # ---------------------------------------------------------------------------
-# Card back texture generation. The back is still a procedurally-drawn paw
-# print built pixel-by-pixel into an Image/ImageTexture - unchanged. Card
-# faces are now real photo PNGs loaded via ANIMAL_TEXTURES above instead of
-# the earlier procedural silhouette generation.
+# Card back texture generation - a plain wood-medallion badge built
+# pixel-by-pixel into an Image/ImageTexture. Card faces are real photo PNGs
+# loaded via ANIMAL_TEXTURES above.
 # ---------------------------------------------------------------------------
 
 func _make_back_texture() -> ImageTexture:
 	# Wood-frame park badge: a circular wood-plank ring (outlined, banded
-	# light/dark like _draw_wood_panel's fake grain highlight) around a
-	# parchment-filled center, with a small leaf-sprig + paw-print crest in
-	# adventure green. Built the same way as the previous flat paw-print
-	# back - pixel-by-pixel circle/ellipse math into an Image - just with
-	# more rings and a richer crest. Outside the badge stays transparent so
-	# the button's own parchment/outline card style (see _style_ui) still
-	# reads as the card's edge.
+	# light/dark like _draw_wood_panel's fake grain highlight) around a plain
+	# parchment-filled center. Pixel-by-pixel circle math into an Image.
+	# Outside the badge stays transparent so the button's own parchment/
+	# outline card style (see _style_ui) still reads as the card's edge.
 	var image := Image.create(ICON_SIZE, ICON_SIZE, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0, 0, 0, 0))
 	var cx := ICON_SIZE / 2.0
@@ -111,11 +107,6 @@ func _make_back_texture() -> ImageTexture:
 	var r_wood_outer := r_outer - 2.0
 	var r_wood_inner := r_wood_outer - 8.0
 	var r_parchment := r_wood_inner - 2.0
-
-	var crest_leaf_center := Vector2(cx, cy - r_parchment * 0.32)
-	var crest_leaf_r := r_parchment * 0.62
-	var crest_paw_center := Vector2(cx, cy + r_parchment * 0.3)
-	var crest_paw_r := r_parchment * 0.5
 
 	for y in range(ICON_SIZE):
 		for x in range(ICON_SIZE):
@@ -130,9 +121,6 @@ func _make_back_texture() -> ImageTexture:
 				image.set_pixel(x, y, _wood_ring_color(px, py, cx, cy, r_outer))
 			elif d > r_parchment:
 				image.set_pixel(x, y, COLOR_OUTLINE)
-			elif _leaf_contains(px, py, crest_leaf_center.x, crest_leaf_center.y, crest_leaf_r) \
-					or _paw_print_contains(px, py, crest_paw_center.x, crest_paw_center.y, crest_paw_r):
-				image.set_pixel(x, y, COLOR_ADVENTURE_GREEN)
 			else:
 				image.set_pixel(x, y, COLOR_PARCHMENT)
 	return ImageTexture.create_from_image(image)
@@ -147,38 +135,6 @@ func _wood_ring_color(px: float, py: float, cx: float, cy: float, r_outer: float
 	if py < cy:
 		color = color.lerp(COLOR_WOOD_LIGHT, clampf((cy - py) / (r_outer * 1.4), 0.0, 0.4))
 	return color
-
-func _leaf_contains(px: float, py: float, cx: float, cy: float, r: float) -> bool:
-	# Organic leaf sprig: one elongated main lobe plus two smaller angled
-	# side lobes, approximating the 3-leaf foliage-accent silhouette used
-	# elsewhere in the frontend (see MapScreen.css's inline leaf-cluster SVG
-	# path data - one larger leaf plus two smaller flanking leaves).
-	if _ellipse_contains(px, py, cx, cy - 0.08 * r, r * 0.32, r * 0.58):
-		return true
-	var side_offsets := [Vector2(-0.4, 0.32), Vector2(0.4, 0.3)]
-	for off in side_offsets:
-		if _ellipse_contains(px, py, cx + off.x * r, cy + off.y * r, r * 0.26, r * 0.4):
-			return true
-	return false
-
-func _ellipse_contains(px: float, py: float, ecx: float, ecy: float, rx: float, ry: float) -> bool:
-	var dx := (px - ecx) / rx
-	var dy := (py - ecy) / ry
-	return dx * dx + dy * dy <= 1.0
-
-func _paw_print_contains(px: float, py: float, cx: float, cy: float, r: float) -> bool:
-	if _circle_contains(px, py, cx, cy + 0.28 * r, 0.6 * r):
-		return true
-	var toe_offsets := [Vector2(-0.5, -0.62), Vector2(-0.18, -0.82), Vector2(0.18, -0.82), Vector2(0.5, -0.62)]
-	for off in toe_offsets:
-		if _circle_contains(px, py, cx + off.x * r, cy + off.y * r, 0.24 * r):
-			return true
-	return false
-
-func _circle_contains(px: float, py: float, ccx: float, ccy: float, rad: float) -> bool:
-	var dx := px - ccx
-	var dy := py - ccy
-	return dx * dx + dy * dy <= rad * rad
 
 # ---------------------------------------------------------------------------
 # Game logic - unchanged from the pre-art-pass version.
@@ -298,8 +254,6 @@ func _draw_sign_plank() -> void:
 
 func _draw_instruction_panel() -> void:
 	_draw_parchment_pill(INSTRUCTION_RECT, 16.0)
-	var icon_center := INSTRUCTION_RECT.position + Vector2(40, INSTRUCTION_RECT.size.y * 0.5)
-	_draw_card_paw_icon(icon_center, 20.0)
 	_draw_stat_box(STAT_BOX_RECT, 14.0)
 
 func _draw_grid_frame() -> void:
@@ -317,16 +271,6 @@ func _draw_paw_icon(center: Vector2, r: float, color: Color) -> void:
 	var toe_offsets := [Vector2(-0.5, -0.62), Vector2(-0.18, -0.82), Vector2(0.18, -0.82), Vector2(0.5, -0.62)]
 	for off in toe_offsets:
 		draw_circle(center + off * r, r * 0.24, color)
-
-func _draw_card_paw_icon(center: Vector2, r: float) -> void:
-	var card_rect := Rect2(center - Vector2(r * 0.68, r * 0.85), Vector2(r * 1.36, r * 1.7))
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(1, 1, 1, 0.9)
-	sb.set_corner_radius_all(int(r * 0.28))
-	sb.set_border_width_all(2)
-	sb.border_color = COLOR_OUTLINE
-	draw_style_box(sb, card_rect)
-	_draw_paw_icon(center, r * 0.6, COLOR_ADVENTURE_GREEN)
 
 func _draw_lightbulb_icon(center: Vector2, r: float) -> void:
 	draw_circle(center + Vector2(0, -r * 0.15), r * 0.62, Color("#f2b705"))

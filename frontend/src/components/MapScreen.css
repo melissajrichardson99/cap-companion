@@ -26,9 +26,14 @@
   isolation: isolate;
 }
 
-/* Bottom-weighted leaf accents (visual language rollout) -- same SVG/
-   technique as HomePage.css's page-level clusters. Map is an open-content
-   screen so it gets the fuller two-cluster treatment.
+/* Corner leaf accents (visual language rollout) -- same SVG/technique as
+   HomePage.css's page-level clusters. Now that .map-scene's redundant
+   same-color background no longer paints over these (see .map-scene above),
+   there's real "mat" gutter around .map-frame for a leaf on all four
+   corners, not just the original two -- .map-foliage-top-left and
+   .map-foliage-bottom-right below are real elements (not more pseudo-
+   selectors, since ::before/::after are already spoken for) mirroring the
+   same size/offset/opacity convention as their ::before/::after counterparts.
    Offsets are non-negative (unlike other screens' corner accents) because
    .map-screen's own negative margins (above) already push this screen's box
    flush to #app-root's edges -- there's no padding gutter left for a
@@ -37,7 +42,8 @@
    line instead of just quietly clipping an unnoticeable sliver. Keeping the
    whole leaf shape inside .map-screen's own box avoids that cut. */
 .map-screen::before,
-.map-screen::after {
+.map-screen::after,
+.map-foliage {
   content: '';
   position: absolute;
   z-index: -1;
@@ -65,9 +71,28 @@
   transform: rotate(-140deg);
 }
 
+.map-foliage-top-left {
+  width: 250px;
+  height: 250px;
+  top: 60px;
+  left: 12px;
+  opacity: 0.2;
+  transform: rotate(-25deg);
+}
+
+.map-foliage-bottom-right {
+  width: 250px;
+  height: 250px;
+  bottom: 20px;
+  right: 12px;
+  opacity: 0.2;
+  transform: rotate(155deg);
+}
+
 @media (max-width: 640px) {
   .map-screen::before,
-  .map-screen::after {
+  .map-screen::after,
+  .map-foliage {
     width: 150px;
     height: 150px;
     opacity: 0.14;
@@ -96,15 +121,16 @@
   box-shadow: var(--cap-shadow-pop);
 }
 
-/* Flat tan "mat" showing around the wood frame -- previously an illustrated
-   tree/signpost/footprint scene image anchored along the bottom, but that
-   art has a fixed-aspect horizon line that can't tile cleanly across the
-   variable page heights this card renders at (it either left a gap or cut
-   off depending on content height). Flat color underneath sidesteps that
-   instead of patching the image positioning. */
+/* "Mat" around the wood frame -- no background-color of its own (previously
+   a hardcoded #e8d9bb, pixel-identical to .map-screen's own
+   --cap-color-page-bg behind it): a same-color opaque box here painted over
+   .map-screen's border-foliage accents regardless of the matching color,
+   since normal-flow siblings always paint above the accents' z-index:-1
+   layer -- the redundant fill was the actual cause of the border foliage
+   reading as clipped/cut off. Leaving this transparent lets .map-screen's
+   own background (and the foliage on it) show straight through, so the
+   "mat" is really just .map-screen's page background continuing underneath. */
 .map-scene {
-  border-radius: var(--cap-radius-lg);
-  background-color: #e8d9bb;
   padding: var(--cap-space-4) var(--cap-space-1);
 }
 

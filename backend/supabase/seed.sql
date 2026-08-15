@@ -76,7 +76,7 @@ insert into map_nodes (name, category, description, x_pct, y_pct) values
     ('Alpacas/Sheep/Pigs',         'animal', 'Shared alpaca, sheep, and pig habitat.',                 65.1, 89.4),
     ('Capybaras & Emus',           'animal', 'Capybara and emu habitat.',                             77.0, 90.1),
     ('Wallaroos (viewing only)',   'animal', 'Wallaroo viewing overlook (viewing only, no entry).',   78.3, 78.7),
-    ('Private Event Animal Space', 'animal', 'Reserved animal encounter space for private events.',   17.1, 61.6)
+    ('Private Event Animal Space', 'animal', 'Reserved animal encounter space for private events.',   21.8, 65.3)
 on conflict (name) do nothing;
 
 -- ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ insert into map_nodes (name, category, description, x_pct, y_pct) values
     ('Restrooms',             'service', 'Public restrooms.',                    19.1, 47.7),
     ('Party Tents',           'service', 'Reserved party/event tents.',          31.0, 47.5),
     ('Main Stage',            'service', 'Scheduled stage shows.',               51.5, 64.4),
-    ('Admin Offices',         'service', 'Park administrative offices.',         21.8, 65.3),
+    ('Admin Offices',         'service', 'Park administrative offices.',         17.1, 61.6),
     ('Animal Stage',          'service', 'Scheduled animal show stage.',         62.0, 75.0),
     ('Critter Cafe',          'food',    'Main park cafe.',                      31.3, 59.1),
     ('Granny Ann''s Kitchen', 'food',    'Kitchen and dining stand.',            31.4, 55.9),

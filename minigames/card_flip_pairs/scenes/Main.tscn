@@ -40,7 +40,7 @@ offset_right = 390.0
 offset_bottom = 166.0
 
 [node name="InstructionLabel" type="Label" parent="UI/InstructionBar"]
-offset_left = 56.0
+offset_left = 16.0
 offset_top = 8.0
 offset_right = 186.0
 offset_bottom = 84.0
