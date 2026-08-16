@@ -10,7 +10,24 @@
 import { readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { execFileSync } from 'node:child_process'
+import { execSync } from 'node:child_process'
+
+// Windows: `npx`/`wrangler` resolve to .cmd shims, which the OS can only
+// launch via cmd.exe, so `shell: true` is unavoidable here. As of Node 20+,
+// execFileSync/spawn no longer escapes args for you when shell is a string
+// or true (see DEP0190) — it just space-joins the array, so any arg with a
+// space or shell metacharacter (e.g. "public, max-age=3600") silently splits
+// into multiple argv entries. Quote every arg ourselves and build a single
+// command string instead of relying on that.
+function shellQuote(arg) {
+  const str = String(arg)
+  if (str.length > 0 && !/[\s"^&|<>%,;]/.test(str)) return str
+  return `"${str.replace(/"/g, '""')}"`
+}
+
+function run(args) {
+  execSync(args.map(shellQuote).join(' '), { stdio: 'inherit' })
+}
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -40,17 +57,13 @@ for (const filePath of walk(gamesDir)) {
   const contentType = MIME_TYPES[path.extname(filePath)] ?? 'application/octet-stream'
   const sizeMB = (statSync(filePath).size / (1024 * 1024)).toFixed(1)
   console.log(`uploading ${key} (${sizeMB} MB, ${contentType})`)
-  execFileSync(
-    'npx',
-    [
-      'wrangler', 'r2', 'object', 'put', `${bucket}/${key}`,
-      '--file', filePath,
-      '--content-type', contentType,
-      '--cache-control', 'public, max-age=3600',
-      '--remote',
-    ],
-    { stdio: 'inherit', shell: true },
-  )
+  run([
+    'npx', 'wrangler', 'r2', 'object', 'put', `${bucket}/${key}`,
+    '--file', filePath,
+    '--content-type', contentType,
+    '--cache-control', 'public, max-age=3600',
+    '--remote',
+  ])
   count++
 }
 console.log(`done — uploaded ${count} files to r2://${bucket}`)
