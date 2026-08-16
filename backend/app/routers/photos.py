@@ -28,6 +28,13 @@ def gallery(voter_session_id: str | None = None) -> list[PhotoSubmission]:
     return photos_service.list_gallery(voter_session_id)
 
 
+@router.get("/shortlisted", response_model=list[PhotoSubmission], dependencies=[Depends(require_staff)])
+def list_shortlisted() -> list[PhotoSubmission]:
+    # Staff-facing view of the same rows /gallery serves guests -- reuses
+    # list_gallery so vote counts stay computed the same way in both places.
+    return photos_service.list_gallery(None)
+
+
 @router.get("/of-the-day", response_model=PhotoSubmission | None)
 def of_the_day() -> PhotoSubmission | None:
     return photos_service.get_photo_of_the_day()
@@ -51,6 +58,15 @@ def reject(submission_id: UUID) -> PhotoSubmission:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.delete("/shortlisted", dependencies=[Depends(require_staff)])
+def clear_shortlisted() -> dict[str, int]:
+    # Declared ahead of DELETE /{submission_id} below -- Starlette matches
+    # routes in registration order, and a path literal here would otherwise
+    # never be reached (every request would match /{submission_id} first,
+    # with "shortlisted" parsed as a bogus submission_id).
+    return {"deleted": photos_service.delete_all_shortlisted()}
 
 
 @router.delete("/{submission_id}", status_code=204, dependencies=[Depends(require_staff)])

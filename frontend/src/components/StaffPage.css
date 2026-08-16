@@ -227,6 +227,32 @@
   color: var(--cap-color-body-text);
 }
 
+.staff-photos-subheading {
+  font-family: var(--cap-font-display);
+  font-size: 16px;
+  color: var(--cap-color-ink);
+  margin: 0 0 var(--cap-space-2);
+}
+
+.staff-shortlisted-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cap-space-3);
+  margin-top: var(--cap-space-5);
+}
+
+.staff-shortlisted-header .staff-photos-subheading {
+  margin: 0;
+}
+
+.staff-photo-vote-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cap-color-body-text);
+  white-space: nowrap;
+}
+
 .staff-photos-list {
   list-style: none;
   margin: 0;
@@ -236,7 +262,8 @@
   gap: 10px;
 }
 
-.staff-photo-row {
+.staff-photo-row,
+.staff-shortlisted-row {
   display: flex;
   align-items: center;
   gap: 12px;

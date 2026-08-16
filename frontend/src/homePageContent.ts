@@ -8,7 +8,7 @@
 // path (not a src/assets ES import) deliberately, since this file is also
 // imported directly by e2e specs under Node/Playwright, which doesn't share
 // Vite's asset-import pipeline.
-export const TODAY_CARD_PHOTO_SRC = '/today-photo-placeholder.svg'
+export const TODAY_CARD_PHOTO_SRC = '/home-image.jpg'
 
 export const ANIMAL_SHOW_TIMES: string[] = ['12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM']
 

@@ -105,18 +105,41 @@ def reject(submission_id: UUID) -> PhotoSubmission:
 
 def delete_submission(submission_id: UUID) -> None:
     # Hard delete, for genuinely inappropriate content -- distinct from reject
-    # (which soft-flags and keeps the row for an audit trail). Only allowed
-    # from pending_review: the Photo Queue only ever acts on pending rows, and
-    # an already-curated (shortlisted/rejected) row should go through reject
-    # first rather than disappearing without a trace.
+    # (which soft-flags and keeps the row for an audit trail). Allowed from
+    # pending_review (Photo Queue moderation) and shortlisted (Staff removing
+    # a live/voting-pool photo, e.g. one that slipped through moderation, or
+    # an end-of-day clear). Rejected rows should go through this same path if
+    # they ever need removing, but rejecting-then-deleting already covers
+    # that -- nothing else routes a rejected row here today.
     row = _get_row(submission_id)
     current = PhotoStatus(row["status"])
-    if current != PhotoStatus.PENDING_REVIEW:
+    if current not in (PhotoStatus.PENDING_REVIEW, PhotoStatus.SHORTLISTED):
         raise ConflictError(f'Photo submission {submission_id} is "{current}", cannot delete')
 
     client = get_supabase_client()
     client.storage.from_(BUCKET).remove([row["storage_path"]])
     client.table("photo_submissions").delete().eq("id", str(submission_id)).execute()
+
+
+def delete_all_shortlisted() -> int:
+    # Bulk end-of-day clear of the voting pool. PostgREST rejects an
+    # unscoped delete (no WHERE clause) -- the .eq("status", ...) filter
+    # below is that clause, not just a courtesy, so this can never widen
+    # into deleting pending/rejected rows too.
+    client = get_supabase_client()
+    rows = (
+        client.table("photo_submissions")
+        .select("id,storage_path")
+        .eq("status", PhotoStatus.SHORTLISTED.value)
+        .execute()
+        .data
+    )
+    if not rows:
+        return 0
+
+    client.storage.from_(BUCKET).remove([r["storage_path"] for r in rows])
+    client.table("photo_submissions").delete().eq("status", PhotoStatus.SHORTLISTED.value).execute()
+    return len(rows)
 
 
 def list_gallery(voter_session_id: str | None) -> list[PhotoSubmission]:

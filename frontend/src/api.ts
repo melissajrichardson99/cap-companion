@@ -402,6 +402,8 @@ export const api = {
     return res.json() as Promise<PhotoSubmission>
   },
   listPendingPhotos: () => staffRequest<PhotoSubmission[]>('/photos/pending'),
+  listShortlistedPhotos: () => staffRequest<PhotoSubmission[]>('/photos/shortlisted'),
+  clearShortlistedPhotos: () => staffRequest<{ deleted: number }>('/photos/shortlisted', { method: 'DELETE' }),
   shortlistPhoto: (submissionId: string) =>
     staffRequest<PhotoSubmission>(`/photos/${submissionId}/shortlist`, { method: 'POST' }),
   rejectPhoto: (submissionId: string) =>
