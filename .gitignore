@@ -149,7 +149,7 @@ venv/
 .venv/
 *.egg-info/
 
-# --- Godot build output (already copied into frontend/public/games/) ---
+# --- Godot build output (already copied into frontend/games-dist/) ---
 /minigames/*/export_web/
 
 # --- Generated QR signage PNGs (backend/scripts/generate_qr_codes.py) ---
@@ -159,3 +159,6 @@ venv/
 test-results/
 playwright-report/
 playwright/.cache/
+
+# --- Wrangler local dev state (local R2/KV simulation, logs) ---
+/.wrangler/

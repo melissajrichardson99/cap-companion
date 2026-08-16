@@ -1,0 +1,13 @@
+{
+  "name": "cap-companion",
+  "compatibility_date": "2026-08-16",
+  "main": "worker.js",
+  "assets": {
+    "directory": "./frontend/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/games/*"]
+  },
+  "r2_buckets": [
+    { "binding": "GAMES_BUCKET", "bucket_name": "cap-companion-games" }
+  ]
+}

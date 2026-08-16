@@ -3,8 +3,11 @@ import type { Minigame } from '../api'
 import './MinigameOverlay.css'
 
 // Maps a Minigame.name to the slug its Web export was copied to under
-// frontend/public/games/. Only games with a built export belong here —
-// anything else falls back to the ToastStack stub notice.
+// frontend/games-dist/. Served at /games/<slug>/... by the dev-server
+// middleware locally and by the Worker's R2 route in production (both
+// export builds are too large for the Vite-bundled static assets — see
+// worker.js). Only games with a built export belong here — anything else
+// falls back to the ToastStack stub notice.
 const GAME_SLUGS: Record<string, string> = {
   'Mini Snake': 'mini_snake',
   'Whack-a-Capybara': 'whack_a_capybara',
