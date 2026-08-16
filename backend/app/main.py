@@ -1,4 +1,5 @@
 import logging
+import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,9 +43,20 @@ async def catch_unhandled_exceptions(request: Request, call_next):
         return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 
+# Comma-separated list of allowed frontend origins, e.g.
+# "https://cap-companion.pages.dev,https://staff-test.cap-companion.pages.dev".
+# Defaults to the local Vite dev server so `.env` doesn't need to set this for
+# local development; set it explicitly once the frontend is deployed.
+_cors_origins_env = os.environ.get("CORS_ALLOWED_ORIGINS")
+CORS_ALLOWED_ORIGINS = (
+    [origin.strip() for origin in _cors_origins_env.split(",") if origin.strip()]
+    if _cors_origins_env
+    else ["http://localhost:5173"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
