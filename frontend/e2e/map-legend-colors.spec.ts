@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 // Covers the Map screen legend-color rework: not-visited pins render as real
 // SVG shapes (star/circle/square/diamond) whose stroke traces the actual
@@ -19,12 +19,22 @@ import { test, expect } from '@playwright/test'
 // box). Both offsets can still touch their OWN shape's corner -- an
 // intentional trade-off, since overlapping a different node's pin is worse
 // than sitting close to your own.
+//
+// Home Page is the true root route now, and the guest nav is a closed-by-
+// default hamburger dropdown -- every test below opens it first via "Open
+// menu" and selects Map via its menuitemradio role, per NavMenu.tsx.
+
+async function openMapTab(page: Page): Promise<void> {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  await page.getByRole('menuitemradio', { name: 'Map' }).click()
+}
 
 test.describe('Map pin legend colors', () => {
   test('not-visited pins render each category as a real SVG shape with the exact legend fill and legend number', async ({
     page,
   }) => {
-    await page.goto('/')
+    await openMapTab(page)
 
     const star = page.locator('.map-pin-attraction .map-pin-shape-fill').first()
     await expect(star).toHaveCSS('fill', 'rgb(255, 0, 0)')
@@ -63,7 +73,7 @@ test.describe('Map pin legend colors', () => {
     // map-parent-child.spec.ts's own visit-flow test, and both specs share
     // the same live demo data, so mutating a different node here keeps the
     // two files independent of run order).
-    await page.goto('/')
+    await openMapTab(page)
 
     const pin = page.locator('.map-pin[aria-label^="Pedal Karts"]')
     const fill = pin.locator('.map-pin-shape-fill')
@@ -98,7 +108,7 @@ test.describe('Map pin legend colors', () => {
   })
 
   test('Food & Store badges use the tighter -3px offset', async ({ page }) => {
-    await page.goto('/')
+    await openMapTab(page)
     await page.waitForSelector('.map-pin-food')
     // Force a badge onto a food node the same way NodeDetailPopup would if
     // it had an uncompleted linked tile (no food node has one in seed data).
@@ -118,7 +128,7 @@ test.describe('Map pin legend colors', () => {
     // Food & Store nodes have zero linked bingo tiles in the current seed
     // data, so they never show a real badge -- inject one on every food pin
     // to test the geometry itself, not today's data.
-    await page.goto('/')
+    await openMapTab(page)
     await page.evaluate(() => {
       document.querySelectorAll('.map-pin-food').forEach((pin) => {
         const span = document.createElement('span')

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 // Covers the new parent/child map node behavior: Cornhole, Cornhole Extreme,
 // Horse Hoops, and Tiki Toss/Ring & Hook are sub-games of Arcade Pad and
@@ -8,10 +8,20 @@ import { test, expect } from '@playwright/test'
 //
 // Assumes `python backend/scripts/reset_demo_data.py` has been run first so
 // the Demo Family card/map nodes start from a known (all-incomplete) state.
+//
+// Home Page is the true root route now, and the guest nav is a closed-by-
+// default hamburger dropdown -- every test below opens it first via "Open
+// menu" and selects Map via its menuitemradio role, per NavMenu.tsx.
+
+async function openMapTab(page: Page): Promise<void> {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  await page.getByRole('menuitemradio', { name: 'Map' }).click()
+}
 
 test.describe('Arcade Pad parent/child interconnectivity', () => {
   test('children are hidden as standalone nodes and reachable only via the parent popup', async ({ page }) => {
-    await page.goto('/')
+    await openMapTab(page)
 
     await expect(page.locator('.map-pin[aria-label^="Arcade Pad"]')).toBeVisible()
 
@@ -31,7 +41,7 @@ test.describe('Arcade Pad parent/child interconnectivity', () => {
   })
 
   test('marking Arcade Pad visited walks through each child\'s linked bingo tile', async ({ page }) => {
-    await page.goto('/')
+    await openMapTab(page)
     await page.locator('.map-pin[aria-label^="Arcade Pad"]').click()
     await page.getByRole('button', { name: 'Mark Visited' }).click()
 
@@ -64,7 +74,8 @@ test.describe('Arcade Pad parent/child interconnectivity', () => {
       await page.locator('.minigame-overlay-close').click()
     }
 
-    await page.getByRole('button', { name: 'Bingo Card' }).click()
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    await page.getByRole('menuitemradio', { name: 'Bingo Card' }).click()
     await expect(page.locator('.bingo-tile', { hasText: 'Win a round at Cornhole' })).toHaveClass(/bingo-tile-completed/)
     await expect(page.locator('.bingo-tile', { hasText: 'Take on Cornhole Extreme' })).toHaveClass(/bingo-tile-completed/)
     await expect(page.locator('.bingo-tile', { hasText: 'Score big at Horse Hoops' })).toHaveClass(/bingo-tile-open/)

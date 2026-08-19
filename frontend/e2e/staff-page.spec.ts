@@ -169,6 +169,16 @@ test('an emergency request sorts above an earlier question; Mark Resolved remove
   await loginAsStaff(staffPage)
   await staffPage.getByRole('tab', { name: 'Contact Requests' }).click()
 
+  // The request list is fetched once on mount (StaffPage.tsx's reload()),
+  // independent of which tab is selected -- that fetch can still be in
+  // flight right after loginAsStaff resolves (which only waits for the
+  // Photo Queue tab to render, not for the requests fetch to complete).
+  // allTextContents() below is a one-shot DOM read with no auto-retry, so
+  // wait for both rows to actually be visible first or this flakes under
+  // load.
+  await expect(staffPage.locator('.staff-request-row', { hasText: 'Sugar Shack' })).toBeVisible()
+  await expect(staffPage.locator('.staff-request-row', { hasText: 'Critter Cafe' })).toBeVisible()
+
   const rowTexts = await staffPage.locator('.staff-request-row').allTextContents()
   const emergencyIndex = rowTexts.findIndex((t) => t.includes('Sugar Shack'))
   const questionIndex = rowTexts.findIndex((t) => t.includes('Critter Cafe'))

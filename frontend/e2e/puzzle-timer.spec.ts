@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 // Covers the Puzzle Solving Timer (Plan.md 2.3): the description-only start
 // screen, start/stop timer per challenge, the 3-tap progressive hint button,
@@ -8,11 +8,20 @@ import { test, expect } from '@playwright/test'
 // has been run first (global setup does this), so puzzle_attempts starts
 // empty and Math Maze's "Standard" challenge has staff_time_seconds = 2
 // each run.
+//
+// The guest nav is a closed-by-default hamburger dropdown -- every test
+// opens it first via "Open menu", then picks Puzzles via its menuitemradio
+// role (not the implicit button role), per NavMenu.tsx.
+
+async function openPuzzlesTab(page: Page): Promise<void> {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  await page.getByRole('menuitemradio', { name: 'Puzzles' }).click()
+}
 
 test.describe('Puzzle Solving Timer', () => {
   test('lists all 6 puzzles with their relabeled challenge variants', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Puzzles' }).click()
+    await openPuzzlesTab(page)
 
     for (const name of [
       'Pyramid Puzzler',
@@ -39,8 +48,7 @@ test.describe('Puzzle Solving Timer', () => {
   })
 
   test('start screen shows the challenge description, hidden once the timer is running', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Puzzles' }).click()
+    await openPuzzlesTab(page)
 
     const mathMazeCard = page.locator('.puzzle-card', { hasText: 'Math Maze' })
     await mathMazeCard.getByRole('button', { name: 'Standard' }).click()
@@ -57,8 +65,7 @@ test.describe('Puzzle Solving Timer', () => {
   })
 
   test('Stop asks Yes/No; No discards the attempt and returns to the start screen', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Puzzles' }).click()
+    await openPuzzlesTab(page)
 
     const mathMazeCard = page.locator('.puzzle-card', { hasText: 'Math Maze' })
     await mathMazeCard.getByRole('button', { name: 'Standard' }).click()
@@ -82,8 +89,7 @@ test.describe('Puzzle Solving Timer', () => {
   })
 
   test('Yes records the attempt and shows a faster-than-staff-time comparison', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Puzzles' }).click()
+    await openPuzzlesTab(page)
 
     const mathMazeCard = page.locator('.puzzle-card', { hasText: 'Math Maze' })
     await mathMazeCard.getByRole('button', { name: 'Standard' }).click()
@@ -101,8 +107,7 @@ test.describe('Puzzle Solving Timer', () => {
   })
 
   test('Yes shows a slower-than-staff-time comparison when elapsed exceeds staff time', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Puzzles' }).click()
+    await openPuzzlesTab(page)
 
     const mathMazeCard = page.locator('.puzzle-card', { hasText: 'Math Maze' })
     await mathMazeCard.getByRole('button', { name: 'Standard' }).click()
@@ -126,8 +131,7 @@ test.describe('Puzzle Solving Timer', () => {
   test('a challenge with no staff time set shows the guest time with a fallback note, not a comparison', async ({
     page,
   }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Puzzles' }).click()
+    await openPuzzlesTab(page)
 
     const mysteryCard = page.locator('.puzzle-card', { hasText: 'Big Mystery Maze' })
     await mysteryCard.getByRole('button', { name: 'Standard' }).click()
@@ -146,8 +150,7 @@ test.describe('Puzzle Solving Timer', () => {
   test('the 3-tap hint button reveals tiers progressively while running, and hints-used reflects only the current run', async ({
     page,
   }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Puzzles' }).click()
+    await openPuzzlesTab(page)
 
     const mathMazeCard = page.locator('.puzzle-card', { hasText: 'Math Maze' })
     await mathMazeCard.getByRole('button', { name: 'Standard' }).click()
@@ -182,8 +185,7 @@ test.describe('Puzzle Solving Timer', () => {
   })
 
   test('a "none" solution puzzle has a timer but no hint button, ever', async ({ page }) => {
-    await page.goto('/')
-    await page.getByRole('button', { name: 'Puzzles' }).click()
+    await openPuzzlesTab(page)
 
     const mysteryCard = page.locator('.puzzle-card', { hasText: 'Big Mystery Maze' })
     await mysteryCard.getByRole('button', { name: 'Standard' }).click()

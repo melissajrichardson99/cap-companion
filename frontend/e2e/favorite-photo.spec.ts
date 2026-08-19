@@ -32,6 +32,10 @@ test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', 
   await expect(page.getByText('Thanks! Your photo is in for staff review.')).toBeVisible()
 
   const staffPage = await context.newPage()
+  // Remove (used in cleanup below) gates on a native window.confirm() --
+  // auto-accept it, same as staff-shortlisted-photos.spec.ts's individual
+  // Remove test does.
+  staffPage.on('dialog', (dialog) => dialog.accept())
   await loginAsStaff(staffPage)
   const staffRow = staffPage.locator('.staff-photo-row', { hasText: guestLabel })
   await expect(staffRow).toBeVisible()
@@ -68,4 +72,11 @@ test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', 
     return voteRes.status
   }, guestLabel)
   expect(duplicateVoteStatus).toBe(409)
+
+  // Clean up the shortlisted photo this test created -- this DB persists
+  // across spec files (only reset once, up front, by global-setup.ts), so
+  // leaving it shortlisted would make home-page.spec.ts's "no shortlisted
+  // photos yet" test see a stale photo depending on run order.
+  await staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel }).getByRole('button', { name: 'Remove' }).click()
+  await expect(staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel })).toHaveCount(0)
 })

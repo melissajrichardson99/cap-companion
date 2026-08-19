@@ -155,6 +155,17 @@ test.describe('Family Passport', () => {
     const scoreButton = (label: string) => scoringDialog.getByRole('button', { name: label, exact: true })
     for (let i = 0; i < 5; i++) await scoreButton('Third Hole (+4)').click() // 20
     await scoreButton('Woody (+1)').click() // 21 -- win
+
+    // A win now plays a dramatic MilestoneBanner moment before the result
+    // screen (same as scoring-sheet.spec.ts's dismissWinAnimation) -- it
+    // auto-dismisses after ~2.8s on its own, but explicitly clicking it
+    // through avoids racing that timer against the assertion's timeout
+    // under a loaded test run.
+    const banner = scoringDialog.locator('.milestone-banner-blackout')
+    await expect(banner).toContainText('Guest wins!')
+    await banner.click()
+    await expect(banner).toHaveCount(0)
+
     await expect(scoringDialog.locator('.scoring-win-headline')).toContainText('Guest wins!')
     await page.keyboard.press('Escape')
 
