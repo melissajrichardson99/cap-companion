@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
   HuntCharacter,
   HuntChallenge,
@@ -189,6 +189,63 @@ function MatchingChallenge({
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null)
   const [wrongRight, setWrongRight] = useState<string | null>(null)
 
+  const columnsRef = useRef<HTMLDivElement>(null)
+  const termButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const meaningButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  // Each column's min-height, measured from this challenge's actual rendered
+  // text (not a hardcoded pixel value) -- so a challenge with all-short
+  // content stays compact and a challenge with one long entry grows every
+  // sibling in that column to match, without towering over the other
+  // column's inherently shorter content. Null until the first post-layout
+  // measurement, so buttons fall back to .hunt-matching-item's CSS floor.
+  const [columnMinHeights, setColumnMinHeights] = useState<{ term: number; meaning: number } | null>(null)
+
+  useLayoutEffect(() => {
+    const tallest = (refs: Map<string, HTMLButtonElement>) => {
+      let max = 0
+      refs.forEach((el) => {
+        max = Math.max(max, el.getBoundingClientRect().height)
+      })
+      return max
+    }
+
+    const remeasure = () => {
+      setColumnMinHeights({ term: tallest(termButtonRefs.current), meaning: tallest(meaningButtonRefs.current) })
+    }
+
+    // Clear any prior override first so text re-wraps (and is measured) at
+    // the current column width -- otherwise a resize that lets text wrap
+    // onto fewer lines would only ever grow the min-height, never shrink it.
+    let frame = 0
+    const scheduleRemeasure = () => {
+      cancelAnimationFrame(frame)
+      setColumnMinHeights(null)
+      frame = requestAnimationFrame(remeasure)
+    }
+    scheduleRemeasure()
+
+    let observer: ResizeObserver | undefined
+    if (columnsRef.current && typeof ResizeObserver !== 'undefined') {
+      let lastWidth = columnsRef.current.getBoundingClientRect().width
+      observer = new ResizeObserver((entries) => {
+        const width = entries[0]?.contentRect.width ?? lastWidth
+        // Only react to width changes (viewport resize/orientation change,
+        // which can shift where text wraps) -- applying our own min-height
+        // only changes this container's *height*, so without this guard
+        // that self-triggers the observer and loops forever.
+        if (Math.abs(width - lastWidth) < 1) return
+        lastWidth = width
+        scheduleRemeasure()
+      })
+      observer.observe(columnsRef.current)
+    }
+
+    return () => {
+      cancelAnimationFrame(frame)
+      observer?.disconnect()
+    }
+  }, [content])
+
   const chooseLeft = (left: string) => {
     if (disabled || matched.has(left)) return
     setWrongRight(null)
@@ -214,15 +271,20 @@ function MatchingChallenge({
   return (
     <div className="hunt-matching">
       <p className="hunt-question">Match each term to its meaning.</p>
-      <div className="hunt-matching-columns">
+      <div className="hunt-matching-columns" ref={columnsRef}>
         <div className="hunt-matching-column">
           {content.pairs.map((p) => (
             <button
               type="button"
               key={p.left}
+              ref={(el) => {
+                if (el) termButtonRefs.current.set(p.left, el)
+                else termButtonRefs.current.delete(p.left)
+              }}
               className={`btn hunt-matching-item hunt-matching-term ${matched.has(p.left) ? 'hunt-option-correct' : ''} ${
                 selectedLeft === p.left ? 'hunt-matching-selected' : ''
               }`}
+              style={columnMinHeights ? { minHeight: columnMinHeights.term } : undefined}
               disabled={disabled || matched.has(p.left)}
               onClick={() => chooseLeft(p.left)}
             >
@@ -237,9 +299,14 @@ function MatchingChallenge({
               <button
                 type="button"
                 key={right}
+                ref={(el) => {
+                  if (el) meaningButtonRefs.current.set(right, el)
+                  else meaningButtonRefs.current.delete(right)
+                }}
                 className={`btn hunt-matching-item hunt-matching-meaning ${isMatched ? 'hunt-option-correct' : ''} ${
                   wrongRight === right ? 'hunt-option-wrong' : ''
                 }`}
+                style={columnMinHeights ? { minHeight: columnMinHeights.meaning } : undefined}
                 disabled={disabled || isMatched}
                 onClick={() => chooseRight(right)}
               >

@@ -207,11 +207,6 @@
 .hunt-matching-columns {
   display: flex;
   gap: 12px;
-  /* Both columns stretch to the row's tallest item (a long meaning phrase),
-     so every term/meaning pill in a row shares one height instead of the
-     meaning column's wrapped, multi-line text towering over the short,
-     single-line terms beside it. */
-  align-items: stretch;
 }
 
 .hunt-matching-column {
@@ -225,38 +220,50 @@
   text-align: left;
   font-size: 14px;
   line-height: 1.25;
-  /* A floor, not a fixed height -- short terms ("Joey") get a uniform pill
-     instead of shrink-wrapping to their text, while longer wrapped meanings
-     can still grow past it. Centering the (possibly multi-line) label
-     vertically keeps every button's text looking anchored mid-pill rather
-     than pinned to the top edge once it's taller than one line. */
+  /* Floor for the first paint, before MatchingChallenge's layout effect
+     (HuntChallengeModal.tsx) measures each column's actual longest rendered
+     button and applies a per-column min-height inline -- that JS-computed
+     value is what keeps every button in a column visually uniform for
+     *this challenge's* content, short or long, rather than this fixed
+     pixel value (which only covers single-line text). Centering the
+     (possibly multi-line) label vertically keeps every button's text
+     looking anchored mid-pill rather than pinned to the top edge once it's
+     taller than one line. */
   min-height: 44px;
   display: flex;
   align-items: center;
 }
 
-/* Term (left) / meaning (right) base colors -- two distinct brand-accent
-   washes (not the plain white default .btn fill) so the two columns read as
-   two intentionally-different groups of matchable chips, not arbitrary
-   buttons. Both stay clear of red/green/orange, which are reserved for the
-   wrong/correct/selected states below -- defined first so those states
-   (same specificity, later in source order) still win once a pair is
-   selected/matched/wrong.
-   All of these (through .hunt-matching-selected below) are qualified under
-   .hunt-modal-inner, not bare classes -- a bare single-class selector here
-   ties in specificity with shared.css's plain .btn background, and which one
-   wins then depends on unpredictable stylesheet load order (confirmed by a
-   real e2e run: these washes/highlights were silently losing to .btn's plain
-   background). Same fix as .btn-primary above, which already avoided this by
-   being qualified the same way. */
-.hunt-modal-inner .hunt-matching-term {
-  border-color: var(--cap-color-wood-plank-blue-deep);
-  background: color-mix(in srgb, var(--cap-color-wood-plank-blue) 32%, transparent);
+/* Term (left) / meaning (right) base color -- same sunset-orange wash as
+   .hunt-mc-option, so matching buttons follow the app's standard orange
+   button convention (Scoring Sheet, the rest of Scavenger Hunt) instead of
+   the old two-tone blue-gray/tan scheme. Both columns share one look since
+   they're just two groups of the same "matchable chip" affordance, not
+   different kinds of controls. Stays clear of red/green/orange-selected,
+   which are reserved for the wrong/correct/selected states below --
+   defined first so those states (same specificity, later in source order)
+   still win once a pair is selected/matched/wrong.
+   Qualified under .hunt-modal-inner, not a bare class -- a bare
+   single-class selector here ties in specificity with shared.css's plain
+   .btn background, and which one wins then depends on unpredictable
+   stylesheet load order (confirmed by a real e2e run: these washes were
+   silently losing to .btn's plain background). Same fix as .btn-primary
+   above, which already avoided this by being qualified the same way. */
+.hunt-modal-inner .hunt-matching-term,
+.hunt-modal-inner .hunt-matching-meaning {
+  border-color: var(--cap-color-sunset-orange-deep);
+  background: color-mix(in srgb, var(--cap-color-sunset-orange) 18%, transparent);
+  color: var(--cap-color-ink);
 }
 
-.hunt-modal-inner .hunt-matching-meaning {
-  border-color: var(--cap-color-trail-tan);
-  background: color-mix(in srgb, var(--cap-color-trail-tan) 26%, transparent);
+/* :not(.hunt-matching-selected):not(.hunt-option-wrong) -- a selected or
+   wrong-flagged item stays clickable (not :disabled), so without excluding
+   these two explicitly, this hover rule's higher specificity (one extra
+   class) would silently repaint them back to the plain hover wash the
+   instant the pointer that just clicked them settles over the button. */
+.hunt-modal-inner .hunt-matching-term:hover:not(:disabled):not(.hunt-matching-selected):not(.hunt-option-wrong),
+.hunt-modal-inner .hunt-matching-meaning:hover:not(:disabled):not(.hunt-matching-selected):not(.hunt-option-wrong) {
+  background: color-mix(in srgb, var(--cap-color-sunset-orange) 30%, transparent);
 }
 
 /* True/False buttons are binary CTAs (not one-of-many option chips like
@@ -286,9 +293,15 @@
   background: color-mix(in srgb, var(--cap-color-adventure-red) 12%, transparent);
 }
 
+/* A solid fill (not another light wash) -- now that the term/meaning base
+   state above is itself an orange wash, a same-hue "selected" tint at
+   similar opacity would barely read as a different state. Matches the
+   solid-orange treatment .btn-primary/.hunt-tf-button already use for an
+   active/CTA state. */
 .hunt-modal-inner .hunt-matching-selected {
-  border-color: var(--cap-color-sunset-orange);
-  background: color-mix(in srgb, var(--cap-color-sunset-orange) 14%, transparent);
+  border-color: var(--cap-color-sunset-orange-deep);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
 }
 
 /* True/False set */
