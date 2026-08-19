@@ -189,3 +189,19 @@
   background: transparent;
   color: var(--cap-color-ink);
 }
+
+/* Scoped override, same fix as .bingo-milestone-prompt/.nav-menu-actions/
+   .hunt-scan-cta .btn-primary -- shared.css's bare .btn-primary resolves to
+   the generic site --accent (purple), not this app's sunset-orange CTA
+   color. Go is the fallback bubble's one action, so it gets the same
+   brand-orange treatment as every other primary CTA instead of the plain
+   dark-outlined default it had before. */
+.scan-entry-modal-frame .btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.scan-entry-modal-frame .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+}

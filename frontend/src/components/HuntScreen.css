@@ -110,6 +110,11 @@
   gap: 8px;
   padding: 14px 16px;
   width: 100%;
+  /* Without this, width:100% + padding is computed in the default content-box
+     model, so the card's rendered outer width becomes 100% + 32px of padding
+     -- pushing it past its container's edge on mobile, where there's no
+     max-width cap (see the min-width:641px override below) to mask it. */
+  box-sizing: border-box;
 }
 
 /* Lines the progress bar's width up with the 2-card desktop grid below it
@@ -147,52 +152,65 @@
   transition: width 0.25s ease;
 }
 
-.hunt-progress-dots {
+/* Primary CTA for the Hunt screen -- replaces the old found/missing dot row
+   with a single prominent action, since scanning a sign is the one thing a
+   guest actually does here (the per-character grid below is a status view,
+   not an action). Full-width + larger padding/font than the shared .btn
+   baseline so it reads as the screen's main call-to-action, not just another
+   button. */
+.hunt-scan-cta {
   display: flex;
-  gap: 8px;
-}
-
-.hunt-progress-dot {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
-  border: 1.5px solid var(--cap-color-outline);
-  background: rgba(20, 24, 26, 0.08);
-  color: var(--cap-color-body-text);
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  font-family: var(--cap-font-display);
+  font-size: 17px;
+  font-weight: 700;
 }
 
-/* Found dots pick up their character's accent -- this is fine to reveal
-   (unlike the locked card/hint modal) since the character is already
-   unlocked, so there's no mystery left to protect. */
-.hunt-progress-dot-found {
-  background: var(--hunt-accent);
-  border-color: var(--hunt-accent-deep);
+/* Scoped override, same fix as .bingo-milestone-prompt .btn-primary and
+   .nav-menu-actions .btn-primary -- shared.css's bare .btn-primary resolves
+   to the generic site --accent (purple), not this app's sunset-orange CTA
+   color, so any *-primary button outside a .hunt-modal-inner-scoped modal
+   needs its own override to pick up the brand orange. */
+.hunt-scan-cta.btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+  box-shadow: var(--cap-shadow-pop-sm);
 }
 
-/* Width-fix cleanup: capped max column width + justify-content:center (not
-   plain 1fr) so cards stop stretching arbitrarily wide now that #app-root
-   reliably fills 900px -- 5 characters never divides evenly into full rows,
-   so this keeps every card a sensible size and the leftover row centered
-   instead of one lone card stretching to match a mostly-empty row. */
+.hunt-scan-cta.btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+}
+
+.hunt-scan-cta-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+/* Mobile-first: a fixed 2-column track (not auto-fill) so exactly 2 cards
+   sit per row at any phone width instead of the single oversized card
+   auto-fill produced once a 180px minimum stopped fitting twice across a
+   narrow viewport. minmax(0, 1fr) (not a fixed px minimum) lets each column
+   actually shrink to fit alongside its neighbor. */
 .hunt-character-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 210px));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   justify-content: center;
-  gap: 14px;
+  gap: 10px;
 }
 
-/* Desktop: exactly 2 cards per row (fixed 2-column track, not auto-fill) --
-   matches .hunt-overall-progress's 654px cap above so the grid and the
-   progress bar it sits under read as the same width. Mobile is untouched:
-   below this breakpoint the auto-fill rule above already yields 1 card per
-   row at typical phone widths. */
+/* Desktop: same 2-column shape, just wider fixed-size columns -- matches
+   .hunt-overall-progress's 654px cap above so the grid and the progress bar
+   it sits under read as the same width. */
 @media (min-width: 641px) {
   .hunt-character-grid {
     grid-template-columns: repeat(2, minmax(240px, 320px));
+    gap: 14px;
   }
 }
 
@@ -207,7 +225,33 @@
   flex-direction: column;
   gap: 6px;
   padding: 16px;
+  /* min-width: 0 lets a grid item shrink below its content's natural size --
+     without it, a long character name can force the column (and so the
+     whole 2-up row) wider than the card's own minmax(0, 1fr) track allows. */
+  min-width: 0;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* Sized down to fit cleanly 2-across at phone widths instead of the desktop
+   card's spacing looking cramped once squeezed into half the row. */
+@media (max-width: 640px) {
+  .hunt-character-card {
+    padding: 10px;
+    gap: 4px;
+  }
+
+  .hunt-character-emoji {
+    font-size: 24px;
+  }
+
+  .hunt-character-name {
+    font-size: 15px;
+  }
+
+  .hunt-character-species,
+  .hunt-character-status {
+    font-size: 11px;
+  }
 }
 
 .hunt-character-card:hover {

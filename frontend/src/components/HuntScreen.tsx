@@ -3,7 +3,7 @@ import type { HuntCharacter } from '../api'
 import { HUNT_CHARACTER_CONTENT } from '../huntCharacterContent'
 import { HuntChallengeModal } from './HuntChallengeModal'
 import { Modal } from './Modal'
-import { LockIcon, SearchIcon } from './NavIcons'
+import { CameraIcon, LockIcon, SearchIcon } from './NavIcons'
 import './HuntScreen.css'
 
 interface HuntScreenProps {
@@ -77,21 +77,10 @@ export function HuntScreen({ characters, error, onReload, onCompleteChallenge, o
             style={{ width: `${(unlockedCount / characters.length) * 100}%` }}
           />
         </div>
-        <div className="hunt-progress-dots">
-          {characters.map((character) => {
-            const content = HUNT_CHARACTER_CONTENT[character.name]
-            return (
-              <span
-                key={character.id}
-                className={`hunt-progress-dot ${character.unlocked ? 'hunt-progress-dot-found' : ''}`}
-                data-hunt-character={character.unlocked ? content.slug : undefined}
-                aria-hidden="true"
-              >
-                {character.unlocked ? content.emoji : ''}
-              </span>
-            )
-          })}
-        </div>
+        <button type="button" className="hunt-scan-cta btn btn-primary" onClick={onScanQr}>
+          <CameraIcon className="hunt-scan-cta-icon" />
+          Scan QR Code
+        </button>
       </div>
 
       <div className="hunt-character-grid">

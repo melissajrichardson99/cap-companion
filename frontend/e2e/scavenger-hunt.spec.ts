@@ -110,12 +110,20 @@ test.describe('Scavenger Hunt', () => {
     await expect(sloth.locator('.hunt-character-name')).toHaveCount(0)
   })
 
-  test('the overall progress bar tracks the total of 5 and shows 5 per-character dots', async ({ page }) => {
+  test('the overall progress bar tracks the total of 5 and shows a Scan QR Code CTA', async ({ page }) => {
     await openHuntTab(page)
     const bar = page.locator('.hunt-overall-progress-track')
     await expect(bar).toHaveAttribute('aria-valuemin', '0')
     await expect(bar).toHaveAttribute('aria-valuemax', '5')
-    await expect(page.locator('.hunt-progress-dot')).toHaveCount(5)
+    await expect(page.getByRole('button', { name: 'Scan QR Code' })).toBeVisible()
+  })
+
+  test('the Scan QR Code button opens the scan-entry modal', async ({ page }) => {
+    await openHuntTab(page)
+    await page.getByRole('button', { name: 'Scan QR Code' }).click()
+
+    await expect(page.getByText('Scan a Code')).toBeVisible()
+    await expect(page.getByLabel('Code from the sign')).toBeVisible()
   })
 
   test('tapping a locked character shows a location hint, not its identity', async ({ page }) => {

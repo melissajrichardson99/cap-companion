@@ -138,6 +138,16 @@
   color: var(--cap-color-adventure-green);
 }
 
+/* Without this, the confirmation text falls through to the page-level
+   default `color: var(--text)` (a muted grayish-purple meant for the
+   generic light-mode page background), which is low-contrast against this
+   card's parchment fill. Dark ink matches every other piece of body copy in
+   this modal (.hunt-question, etc.). */
+.hunt-complete-banner p {
+  color: var(--cap-color-ink);
+  font-weight: 600;
+}
+
 .hunt-modal-inner .btn {
   font-family: var(--cap-font-body);
   font-weight: 700;
@@ -174,8 +184,23 @@
   gap: 8px;
 }
 
-.hunt-mc-option {
+/* Sunset-orange wash, same recipe as ScoringSessionModal's
+   .scoring-event-btn -- these options previously fell through to
+   shared.css's bare `.btn { background: var(--bg) }` (plain white fill,
+   near-black outline/text), which read as off-brand next to the rest of the
+   app's orange CTA convention. Qualified under .hunt-modal-inner (same
+   0,2,0 specificity as this file's .btn/.btn-primary overrides below) so it
+   reliably wins over that shared rule regardless of stylesheet load order --
+   see the scoring-event-btn comment for the same reasoning. */
+.hunt-modal-inner .hunt-mc-option {
   text-align: left;
+  border-color: var(--cap-color-sunset-orange-deep);
+  background: color-mix(in srgb, var(--cap-color-sunset-orange) 18%, transparent);
+  color: var(--cap-color-ink);
+}
+
+.hunt-modal-inner .hunt-mc-option:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cap-color-sunset-orange) 30%, transparent);
 }
 
 /* Matching */

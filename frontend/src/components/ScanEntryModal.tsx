@@ -171,7 +171,7 @@ export function ScanEntryModal({ onClose, onCodeSubmitted }: ScanEntryModalProps
             onChange={(e) => setManualCode(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && submitManual()}
           />
-          <button type="button" className="btn btn-secondary" onClick={submitManual}>
+          <button type="button" className="btn btn-primary" onClick={submitManual}>
             Go
           </button>
         </div>
