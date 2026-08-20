@@ -283,9 +283,23 @@ interface MapScreenProps {
   error: string | null
   onReload: () => void
   onVisitResult: (result: VisitNodeResponse) => void
+  // Deep-link support (FaqScreen's washroom answer "Show me on the map"
+  // button) -- opens this "Take Me There" key spot's highlight once this
+  // screen has measured its map container. onInitialKeySpotHandled clears
+  // the caller's pending state so re-mounting this screen later (e.g.
+  // switching tabs away and back) doesn't replay the same deep link.
+  initialKeySpot?: string | null
+  onInitialKeySpotHandled?: () => void
 }
 
-export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenProps) {
+export function MapScreen({
+  nodes,
+  error,
+  onReload,
+  onVisitResult,
+  initialKeySpot,
+  onInitialKeySpotHandled,
+}: MapScreenProps) {
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null)
   const [openLegendCategories, setOpenLegendCategories] = useState<Set<MapNode['category']>>(new Set())
   const [activeKeySpot, setActiveKeySpot] = useState<string | null>(null)
@@ -489,6 +503,18 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
     const matchingNodes = positioned.filter((n) => category.matches(n))
     setZoom(focusScaleAndPan(matchingNodes, containerSize))
   }
+
+  // Runs handleKeySpotClick's own logic once (not the toggle-off branch,
+  // since a fresh deep link should always open) as soon as containerSize is
+  // available to zoom/pan against -- mirrors handleKeySpotClick's guard.
+  useEffect(() => {
+    if (!initialKeySpot || !containerSize) return
+    if (activeKeySpot !== initialKeySpot) {
+      handleKeySpotClick(initialKeySpot)
+    }
+    onInitialKeySpotHandled?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialKeySpot, containerSize])
 
   const toggleLegendCategory = (category: MapNode['category']) => {
     setOpenLegendCategories((prev) => {

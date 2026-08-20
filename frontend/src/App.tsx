@@ -6,13 +6,14 @@ import { BingoScreen } from './components/BingoScreen'
 import { BrandLogo } from './components/BrandLogo'
 import { CollectiblesScreen } from './components/CollectiblesScreen'
 import { ContactStaffModal } from './components/ContactStaffModal'
+import { FaqScreen } from './components/FaqScreen'
 import { FoodTruckScreen } from './components/FoodTruckScreen'
 import { HomePage } from './components/HomePage'
 import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
 import { NavMenu } from './components/NavMenu'
-import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, SearchIcon, TruckIcon } from './components/NavIcons'
+import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, QuestionMarkIcon, SearchIcon, TruckIcon } from './components/NavIcons'
 import { PassportModal } from './components/PassportModal'
 import { PhotoScreen } from './components/PhotoScreen'
 import { PuzzleScreen } from './components/PuzzleScreen'
@@ -26,7 +27,7 @@ import { getVoterSessionId } from './voterSession'
 import './components/shared.css'
 import './App.css'
 
-type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'animals' | 'collectibles' | 'photos' | 'foodtrucks'
+type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'animals' | 'collectibles' | 'photos' | 'foodtrucks' | 'faq'
 
 const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   { key: 'map', label: 'Map', icon: <MapPinIcon /> },
@@ -38,6 +39,7 @@ const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   { key: 'collectibles', label: 'Collectibles', icon: <PawIcon /> },
   { key: 'photos', label: 'Favorite Photo', icon: <CameraIcon /> },
   { key: 'foodtrucks', label: 'Food Truck Menus', icon: <TruckIcon /> },
+  { key: 'faq', label: 'FAQ', icon: <QuestionMarkIcon /> },
 ]
 
 function App() {
@@ -60,6 +62,10 @@ function App() {
   const [showContactStaff, setShowContactStaff] = useState(false)
   const [showPassport, setShowPassport] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  // FAQ->Map deep link (FaqScreen's washroom answer "Show me on the map"
+  // button) -- set right before switching activeTab to 'map', consumed and
+  // cleared by MapScreen once it opens the key spot's highlight.
+  const [pendingMapKeySpot, setPendingMapKeySpot] = useState<string | null>(null)
 
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname)
@@ -388,7 +394,14 @@ function App() {
           />
         )}
         {!showHome && activeTab === 'map' && (
-          <MapScreen nodes={nodes} error={nodesError} onReload={reloadNodes} onVisitResult={handleVisitResult} />
+          <MapScreen
+            nodes={nodes}
+            error={nodesError}
+            onReload={reloadNodes}
+            onVisitResult={handleVisitResult}
+            initialKeySpot={pendingMapKeySpot}
+            onInitialKeySpotHandled={() => setPendingMapKeySpot(null)}
+          />
         )}
         {!showHome && activeTab === 'bingo' && (
           <BingoScreen
@@ -431,6 +444,14 @@ function App() {
           <PhotoScreen gallery={photoGallery} error={photoGalleryError} onReload={reloadPhotoGallery} />
         )}
         {!showHome && activeTab === 'foodtrucks' && <FoodTruckScreen />}
+        {!showHome && activeTab === 'faq' && (
+          <FaqScreen
+            onOpenMapKeySpot={(key) => {
+              setPendingMapKeySpot(key)
+              setActiveTab('map')
+            }}
+          />
+        )}
       </main>
 
       <ToastStack toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />

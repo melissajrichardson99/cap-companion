@@ -296,6 +296,17 @@ export function JoystickIcon({ className }: IconProps) {
   )
 }
 
+// Question mark bubble -- the FAQ page's sign-board title icon and each
+// accordion entry's icon. Nothing else in the app covers this shape.
+export function QuestionMarkIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M6.5 7a3.5 3.5 0 1 1 5.7 2.7c-.9.7-1.7 1.3-1.7 2.6v.5" />
+      <circle cx="10" cy="15.3" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 // Left/right chevrons -- reused for the "Our Animals" detail/cards screens'
 // back button and flashcard prev/next navigation. Nothing else in the app
 // covers this shape.

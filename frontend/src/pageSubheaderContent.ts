@@ -17,6 +17,7 @@ export interface PageSubheaders {
   collectibles: string
   foodTrucks: string
   contactStaff: string
+  faq: string
 }
 
 export const PAGE_SUBHEADERS: PageSubheaders = {
@@ -31,4 +32,5 @@ export const PAGE_SUBHEADERS: PageSubheaders = {
   collectibles: "Collect your memories from around the park! Unlock badges, discoveries, and special collectibles as you explore Cobb's.",
   foodTrucks: "Hungry? We've got you covered! Browse today's food trucks and find something delicious for lunch, a snack, or a sweet treat.",
   contactStaff: "Need a hand? We're happy to help. Find out how to reach the Cobb's team during your visit.",
+  faq: "Find answers to common questions to help make your visit to Cobb's even better!",
 }
