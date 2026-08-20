@@ -5,13 +5,14 @@
 // place for this list to drift out of sync. Mapping reviewed against the
 // live map_nodes table and confirmed with Melissa on 2026-08-20 -- see specific
 // notes below before changing any of these lists.
+import type { ReactElement } from 'react'
 import type { MapNode } from './api'
 import { FenceIcon, ForkKnifeIcon, JoystickIcon, StageIcon, StoreIcon, WashroomIcon } from './components/NavIcons'
 
 export interface KeySpotCategory {
   key: string
   label: string
-  icon: (props: { className?: string }) => JSX.Element
+  icon: (props: { className?: string }) => ReactElement
   matches: (node: MapNode) => boolean
 }
 
