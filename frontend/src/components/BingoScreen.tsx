@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, type BingoCard, type BingoTile, type MilestoneEvent, type Minigame, type TileCompletionResult } from '../api'
+import { BINGO_MILESTONE_EXAMPLES, BINGO_MILESTONE_REWARD_TEXT } from '../bingoMilestoneContent'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { BingoTileModal } from './BingoTileModal'
 import { MilestoneBanner } from './MilestoneBanner'
@@ -115,6 +116,32 @@ export function BingoScreen({
           </div>
         )}
       </div>
+
+      <section className="bingo-milestones-card cap-parchment-card">
+        <h2 className="cap-section-title">Bingo Milestones</h2>
+        <p className="bingo-milestones-subtitle">Complete these milestones to earn extra rewards!</p>
+        <div className="bingo-milestones-grid">
+          {BINGO_MILESTONE_EXAMPLES.map((example) => (
+            <div className="bingo-milestone-example" key={example.type}>
+              <div className={`bingo-milestone-diagram bingo-milestone-diagram-${example.type}`} aria-hidden="true">
+                {Array.from({ length: 25 }, (_, i) => (
+                  <span
+                    key={i}
+                    className={
+                      example.filledTiles.has(i)
+                        ? 'bingo-milestone-diagram-dot bingo-milestone-diagram-dot-filled'
+                        : 'bingo-milestone-diagram-dot'
+                    }
+                  />
+                ))}
+              </div>
+              <h3 className="bingo-milestone-example-label">{example.label}</h3>
+              <p className="bingo-milestone-example-desc">{example.description}</p>
+              <span className="bingo-milestone-example-reward">{BINGO_MILESTONE_REWARD_TEXT}</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {selectedTile && (
         <BingoTileModal

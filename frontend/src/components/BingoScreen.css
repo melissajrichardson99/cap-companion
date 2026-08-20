@@ -417,3 +417,149 @@
     transform: translateY(0);
   }
 }
+
+/* "Bingo Milestones" example card -- purely informational, sits below the
+   wood-plank board itself. Uses the shared .cap-parchment-card surface (not
+   the board's one-off wood-plank treatment) with the same per-card corner
+   leaf accents as HomePage's .home-card, since this is chrome around the
+   board rather than the board's own "physical object" identity. */
+.bingo-milestones-card {
+  position: relative;
+  isolation: isolate;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bingo-milestones-card::before,
+.bingo-milestones-card::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.bingo-milestones-card::before {
+  width: 85px;
+  height: 85px;
+  bottom: -16px;
+  right: -12px;
+  opacity: 0.13;
+  transform: rotate(205deg);
+}
+
+.bingo-milestones-card::after {
+  width: 55px;
+  height: 55px;
+  bottom: -8px;
+  left: -8px;
+  opacity: 0.1;
+  transform: rotate(140deg);
+}
+
+.bingo-milestones-subtitle {
+  margin: -4px 0 0;
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+}
+
+.bingo-milestones-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .bingo-milestones-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.bingo-milestone-example {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+/* Small illustrative dot grid -- deliberately not built from the same
+   .bingo-tile markup as the real board (tech spec: this card clarifies what
+   a milestone shape looks like at a glance, not a second interactive card). */
+/* grid-template-rows (not just columns) pins each row to an equal share of
+   the container's own aspect-ratio-derived height -- without it, the 5 rows
+   sized only from each dot's intrinsic aspect-ratio needed more height than
+   this fixed-size box, overflowing into the label/description text below
+   it. */
+.bingo-milestone-diagram {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 3px;
+  width: 62px;
+  aspect-ratio: 1 / 1;
+}
+
+.bingo-milestone-diagram-dot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--cap-color-trail-tan);
+  border: 1px solid var(--cap-color-outline);
+}
+
+/* Filled-dot color matches the same --milestone-* accent each shape sweeps
+   in with on the real board (BingoScreen.css .bingo-tile-milestone-*), so
+   the example card stays visually consistent with the live milestone
+   celebration rather than introducing a new color per shape. */
+.bingo-milestone-diagram-line .bingo-milestone-diagram-dot-filled {
+  background: var(--milestone-line);
+  border-color: var(--milestone-line);
+}
+
+.bingo-milestone-diagram-x .bingo-milestone-diagram-dot-filled {
+  background: var(--milestone-x);
+  border-color: var(--milestone-x);
+}
+
+.bingo-milestone-diagram-double_bingo .bingo-milestone-diagram-dot-filled {
+  background: var(--milestone-double-bingo);
+  border-color: var(--milestone-double-bingo);
+}
+
+.bingo-milestone-diagram-blackout .bingo-milestone-diagram-dot-filled {
+  background: var(--milestone-blackout);
+  border-color: var(--milestone-blackout);
+}
+
+.bingo-milestone-example-label {
+  font-family: var(--cap-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
+  margin: 0;
+}
+
+.bingo-milestone-example-desc {
+  font-size: 12px;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}
+
+/* Same wood-sign pill treatment as .nav-menu-coins/.collectibles-total, for
+   consistency with the app's other small reward chips. */
+.bingo-milestone-example-reward {
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-wood-sign);
+  color: var(--cap-color-on-header);
+  white-space: nowrap;
+}
