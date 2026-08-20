@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, type BingoCard, type BingoTile, type MilestoneEvent, type Minigame, type TileCompletionResult } from '../api'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { BingoTileModal } from './BingoTileModal'
 import { MilestoneBanner } from './MilestoneBanner'
 import { GridIcon } from './NavIcons'
@@ -73,6 +74,7 @@ export function BingoScreen({
         <GridIcon className="cap-sign-board-icon" />
         Bingo Card
       </h1>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.bingo}</p>
 
       <div className="bingo-content">
         <div className="bingo-grid">

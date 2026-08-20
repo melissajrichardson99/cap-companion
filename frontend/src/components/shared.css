@@ -86,6 +86,22 @@
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
+/* App-wide page subheader (page subheader rollout) -- sits directly under a
+   .cap-sign-board title, one line of friendly copy per page (see
+   pageSubheaderContent.ts). Originated as FoodTruckScreen's one-off
+   .foodtruck-subtitle; promoted here so every guest-facing page shares the
+   exact same treatment instead of each page redefining it. Negative top
+   margin pulls it up into .cap-sign-board's own bottom margin
+   (var(--cap-space-5)) rather than stacking two full gaps. */
+.cap-page-subheader {
+  text-align: center;
+  font-family: var(--cap-font-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--cap-color-header-green);
+  margin: -8px 0 4px;
+}
+
 /* Subtle paper-grain texture (SVG feTurbulence noise) layered over the flat
    parchment fill, plus a softened, larger "sticker-pop" shadow for more
    depth than a flat pop -- lifted verbatim from HomePage.css's .home-card,

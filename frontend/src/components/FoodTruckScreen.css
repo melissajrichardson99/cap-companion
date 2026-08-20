@@ -47,15 +47,6 @@
   }
 }
 
-.foodtruck-subtitle {
-  text-align: center;
-  font-family: var(--cap-font-display);
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--cap-color-header-green);
-  margin: -8px 0 4px;
-}
-
 /* ---------------------------------------------------------------------
    Per-truck accent palette (Granny Ann's Kitchen / Sugar Shack / Critter
    Cafe), same [data-*] custom-property technique as HuntScreen.css's

@@ -1,4 +1,5 @@
 import type { CoinsSummary } from '../api'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { PawIcon } from './NavIcons'
 import './CollectiblesScreen.css'
 
@@ -30,6 +31,7 @@ export function CollectiblesScreen({ summary, error, onReload }: CollectiblesScr
         <PawIcon className="cap-sign-board-icon" />
         Collectibles
       </h1>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.collectibles}</p>
 
       <p className="collectibles-intro">
         Earn Cobb Coins by finishing Scavenger Hunt characters, Puzzle Timer challenges, Scoring Sheet wins, and

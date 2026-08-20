@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Puzzle, PuzzleChallenge } from '../api'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { PuzzleChallengeModal } from './PuzzleChallengeModal'
 import { PuzzlePieceIcon } from './NavIcons'
 import './PuzzleScreen.css'
@@ -44,6 +45,7 @@ export function PuzzleScreen({ puzzles, error, onReload, onCoinsChanged }: Puzzl
         <PuzzlePieceIcon className="cap-sign-board-icon" />
         Floor Puzzles
       </h1>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.puzzles}</p>
 
       <div className="puzzle-list">
         {puzzles.map((puzzle) => (

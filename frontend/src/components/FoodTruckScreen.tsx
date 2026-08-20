@@ -1,5 +1,6 @@
 import { useState, type ComponentType } from 'react'
 import { FOOD_TRUCKS } from '../foodTruckContent'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { BurgerIcon, CoffeeCupIcon, ForkKnifeIcon, IceCreamIcon } from './NavIcons'
 import './FoodTruckScreen.css'
 
@@ -28,7 +29,7 @@ export function FoodTruckScreen() {
         <ForkKnifeIcon className="cap-sign-board-icon" />
         Food Truck Menus
       </h1>
-      <p className="foodtruck-subtitle">Something for everyone!</p>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.foodTrucks}</p>
 
       <div className="foodtruck-grid">
         {FOOD_TRUCKS.map((truck) => {

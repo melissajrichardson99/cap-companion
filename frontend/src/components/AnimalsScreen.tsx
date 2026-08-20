@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ANIMALS } from '../animalContent'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { AnimalCardsScreen } from './AnimalCardsScreen'
 import { AnimalDetailScreen } from './AnimalDetailScreen'
 import { AnimalImage } from './AnimalImage'
@@ -59,6 +60,7 @@ export function AnimalsScreen({ onScanQr }: AnimalsScreenProps) {
         <BinocularsIcon className="cap-sign-board-icon" />
         Our Animals
       </h1>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.animals}</p>
 
       <div className="animals-search-row">
         <SearchIcon className="animals-search-icon" aria-hidden="true" />

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { MapNode, VisitNodeResponse } from '../api'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { NodeDetailPopup } from './NodeDetailPopup'
 import { MapPinIcon } from './NavIcons'
 import './MapScreen.css'
@@ -458,6 +459,7 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
         <MapPinIcon className="cap-sign-board-icon" />
         Park Map
       </h1>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.map}</p>
 
       <div className="map-scene">
         <div className="map-frame">

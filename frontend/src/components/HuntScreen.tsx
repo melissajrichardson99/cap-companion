@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { HuntCharacter } from '../api'
 import { HUNT_CHARACTER_CONTENT } from '../huntCharacterContent'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { HuntChallengeModal } from './HuntChallengeModal'
 import { Modal } from './Modal'
 import { CameraIcon, LockIcon, SearchIcon } from './NavIcons'
@@ -54,6 +55,7 @@ export function HuntScreen({ characters, error, onReload, onCompleteChallenge, o
         <SearchIcon className="cap-sign-board-icon" />
         Scavenger Hunt
       </h1>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.hunt}</p>
 
       <p className="hunt-intro">Find all 5 animals and complete their challenges.</p>
 

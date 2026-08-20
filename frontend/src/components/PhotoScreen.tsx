@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { api, type PhotoSubmission } from '../api'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { getVoterSessionId } from '../voterSession'
 import { CameraIcon } from './NavIcons'
 import './PhotoScreen.css'
@@ -61,6 +62,7 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
         <CameraIcon className="cap-sign-board-icon" />
         Favorite Photo
       </h1>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.photo}</p>
 
       <section className="photo-submit cap-parchment-card">
         <h2 className="photo-section-title">Submit Your Favorite Photo</h2>

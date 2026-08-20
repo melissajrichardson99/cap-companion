@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { FOOD_TRUCKS } from '../src/foodTruckContent'
+import { PAGE_SUBHEADERS } from '../src/pageSubheaderContent'
 
 // Covers the "Food Truck Menus" page -- the last major unbuilt item from the
 // original app plan. All content is frontend-only (foodTruckContent.ts, no
@@ -23,7 +24,7 @@ test.describe('Food Truck Menus', () => {
   test('reachable from the nav and renders the sign-board title, subtitle, and all three trucks', async ({ page }) => {
     await openFoodTrucksTab(page)
     await expect(page.getByRole('heading', { name: 'Food Truck Menus' })).toBeVisible()
-    await expect(page.getByText('Something for everyone!')).toBeVisible()
+    await expect(page.getByText(PAGE_SUBHEADERS.foodTrucks)).toBeVisible()
     await expect(page.locator('.foodtruck-card')).toHaveCount(FOOD_TRUCKS.length)
   })
 

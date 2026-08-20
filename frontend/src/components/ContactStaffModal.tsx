@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, type MapNode, type StaffRequestType } from '../api'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { Modal } from './Modal'
 import { MessageIcon } from './NavIcons'
 import './ContactStaffModal.css'
@@ -58,6 +59,7 @@ export function ContactStaffModal({ nodes, onClose }: ContactStaffModalProps) {
       <Modal onClose={onClose} labelledBy="contact-staff-title" className="contact-staff-modal-frame">
         <div className="contact-staff-modal-inner">
           {renderTitle('Contact Staff')}
+          <p className="cap-page-subheader contact-staff-page-subheader">{PAGE_SUBHEADERS.contactStaff}</p>
           <div className="contact-staff-menu">
             <button
               type="button"

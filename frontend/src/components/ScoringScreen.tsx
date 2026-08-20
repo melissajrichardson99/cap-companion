@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ScoringGame } from '../api'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { ScoringSessionModal } from './ScoringSessionModal'
 import { ClipboardIcon } from './NavIcons'
 import './ScoringScreen.css'
@@ -38,6 +39,7 @@ export function ScoringScreen({ games, error, onReload, onCoinsChanged }: Scorin
         <ClipboardIcon className="cap-sign-board-icon" />
         Scoring Sheet
       </h1>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.scoring}</p>
 
       <div className="scoring-game-list">
         {games.map((game) => (

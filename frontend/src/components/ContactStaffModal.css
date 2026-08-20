@@ -102,6 +102,15 @@
   height: 18px;
 }
 
+/* Overrides shared.css's .cap-page-subheader (centered, tuned to pull up
+   into a .cap-sign-board's bottom margin) to sit left-aligned under this
+   modal's own left-aligned icon-badge title instead, with the same
+   bottom-margin rhythm as .contact-staff-subtitle below. */
+.contact-staff-page-subheader {
+  text-align: left;
+  margin: 0 0 var(--cap-space-4);
+}
+
 .contact-staff-subtitle {
   margin: 0 0 16px;
   font-size: 14px;

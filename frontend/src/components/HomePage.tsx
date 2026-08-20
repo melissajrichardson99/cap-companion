@@ -11,6 +11,7 @@ import {
   TRACTOR_RIDE_TIMES_EAST,
   TRACTOR_RIDE_TIMES_WEST,
 } from '../homePageContent'
+import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { fetchCurrentWeather, type CurrentWeather } from '../weather'
 import { CameraIcon, HomeIcon } from './NavIcons'
 import './HomePage.css'
@@ -62,6 +63,7 @@ export function HomePage({ onBrowsePhotos }: HomePageProps) {
           <span className="home-sign-board-line2">Cobb's Adventure Park</span>
         </span>
       </h1>
+      <p className="cap-page-subheader">{PAGE_SUBHEADERS.home}</p>
 
       <section className="home-card cap-parchment-card">
         <h2 className="home-section-title">Today at Cobb's</h2>
