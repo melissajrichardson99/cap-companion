@@ -502,12 +502,176 @@
   text-decoration-color: var(--cap-color-adventure-red);
 }
 
+/* "Take Me There" card (between the map and the legend) -- same wood-frame +
+   parchment-card chrome as .map-legend-frame/.map-legend below, so it reads
+   as the same family of surface rather than a one-off. */
+.map-keyspot-frame {
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  margin-top: var(--cap-space-4);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.map-keyspot-card {
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-4);
+}
+
+.map-keyspot-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cap-space-2);
+}
+
+/* Visual language rollout: same treatment as .cap-section-title (shared.css) */
+.map-keyspot-title {
+  display: flex;
+  align-items: center;
+  gap: var(--cap-space-2);
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--cap-color-header-green);
+  margin: 0;
+}
+
+.map-keyspot-title-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--cap-color-header-green);
+}
+
+/* Small leaf accents flanking the title (approved mockup), distinct from the
+   page-level corner foliage -- same sprig SVG/fill as .cap-foliage-accent,
+   just inline-sized and at higher opacity since these are a deliberate small
+   accent next to text rather than background texture. */
+.map-keyspot-leaf {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.map-keyspot-leaf-left {
+  transform: rotate(-25deg);
+}
+
+.map-keyspot-leaf-right {
+  transform: rotate(155deg) scaleX(-1);
+}
+
+.map-keyspot-subtitle {
+  text-align: center;
+  font-size: 13px;
+  color: var(--cap-color-body-text);
+  margin: var(--cap-space-1) 0 var(--cap-space-4);
+}
+
+.map-keyspot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--cap-space-3);
+}
+
+.map-keyspot-btn {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cap-space-1);
+  padding: var(--cap-space-3) var(--cap-space-2);
+  border-radius: var(--cap-radius-md);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-parchment);
+  color: var(--cap-color-ink);
+  cursor: pointer;
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.map-keyspot-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--cap-shadow-pop);
+}
+
+.map-keyspot-btn-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.map-keyspot-btn-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Active/selected state -- same sunset-orange accent .nav-menu-tab-active
+   uses for "currently selected" elsewhere in the app. */
+.map-keyspot-btn-active {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-sunset-orange-deep);
+  color: #fff;
+}
+
+.map-keyspot-btn-active:hover {
+  background: var(--cap-color-sunset-orange-deep);
+}
+
+/* Highlighted pin(s) for the active "Take Me There" category -- enlarges and
+   adds a pulsing sunset-orange glow ring, layered on top of whatever
+   category-color/state classes the pin already has (map-pin-attraction,
+   map-pin-visited, etc.) rather than replacing them. */
+@keyframes keyspot-pin-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(243, 134, 48, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 9px rgba(243, 134, 48, 0.25);
+  }
+}
+
+.map-pin-keyspot-highlighted .map-pin-shape {
+  border-radius: 50%;
+  animation: keyspot-pin-pulse 1.4s ease-in-out infinite;
+}
+
+.map-pin-keyspot-highlighted {
+  z-index: 3;
+  transform: translate(calc(-50% + var(--nudge-x, 0px)), calc(-50% + var(--nudge-y, 0px))) scale(1.25);
+}
+
+.map-pin-keyspot-highlighted:hover,
+.map-pin-keyspot-highlighted:focus-visible {
+  z-index: 4;
+}
+
 /* Wood-grain frame/border treatment, matching the nav dropdown panel
    (.nav-menu-frame in NavMenu.css, itself reusing .map-frame's gradient) --
    wraps the legend's parchment card so it reads as the same wood chrome as
    the map card and every other framed surface in the app. */
 .map-legend-frame {
   border-radius: var(--cap-radius-md);
+  margin-top: var(--cap-space-4);
   background:
     repeating-linear-gradient(
       100deg,

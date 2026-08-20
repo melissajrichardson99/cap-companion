@@ -228,6 +228,74 @@ export function CoffeeCupIcon({ className }: IconProps) {
   )
 }
 
+// Restroom pictogram (head + body arch) -- the Map page's "Take Me There"
+// card's Washrooms button. Nothing else in the app covers this shape.
+export function WashroomIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <circle cx="10" cy="5.3" r="2.3" />
+      <path d="M6.3 17v-5.2a3.7 3.7 0 0 1 7.4 0V17" />
+    </svg>
+  )
+}
+
+// Storefront awning -- the Map page's "Take Me There" card's General Store
+// button. Distinct from TruckIcon (a vehicle) and the food icons (dishware) --
+// nothing else in the app covers this shape.
+export function StoreIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M2.5 7L4 2.5h12L17.5 7" />
+      <path d="M2.5 7a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0" />
+      <path d="M4 9.3V17.5h12V9.3" />
+      <path d="M8 17.5V13a2 2 0 0 1 4 0v4.5" />
+    </svg>
+  )
+}
+
+// Picket fence -- the Map page's "Take Me There" card's Animal Pens button.
+// Distinct from PawIcon (Collectibles nav tab, a different concept). Nothing
+// else in the app covers this shape.
+export function FenceIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <line x1="1.5" y1="7" x2="18.5" y2="7" />
+      <line x1="1.5" y1="12.5" x2="18.5" y2="12.5" />
+      <line x1="3.5" y1="4" x2="3.5" y2="17" />
+      <line x1="8.3" y1="2.3" x2="8.3" y2="17" />
+      <line x1="13" y1="4" x2="13" y2="17" />
+      <line x1="17" y1="2.3" x2="17" y2="17" />
+    </svg>
+  )
+}
+
+// Draped stage -- the Map page's "Take Me There" card's Animal Shows button.
+// Distinct from BinocularsIcon (Our Animals nav tab, a different concept).
+// Nothing else in the app covers this shape.
+export function StageIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M2 3h16v2.2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V3z" />
+      <line x1="2" y1="17.2" x2="18" y2="17.2" />
+      <line x1="6" y1="8.2" x2="6" y2="17.2" />
+      <line x1="14" y1="8.2" x2="14" y2="17.2" />
+    </svg>
+  )
+}
+
+// Joystick -- the Map page's "Take Me There" card's Attractions button.
+// Distinct from GridIcon (Bingo Card nav tab, a different concept). Nothing
+// else in the app covers this shape.
+export function JoystickIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <circle cx="10" cy="4.8" r="2.2" />
+      <line x1="10" y1="7" x2="10" y2="12.5" />
+      <rect x="3.5" y="12.5" width="13" height="4.8" rx="1.6" />
+    </svg>
+  )
+}
+
 // Left/right chevrons -- reused for the "Our Animals" detail/cards screens'
 // back button and flashcard prev/next navigation. Nothing else in the app
 // covers this shape.

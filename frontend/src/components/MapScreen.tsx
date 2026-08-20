@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { MapNode, VisitNodeResponse } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
+import { KEY_SPOT_CATEGORIES } from '../keySpotCategories'
 import { NodeDetailPopup } from './NodeDetailPopup'
 import { MapPinIcon } from './NavIcons'
 import './MapScreen.css'
@@ -48,6 +49,17 @@ const DRAG_THRESHOLD_PX = 4
 // cover that click, not so long a fast deliberate tap right after gets
 // eaten.
 const CLICK_SUPPRESS_MS = 300
+
+// "Take Me There" focus-on-highlight tuning. A single-node category zooms in
+// to a fixed comfortable level (there's no bounding box to fit); a
+// multi-node category fits its bounding box instead, so e.g. Attractions
+// (spread across nearly the whole map) settles back near MIN_ZOOM instead of
+// trying to zoom into empty space.
+const KEYSPOT_SINGLE_NODE_ZOOM = 2.2
+// Extra percent-of-map padding added around a multi-node bounding box before
+// fitting it to the viewport, so the outermost highlighted pins aren't
+// touching the viewport edge.
+const KEYSPOT_FOCUS_PADDING_PCT = 12
 
 interface GestureState {
   pointers: Map<number, { x: number; y: number }>
@@ -126,6 +138,46 @@ function computeNudges(
     })
   }
   return result
+}
+
+// Computes the zoom/pan that fits a "Take Me There" category's matching
+// pin(s) in the viewport -- reuses clampPan so the result always respects
+// the same pan bounds real pinch/drag gestures do.
+function focusScaleAndPan(
+  nodes: MapNode[],
+  containerSize: { width: number; height: number }
+): { scale: number; pan: { x: number; y: number } } {
+  if (nodes.length === 0) {
+    return { scale: MIN_ZOOM, pan: { x: 0, y: 0 } }
+  }
+  const xs = nodes.map((n) => n.x_pct!)
+  const ys = nodes.map((n) => n.y_pct!)
+  const minXPct = Math.min(...xs)
+  const maxXPct = Math.max(...xs)
+  const minYPct = Math.min(...ys)
+  const maxYPct = Math.max(...ys)
+  const centerX = ((minXPct + maxXPct) / 2 / 100) * containerSize.width
+  const centerY = ((minYPct + maxYPct) / 2 / 100) * containerSize.height
+
+  let scale: number
+  if (nodes.length === 1) {
+    scale = KEYSPOT_SINGLE_NODE_ZOOM
+  } else {
+    const spanXPct = maxXPct - minXPct + KEYSPOT_FOCUS_PADDING_PCT * 2
+    const spanYPct = maxYPct - minYPct + KEYSPOT_FOCUS_PADDING_PCT * 2
+    const spanX = (spanXPct / 100) * containerSize.width
+    const spanY = (spanYPct / 100) * containerSize.height
+    const fitScale = Math.min(containerSize.width / spanX, containerSize.height / spanY)
+    scale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, fitScale))
+  }
+
+  const pan = clampPan(
+    containerSize.width / 2 - centerX * scale,
+    containerSize.height / 2 - centerY * scale,
+    scale,
+    containerSize
+  )
+  return { scale, pan }
 }
 
 const CATEGORY_LABEL: Record<MapNode['category'], string> = {
@@ -236,6 +288,7 @@ interface MapScreenProps {
 export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenProps) {
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null)
   const [openLegendCategories, setOpenLegendCategories] = useState<Set<MapNode['category']>>(new Set())
+  const [activeKeySpot, setActiveKeySpot] = useState<string | null>(null)
   const imageWrapRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null)
@@ -400,6 +453,43 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
     return computeNudges(positioned, containerSize)
   }, [isMobile, containerSize, positioned])
 
+  // Dev-only guard: if a future node rename/removal leaves one of the 6
+  // key-spot categories with nothing to highlight, surface it loudly instead
+  // of shipping a silently-dead button -- matches the ticket's "flag zero
+  // matches explicitly" requirement for whenever this list next drifts from
+  // the live data.
+  useEffect(() => {
+    if (!nodes || import.meta.env.PROD) return
+    for (const category of KEY_SPOT_CATEGORIES) {
+      if (!nodes.some((n) => category.matches(n))) {
+        console.warn(`Take Me There: "${category.label}" matches zero map nodes.`)
+      }
+    }
+  }, [nodes])
+
+  const activeKeySpotCategory = activeKeySpot ? KEY_SPOT_CATEGORIES.find((c) => c.key === activeKeySpot) ?? null : null
+
+  const highlightedNodeIds = useMemo(() => {
+    if (!activeKeySpotCategory) return new Set<string>()
+    return new Set(positioned.filter((n) => activeKeySpotCategory.matches(n)).map((n) => n.id))
+  }, [activeKeySpotCategory, positioned])
+
+  const handleKeySpotClick = (key: string) => {
+    if (activeKeySpot === key) {
+      // Tapping the active category again clears the highlight and returns
+      // the map to its default view, rather than re-running a no-op focus.
+      setActiveKeySpot(null)
+      setZoom({ scale: MIN_ZOOM, pan: { x: 0, y: 0 } })
+      return
+    }
+    setActiveKeySpot(key)
+    if (!containerSize) return
+    const category = KEY_SPOT_CATEGORIES.find((c) => c.key === key)
+    if (!category) return
+    const matchingNodes = positioned.filter((n) => category.matches(n))
+    setZoom(focusScaleAndPan(matchingNodes, containerSize))
+  }
+
   const toggleLegendCategory = (category: MapNode['category']) => {
     setOpenLegendCategories((prev) => {
       const next = new Set(prev)
@@ -488,11 +578,12 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
                   '--nudge-x': `${nudge?.dx ?? 0}px`,
                   '--nudge-y': `${nudge?.dy ?? 0}px`,
                 } as CSSProperties
+                const isKeySpotHighlighted = highlightedNodeIds.has(node.id)
                 return (
                   <button
                     type="button"
                     key={node.id}
-                    className={`map-pin map-pin-${node.category} map-pin-${node.state}`}
+                    className={`map-pin map-pin-${node.category} map-pin-${node.state}${isKeySpotHighlighted ? ' map-pin-keyspot-highlighted' : ''}`}
                     style={pinStyle}
                     onClick={() => setSelectedNode(node)}
                     aria-label={`${node.name} (${CATEGORY_LABEL[node.category]}${stateNote})`}
@@ -551,6 +642,38 @@ export function MapScreen({ nodes, error, onReload, onVisitResult }: MapScreenPr
           </div>
         </section>
       )}
+
+      <div className="map-keyspot-frame">
+        <section className="map-keyspot-card cap-parchment-card">
+          <div className="map-keyspot-header">
+            <span className="map-keyspot-leaf map-keyspot-leaf-left" aria-hidden="true" />
+            <h2 className="map-keyspot-title">
+              <MapPinIcon className="map-keyspot-title-icon" />
+              Take Me There
+            </h2>
+            <span className="map-keyspot-leaf map-keyspot-leaf-right" aria-hidden="true" />
+          </div>
+          <p className="map-keyspot-subtitle">Select a key location to highlight it on the map.</p>
+          <div className="map-keyspot-grid">
+            {KEY_SPOT_CATEGORIES.map((category) => {
+              const Icon = category.icon
+              const isActive = activeKeySpot === category.key
+              return (
+                <button
+                  type="button"
+                  key={category.key}
+                  className={`map-keyspot-btn${isActive ? ' map-keyspot-btn-active' : ''}`}
+                  aria-pressed={isActive}
+                  onClick={() => handleKeySpotClick(category.key)}
+                >
+                  <Icon className="map-keyspot-btn-icon" />
+                  <span className="map-keyspot-btn-label">{category.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+      </div>
 
       <div className="map-legend-frame">
         <section className="map-legend cap-parchment-card">
