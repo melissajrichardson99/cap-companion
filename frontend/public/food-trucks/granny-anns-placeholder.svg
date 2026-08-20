@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#f0deC0" />
+  <rect x="16" y="16" width="608" height="448" rx="14" fill="none" stroke="#d1382c" stroke-width="4" stroke-dasharray="14 10" />
+  <g transform="translate(320,210)" fill="#d1382c" opacity="0.55">
+    <rect x="-90" y="-46" width="180" height="92" rx="46" />
+    <rect x="-90" y="-8" width="180" height="16" fill="#f0deC0" opacity="0.6" />
+  </g>
+  <text x="320" y="320" text-anchor="middle" font-family="Nunito, sans-serif" font-size="24" font-weight="700" fill="#6e4523">Photo Coming Soon</text>
+</svg>

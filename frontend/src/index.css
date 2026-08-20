@@ -94,6 +94,19 @@
   --cap-color-contact-red: #8c1c1c;
   --cap-color-contact-red-deep: #6e1414;
 
+  /* Food Truck Menus per-truck ribbon accents (Granny Ann's Kitchen / Sugar
+     Shack / Critter Cafe). Diner-red is deliberately a brighter, warmer red
+     than --cap-color-contact-red above -- that token is reserved as this
+     app's one "urgent" signal (Contact Staff), so a food card needed its own
+     hue rather than reusing it. Sugar-blue and cafe-brown are new curated
+     tones (not aliases) matching the approved mockup's colors as-is. */
+  --cap-color-diner-red: #d1382c;
+  --cap-color-diner-red-deep: #9c281f;
+  --cap-color-sugar-blue: #6fb8dd;
+  --cap-color-sugar-blue-deep: #4a8bb0;
+  --cap-color-cafe-brown: #7a5230;
+  --cap-color-cafe-brown-deep: #54371f;
+
   /* Nav dropdown panel: a distinct dark green from --cap-color-header-green
      (its own brand value, not an alias) for the wood-framed panel's fill,
      plus a mid-brown wood tone for the Cobb Coins sign-board pill. Fixed

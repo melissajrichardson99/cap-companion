@@ -165,6 +165,69 @@ export function HeartIcon({ className }: IconProps) {
   )
 }
 
+// Food truck -- used for the "Food Truck Menus" nav tab. Distinct from
+// PawIcon/BinocularsIcon (animals) and ClipboardIcon (scoring); nothing else
+// in the app covers this shape.
+export function TruckIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <rect x="1.5" y="6" width="10.5" height="8" rx="1" />
+      <path d="M12 9h4l3 3v2h-7z" />
+      <circle cx="5.5" cy="15.5" r="1.8" />
+      <circle cx="14.5" cy="15.5" r="1.8" />
+    </svg>
+  )
+}
+
+// Fork & knife -- the Food Truck Menus sign-board title icon, per the
+// approved mockup. Nothing else in the app covers this shape.
+export function ForkKnifeIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <line x1="5" y1="2" x2="5" y2="18" />
+      <path d="M3 2v6a2 2 0 0 0 4 0V2" />
+      <path d="M15 2c-1.7 0-3 2-3 4.5S13.3 10 15 10V18" />
+    </svg>
+  )
+}
+
+// Burger -- Granny Ann's Kitchen ribbon icon. Nothing else in the app covers
+// this shape.
+export function BurgerIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M2.5 8.5a7.5 6 0 0 1 15 0z" />
+      <line x1="2" y1="10.5" x2="18" y2="10.5" />
+      <line x1="2" y1="13" x2="18" y2="13" />
+      <path d="M2.5 15.5h15a1.5 1.5 0 0 1-1.5 1.5h-12a1.5 1.5 0 0 1-1.5-1.5z" />
+    </svg>
+  )
+}
+
+// Ice cream cone -- Sugar Shack ribbon icon. Nothing else in the app covers
+// this shape.
+export function IceCreamIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M6 8a4 4 0 0 1 8 0c0 1.2-.5 2-1 2.5H7c-.5-.5-1-1.3-1-2.5z" />
+      <path d="M7 10.5l2.5 7 2.5-7" />
+    </svg>
+  )
+}
+
+// Coffee cup -- Critter Cafe ribbon icon. Nothing else in the app covers
+// this shape.
+export function CoffeeCupIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M3.5 7h10v5.5a3.5 3.5 0 0 1-3.5 3.5h-3a3.5 3.5 0 0 1-3.5-3.5z" />
+      <path d="M13.5 8.5h1.5a2 2 0 0 1 0 4h-1.5" />
+      <path d="M6 4.5c0-1 1-1 1-2" />
+      <path d="M9.5 4.5c0-1 1-1 1-2" />
+    </svg>
+  )
+}
+
 // Left/right chevrons -- reused for the "Our Animals" detail/cards screens'
 // back button and flashcard prev/next navigation. Nothing else in the app
 // covers this shape.

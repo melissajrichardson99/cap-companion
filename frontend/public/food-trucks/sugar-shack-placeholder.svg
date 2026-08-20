@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#f0deC0" />
+  <rect x="16" y="16" width="608" height="448" rx="14" fill="none" stroke="#6fb8dd" stroke-width="4" stroke-dasharray="14 10" />
+  <g transform="translate(320,210)" fill="#6fb8dd" opacity="0.55">
+    <path d="M-40 -10 a40 40 0 1 1 80 0 z" />
+    <polygon points="-40,-10 40,-10 8,60 -8,60" />
+  </g>
+  <text x="320" y="320" text-anchor="middle" font-family="Nunito, sans-serif" font-size="24" font-weight="700" fill="#6e4523">Photo Coming Soon</text>
+</svg>

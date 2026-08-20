@@ -1,0 +1,257 @@
+.foodtruck-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: var(--cap-font-body);
+  position: relative;
+  isolation: isolate;
+}
+
+/* Bottom-weighted leaf accents (visual language rollout) -- same SVG/
+   technique as HuntScreen.css/HomePage.css's page-level clusters. */
+.foodtruck-screen::before,
+.foodtruck-screen::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.foodtruck-screen::before {
+  width: 230px;
+  height: 230px;
+  top: 40px;
+  right: -40px;
+  opacity: 0.18;
+  transform: rotate(20deg);
+}
+
+.foodtruck-screen::after {
+  width: 230px;
+  height: 230px;
+  bottom: 10px;
+  left: -45px;
+  opacity: 0.18;
+  transform: rotate(-140deg);
+}
+
+@media (max-width: 640px) {
+  .foodtruck-screen::before,
+  .foodtruck-screen::after {
+    width: 140px;
+    height: 140px;
+    opacity: 0.13;
+  }
+}
+
+.foodtruck-subtitle {
+  text-align: center;
+  font-family: var(--cap-font-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--cap-color-header-green);
+  margin: -8px 0 4px;
+}
+
+/* ---------------------------------------------------------------------
+   Per-truck accent palette (Granny Ann's Kitchen / Sugar Shack / Critter
+   Cafe), same [data-*] custom-property technique as HuntScreen.css's
+   [data-hunt-character] blocks. Diner-red is a deliberately distinct hue
+   from --cap-color-contact-red (that token stays reserved as this app's one
+   "urgent" signal, Contact Staff) -- see index.css's comment on
+   --cap-color-diner-red. Sugar-blue/cafe-brown match the approved mockup's
+   colors as-is.
+   --------------------------------------------------------------------- */
+[data-truck='granny-anns-kitchen'] {
+  --truck-accent: var(--cap-color-diner-red);
+  --truck-accent-deep: var(--cap-color-diner-red-deep);
+}
+
+[data-truck='sugar-shack'] {
+  --truck-accent: var(--cap-color-sugar-blue);
+  --truck-accent-deep: var(--cap-color-sugar-blue-deep);
+}
+
+[data-truck='critter-cafe'] {
+  --truck-accent: var(--cap-color-cafe-brown);
+  --truck-accent-deep: var(--cap-color-cafe-brown-deep);
+}
+
+.foodtruck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.foodtruck-card[data-truck] {
+  border-color: var(--truck-accent-deep);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.foodtruck-photo {
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-bottom: 2px solid var(--cap-color-outline);
+}
+
+.foodtruck-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--truck-accent);
+  border-bottom: 2px solid var(--cap-color-outline);
+}
+
+.foodtruck-ribbon-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.foodtruck-ribbon-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.foodtruck-ribbon-name {
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.foodtruck-ribbon-tagline {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.foodtruck-seasonal-badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: #fff;
+  color: var(--truck-accent-deep);
+  white-space: nowrap;
+}
+
+.foodtruck-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.foodtruck-menu-list,
+.foodtruck-sidebox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.foodtruck-menu-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--cap-color-ink);
+}
+
+.foodtruck-menu-item-name {
+  min-width: 0;
+}
+
+.foodtruck-menu-item-price {
+  font-weight: 700;
+  color: var(--truck-accent-deep);
+  white-space: nowrap;
+}
+
+.foodtruck-sideboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
+}
+
+/* Critter Cafe's two side-by-side boxes (Hot Drinks + Snacks) get too narrow
+   on phone widths -- "Hot Chocolate" was wrapping mid-word against its price.
+   Stack to full-width single-column instead, same 640px breakpoint the rest
+   of the app uses. */
+@media (max-width: 640px) {
+  .foodtruck-sideboxes {
+    flex-direction: column;
+  }
+}
+
+/* Same tan chip tone as HomePage.css's .home-schedule-time-chip -- a step
+   darker than the parent .cap-parchment-card fill. */
+.foodtruck-sidebox {
+  flex: 1 1 120px;
+  background: #e2cba0;
+  border: 1px solid rgba(20, 24, 26, 0.15);
+  border-radius: var(--cap-radius-sm);
+  padding: 10px 12px;
+}
+
+.foodtruck-sidebox-title {
+  margin: 0 0 6px;
+  font-family: var(--cap-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--truck-accent-deep);
+}
+
+.foodtruck-sidebox-list .foodtruck-menu-item {
+  font-size: 13px;
+}
+
+.foodtruck-note-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  text-align: center;
+}
+
+.foodtruck-note-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+}
+
+/* Compound selector + parent scope so this reliably beats shared.css's
+   single-class .cap-sign-board rule regardless of CSS bundle load order
+   (see CSS specificity vs. load-order gotcha) -- shrinks the closing sign
+   down from the full page-title size. */
+.foodtruck-screen .cap-sign-board.foodtruck-closing-sign {
+  margin: 0;
+  padding: var(--cap-space-2) var(--cap-space-5);
+  font-size: 16px;
+}

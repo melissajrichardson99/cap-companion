@@ -182,6 +182,32 @@ Follow in order — later steps depend on earlier ones.
   — it exists because seed.sql was updated with the Phase 2 minigames but
   never re-run against the live DB.) Verify what's actually live via the
   Supabase REST API rather than assuming seed.sql reflects it.
+- **A browser "CORS error" can be a Render outage in disguise — check
+  before touching `CORS_ALLOWED_ORIGINS`.** On 2026-08-20, every frontend
+  API call started failing with "No 'Access-Control-Allow-Origin' header is
+  present," across every route, with no config change on our end. Root
+  cause: a Render platform incident ("Deployment Issues," upstream Google
+  Cloud problem, see status.render.com) had disabled builds/deploys and
+  free-tier spin-up across all regions. Render's own edge proxy was
+  returning 502/503 directly — the request never reached FastAPI or its
+  `CORSMiddleware` at all — and Render's error responses carry no CORS
+  headers, so the browser reports it exactly like a CORS misconfiguration.
+  Before assuming `CORS_ALLOWED_ORIGINS` reverted or drifted:
+  1. `curl -i` the backend directly and check the `x-render-routing`
+     response header. `hibernate-wake-error` or `no-deploy` (returned
+     near-instantly, not after a normal ~30-60s cold-start delay) means
+     the platform itself isn't routing to your service — this is not an
+     app-level config problem.
+  2. Check https://status.render.com before editing any env var — a
+     platform incident affecting free-tier services will explain a
+     sudden, total, config-untouched failure far better than "the value
+     silently reverted." (It won't — `render.yaml` declares
+     `CORS_ALLOWED_ORIGINS` with `sync: false`, which persists the
+     dashboard value across redeploys; there is no mechanism here that
+     resets it.)
+  3. Only if the routing header/status page point at a real request
+     reaching FastAPI (not a Render-edge error) is `CORS_ALLOWED_ORIGINS`
+     itself worth re-checking.
 
 ## 4. Cost and safety notes
 
