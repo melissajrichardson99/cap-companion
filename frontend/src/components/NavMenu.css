@@ -74,6 +74,13 @@
   max-width: calc(100vw - 32px);
   max-height: 75vh;
   overflow-y: auto;
+  /* Same thin-bar recipe as ContactStaffModal.css's identical comment. No
+     padding/negative-margin sink here -- unlike those modals, this panel's
+     own box IS the outer edge (.nav-menu-frame's wood border lives inside
+     it, not outside), so the thin bar is already as close to the frame as
+     it can get without widening the fixed 280px panel. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--cap-scrollbar-thumb) var(--cap-scrollbar-track);
   box-shadow: var(--cap-shadow-soft), var(--cap-shadow-pop);
   border-radius: var(--cap-radius-lg);
   transform-origin: top right;
@@ -87,6 +94,24 @@
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
+}
+
+.nav-menu-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.nav-menu-panel::-webkit-scrollbar-track {
+  background: var(--cap-scrollbar-track);
+  border-radius: var(--cap-radius-pill);
+}
+
+.nav-menu-panel::-webkit-scrollbar-thumb {
+  background: var(--cap-scrollbar-thumb);
+  border-radius: var(--cap-radius-pill);
+}
+
+.nav-menu-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--cap-scrollbar-thumb-hover);
 }
 
 /* Wood-plank border, matching the Map card's frame (.map-frame in

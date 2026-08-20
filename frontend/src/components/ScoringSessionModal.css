@@ -1,7 +1,21 @@
 /* Wood-grain frame/border treatment, same recipe as Puzzles'
    .puzzle-modal-frame -- replaces Modal.css's default panel background so
-   this modal reads as "framed" the same way the Puzzle challenge modal is. */
-.scoring-modal-frame {
+   this modal reads as "framed" the same way the Puzzle challenge modal is.
+   Also the same element as Modal.css's .modal-panel (Modal.tsx applies both
+   classes to one div) -- see ContactStaffModal.css's identical comment for
+   why this needs display:flex + min-height:0, scoped to this compound
+   selector only. Confirmed via Playwright: with 10+ players added in setup,
+   .modal-panel's overflow: hidden doesn't just clip -- the focused "Add
+   Player" button moving down the growing list drags the browser's built-in
+   focus-scroll-into-view along with it (overflow: hidden still has a
+   scrollTop, it just hides the scrollbar/blocks user-driven scroll), leaving
+   the visible slice at an arbitrary scroll position with the Player 1-4
+   inputs invisible above it. .scoring-modal-scroll below gives real content
+   its own deliberate, user-controllable scroll area instead. */
+.modal-panel.scoring-modal-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border-radius: var(--cap-radius-md);
   background:
     repeating-linear-gradient(
@@ -26,12 +40,53 @@
 .scoring-modal-inner {
   position: relative;
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   background-color: var(--cap-color-parchment);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   border: 2px solid var(--cap-color-outline);
   border-radius: calc(var(--cap-radius-md) - 4px);
   padding: var(--cap-space-4);
   font-family: var(--cap-font-body);
+}
+
+/* The one actual scroll container -- see ContactStaffModal.css's identical
+   comment. Only real content lives in here, never the decorative leaf
+   accents above (those stay on .scoring-modal-inner itself). Both axes set
+   explicitly so neither is left at its 'visible' default (the original
+   phantom-scrollbar spec quirk, see Modal.css's .modal-panel comment). */
+.scoring-modal-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Same scrollbar recipe as ContactStaffModal.css's identical comment --
+     sinks the thin bar 6px into .scoring-modal-inner's own padding gutter,
+     closer to the wood frame and off the button edges. */
+  padding-right: 10px;
+  margin-right: -6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cap-scrollbar-thumb) var(--cap-scrollbar-track);
+}
+
+.scoring-modal-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scoring-modal-scroll::-webkit-scrollbar-track {
+  background: var(--cap-scrollbar-track);
+  border-radius: var(--cap-radius-pill);
+}
+
+.scoring-modal-scroll::-webkit-scrollbar-thumb {
+  background: var(--cap-scrollbar-thumb);
+  border-radius: var(--cap-radius-pill);
+}
+
+.scoring-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--cap-scrollbar-thumb-hover);
 }
 
 /* Small corner leaf accents (visual language rollout) -- offsets capped at
@@ -215,6 +270,30 @@
   gap: 6px;
   overflow-x: auto;
   margin: 0 0 14px;
+  padding-bottom: 6px;
+  /* Same thin-bar recipe as .scoring-modal-scroll above, for the other
+     scrollable area in this modal -- kept consistent app-wide rather than
+     leaving this one at the bulky browser default. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--cap-scrollbar-thumb) var(--cap-scrollbar-track);
+}
+
+.scoring-turn-strip::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scoring-turn-strip::-webkit-scrollbar-track {
+  background: var(--cap-scrollbar-track);
+  border-radius: var(--cap-radius-pill);
+}
+
+.scoring-turn-strip::-webkit-scrollbar-thumb {
+  background: var(--cap-scrollbar-thumb);
+  border-radius: var(--cap-radius-pill);
+}
+
+.scoring-turn-strip::-webkit-scrollbar-thumb:hover {
+  background: var(--cap-scrollbar-thumb-hover);
 }
 
 .scoring-turn-arrow {

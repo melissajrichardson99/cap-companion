@@ -58,25 +58,27 @@ export function ContactStaffModal({ nodes, onClose }: ContactStaffModalProps) {
     return (
       <Modal onClose={onClose} labelledBy="contact-staff-title" className="contact-staff-modal-frame">
         <div className="contact-staff-modal-inner">
-          {renderTitle('Contact Staff')}
-          <p className="cap-page-subheader contact-staff-page-subheader">{PAGE_SUBHEADERS.contactStaff}</p>
-          <div className="contact-staff-menu">
-            <button
-              type="button"
-              className="contact-staff-option"
-              onClick={() => setStep('question-location')}
-            >
-              <span className="contact-staff-option-title">I have a question</span>
-              <span className="contact-staff-option-desc">A staff member will come find you — not urgent.</span>
-            </button>
-            <button
-              type="button"
-              className="contact-staff-option contact-staff-option-emergency"
-              onClick={() => setStep('emergency-location')}
-            >
-              <span className="contact-staff-option-title">I need help now</span>
-              <span className="contact-staff-option-desc">Emergency — notifies staff immediately.</span>
-            </button>
+          <div className="contact-staff-modal-scroll">
+            {renderTitle('Contact Staff')}
+            <p className="cap-page-subheader contact-staff-page-subheader">{PAGE_SUBHEADERS.contactStaff}</p>
+            <div className="contact-staff-menu">
+              <button
+                type="button"
+                className="contact-staff-option"
+                onClick={() => setStep('question-location')}
+              >
+                <span className="contact-staff-option-title">I have a question</span>
+                <span className="contact-staff-option-desc">A staff member will come find you — not urgent.</span>
+              </button>
+              <button
+                type="button"
+                className="contact-staff-option contact-staff-option-emergency"
+                onClick={() => setStep('emergency-location')}
+              >
+                <span className="contact-staff-option-title">I need help now</span>
+                <span className="contact-staff-option-desc">Emergency — notifies staff immediately.</span>
+              </button>
+            </div>
           </div>
         </div>
       </Modal>
@@ -88,45 +90,47 @@ export function ContactStaffModal({ nodes, onClose }: ContactStaffModalProps) {
     return (
       <Modal onClose={onClose} labelledBy="contact-staff-title" className="contact-staff-modal-frame">
         <div className="contact-staff-modal-inner">
-          {renderTitle('Where are you?')}
-          <p className="contact-staff-subtitle">
-            {isEmergency
-              ? 'Tap your nearest location to notify staff right away.'
-              : 'Pick your nearest location, then send your question.'}
-          </p>
-          {error && <p className="screen-error">{error}</p>}
-          {nodes === null ? (
-            <p className="contact-staff-loading">Loading locations…</p>
-          ) : (
-            <div className="contact-staff-locations">
-              {locations.map((node) => (
-                <button
-                  type="button"
-                  key={node.id}
-                  className={`contact-staff-location ${
-                    !isEmergency && selectedLocationId === node.id ? 'contact-staff-location-selected' : ''
-                  }`}
-                  disabled={submitting}
-                  onClick={() => (isEmergency ? submit('emergency', node.id) : setSelectedLocationId(node.id))}
-                >
-                  {node.name}
-                </button>
-              ))}
-            </div>
-          )}
-          {!isEmergency && (
-            <button
-              type="button"
-              className="btn btn-danger contact-staff-submit"
-              disabled={!selectedLocationId || submitting}
-              onClick={() => selectedLocationId && submit('question', selectedLocationId)}
-            >
-              {submitting ? 'Sending…' : 'Submit Question'}
+          <div className="contact-staff-modal-scroll">
+            {renderTitle('Where are you?')}
+            <p className="contact-staff-subtitle">
+              {isEmergency
+                ? 'Tap your nearest location to notify staff right away.'
+                : 'Pick your nearest location, then send your question.'}
+            </p>
+            {error && <p className="screen-error">{error}</p>}
+            {nodes === null ? (
+              <p className="contact-staff-loading">Loading locations…</p>
+            ) : (
+              <div className="contact-staff-locations">
+                {locations.map((node) => (
+                  <button
+                    type="button"
+                    key={node.id}
+                    className={`contact-staff-location ${
+                      !isEmergency && selectedLocationId === node.id ? 'contact-staff-location-selected' : ''
+                    }`}
+                    disabled={submitting}
+                    onClick={() => (isEmergency ? submit('emergency', node.id) : setSelectedLocationId(node.id))}
+                  >
+                    {node.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!isEmergency && (
+              <button
+                type="button"
+                className="btn btn-danger contact-staff-submit"
+                disabled={!selectedLocationId || submitting}
+                onClick={() => selectedLocationId && submit('question', selectedLocationId)}
+              >
+                {submitting ? 'Sending…' : 'Submit Question'}
+              </button>
+            )}
+            <button type="button" className="btn btn-secondary contact-staff-back" onClick={() => setStep('menu')}>
+              Back
             </button>
-          )}
-          <button type="button" className="btn btn-secondary contact-staff-back" onClick={() => setStep('menu')}>
-            Back
-          </button>
+          </div>
         </div>
       </Modal>
     )
@@ -135,15 +139,17 @@ export function ContactStaffModal({ nodes, onClose }: ContactStaffModalProps) {
   return (
     <Modal onClose={onClose} labelledBy="contact-staff-title" className="contact-staff-modal-frame">
       <div className="contact-staff-modal-inner">
-        {renderTitle(submittedType === 'emergency' ? 'Help is on the way' : 'Question sent')}
-        <p className="contact-staff-subtitle">
-          {submittedType === 'emergency'
-            ? 'A staff member has been notified and is heading your way now.'
-            : "A staff member has been notified and will come find you when they're free."}
-        </p>
-        <button type="button" className="btn btn-danger" onClick={onClose}>
-          Close
-        </button>
+        <div className="contact-staff-modal-scroll">
+          {renderTitle(submittedType === 'emergency' ? 'Help is on the way' : 'Question sent')}
+          <p className="contact-staff-subtitle">
+            {submittedType === 'emergency'
+              ? 'A staff member has been notified and is heading your way now.'
+              : "A staff member has been notified and will come find you when they're free."}
+          </p>
+          <button type="button" className="btn btn-danger" onClick={onClose}>
+            Close
+          </button>
+        </div>
       </div>
     </Modal>
   )

@@ -152,6 +152,18 @@
   --cap-color-on-header: #ffffff;
   --cap-color-on-header-muted: rgba(255, 255, 255, 0.82);
 
+  /* Custom scrollbar recipe (thin bar, wood-brown thumb) -- shared by every
+     scrollable area's own CSS (ContactStaffModal.css's
+     .contact-staff-modal-scroll, ScoringSessionModal.css's
+     .scoring-modal-scroll/.scoring-turn-strip, NavMenu.css's
+     .nav-menu-panel) instead of each one hardcoding the recipe's colors.
+     Fixed regardless of theme, same reasoning as the rest of the brand
+     palette above -- these scrollbars only ever sit on fixed
+     wood/parchment/nav-panel-green surfaces, never an adaptive neutral. */
+  --cap-scrollbar-thumb: rgba(110, 69, 35, 0.55);
+  --cap-scrollbar-thumb-hover: rgba(110, 69, 35, 0.75);
+  --cap-scrollbar-track: rgba(110, 69, 35, 0.1);
+
   --cap-font-display: 'Fredoka', var(--sans);
   --cap-font-body: 'Nunito', var(--sans);
 

@@ -194,45 +194,47 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
     return (
       <Modal onClose={onClose} labelledBy="scoring-modal-title" className="scoring-modal-frame">
         <div className="scoring-modal-inner">
-          {title}
-          <p className="scoring-modal-rules">{game.rules_text}</p>
-          <p className="scoring-modal-win-condition">{game.win_condition_text}</p>
+          <div className="scoring-modal-scroll">
+            {title}
+            <p className="scoring-modal-rules">{game.rules_text}</p>
+            <p className="scoring-modal-win-condition">{game.win_condition_text}</p>
 
-          <div className="scoring-setup">
-            <h3 className="scoring-section-title">Players</h3>
-            <p className="scoring-setup-hint">Players take turns in the order entered below.</p>
-            {playerInputs.map((value, i) => (
-              <div className="scoring-player-input-row" key={i}>
-                <input
-                  type="text"
-                  className="scoring-player-input"
-                  placeholder={`Player ${i + 1} name`}
-                  value={value}
-                  onChange={(e) => updatePlayerField(i, e.target.value)}
-                />
-                {playerInputs.length > 1 && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary scoring-remove-player-btn"
-                    aria-label={`Remove player ${i + 1}`}
-                    onClick={() => removePlayerField(i)}
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            ))}
-            <button type="button" className="btn btn-secondary" onClick={addPlayerField}>
-              Add Player
-            </button>
-          </div>
+            <div className="scoring-setup">
+              <h3 className="scoring-section-title">Players</h3>
+              <p className="scoring-setup-hint">Players take turns in the order entered below.</p>
+              {playerInputs.map((value, i) => (
+                <div className="scoring-player-input-row" key={i}>
+                  <input
+                    type="text"
+                    className="scoring-player-input"
+                    placeholder={`Player ${i + 1} name`}
+                    value={value}
+                    onChange={(e) => updatePlayerField(i, e.target.value)}
+                  />
+                  {playerInputs.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary scoring-remove-player-btn"
+                      aria-label={`Remove player ${i + 1}`}
+                      onClick={() => removePlayerField(i)}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button type="button" className="btn btn-secondary" onClick={addPlayerField}>
+                Add Player
+              </button>
+            </div>
 
-          {setupError && <p className="screen-error">{setupError}</p>}
+            {setupError && <p className="screen-error">{setupError}</p>}
 
-          <div className="scoring-modal-actions">
-            <button type="button" className="btn btn-primary" disabled={creating} onClick={startSession}>
-              {creating ? 'Starting…' : 'Begin Session'}
-            </button>
+            <div className="scoring-modal-actions">
+              <button type="button" className="btn btn-primary" disabled={creating} onClick={startSession}>
+                {creating ? 'Starting…' : 'Begin Session'}
+              </button>
+            </div>
           </div>
         </div>
       </Modal>
@@ -245,29 +247,31 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
     return (
       <Modal onClose={onClose} labelledBy="scoring-modal-title" className="scoring-modal-frame">
         <div className="scoring-modal-inner">
-          {title}
-          <div className="scoring-win-banner">
-            <span className="scoring-win-headline">🏆 {session.winner} wins!</span>
-          </div>
+          <div className="scoring-modal-scroll">
+            {title}
+            <div className="scoring-win-banner">
+              <span className="scoring-win-headline">🏆 {session.winner} wins!</span>
+            </div>
 
-          <table className="scoring-final-totals">
-            <tbody>
-              {session.players.map((player) => (
-                <tr key={player} className={player === session.winner ? 'scoring-final-totals-winner-row' : ''}>
-                  <td>{player}</td>
-                  <td className="scoring-final-totals-score">{session.totals[player] ?? 0}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            <table className="scoring-final-totals">
+              <tbody>
+                {session.players.map((player) => (
+                  <tr key={player} className={player === session.winner ? 'scoring-final-totals-winner-row' : ''}>
+                    <td>{player}</td>
+                    <td className="scoring-final-totals-score">{session.totals[player] ?? 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          <div className="scoring-modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={() => downloadSummary(game, session)}>
-              Download Summary
-            </button>
-            <button type="button" className="btn btn-primary" onClick={startNewSession}>
-              New Session
-            </button>
+            <div className="scoring-modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => downloadSummary(game, session)}>
+                Download Summary
+              </button>
+              <button type="button" className="btn btn-primary" onClick={startNewSession}>
+                New Session
+              </button>
+            </div>
           </div>
         </div>
       </Modal>
@@ -289,96 +293,98 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
   return (
     <Modal onClose={onClose} labelledBy="scoring-modal-title" className="scoring-modal-frame">
       <div className="scoring-modal-inner">
-        {title}
+        <div className="scoring-modal-scroll">
+          {title}
 
-        {tieMessage && <p className="scoring-tie-banner">{tieMessage}</p>}
-        {provisionalWin && (
-          <div className="scoring-provisional-win-banner">
-            <p className="scoring-provisional-win-text">🏆 {session.winner} leads with {session.totals[session.winner ?? '']}!</p>
-            <button type="button" className="btn btn-primary" disabled={finishing} onClick={finishGame}>
-              {finishing ? 'Finishing…' : 'Finish Game'}
-            </button>
-          </div>
-        )}
-        {game.throws_per_round && !tieMessage && stillPlaying && (
-          <p className="scoring-round-status">Round {(session.round_number ?? 0) + 1} in progress</p>
-        )}
-
-        {stillPlaying && (
-          <>
-            <div className="scoring-turn-strip">
-              {turnOrder.flatMap((player, i) => [
-                i > 0 && (
-                  <span key={`arrow-${i}`} className="scoring-turn-arrow" aria-hidden="true">
-                    →
-                  </span>
-                ),
-                <span
-                  key={`${player}-${i}`}
-                  className={`scoring-turn-chip ${i === 0 ? 'scoring-turn-chip-current' : 'scoring-turn-chip-queued'}`}
-                >
-                  {player}
-                </span>,
-              ])}
+          {tieMessage && <p className="scoring-tie-banner">{tieMessage}</p>}
+          {provisionalWin && (
+            <div className="scoring-provisional-win-banner">
+              <p className="scoring-provisional-win-text">🏆 {session.winner} leads with {session.totals[session.winner ?? '']}!</p>
+              <button type="button" className="btn btn-primary" disabled={finishing} onClick={finishGame}>
+                {finishing ? 'Finishing…' : 'Finish Game'}
+              </button>
             </div>
+          )}
+          {game.throws_per_round && !tieMessage && stillPlaying && (
+            <p className="scoring-round-status">Round {(session.round_number ?? 0) + 1} in progress</p>
+          )}
 
-            <div className="scoring-current-player-panel">
-              <div className="scoring-player-header">
-                <span className="scoring-player-name">{session.current_player}'s turn</span>
-                <span className="scoring-player-total">{session.totals[session.current_player ?? ''] ?? 0}</span>
-              </div>
-              {turnResult ? (
-                <div className="scoring-turn-result" role="status">
-                  <p
-                    className={`scoring-turn-result-text${turnResult.event.is_miss ? ' scoring-turn-result-miss' : ''}`}
+          {stillPlaying && (
+            <>
+              <div className="scoring-turn-strip">
+                {turnOrder.flatMap((player, i) => [
+                  i > 0 && (
+                    <span key={`arrow-${i}`} className="scoring-turn-arrow" aria-hidden="true">
+                      →
+                    </span>
+                  ),
+                  <span
+                    key={`${player}-${i}`}
+                    className={`scoring-turn-chip ${i === 0 ? 'scoring-turn-chip-current' : 'scoring-turn-chip-queued'}`}
                   >
-                    {turnResult.event.is_miss
-                      ? `Maybe next shot, ${turnResult.playerName}!`
-                      : `${turnResult.playerName} scored ${turnResult.event.point_value} point${turnResult.event.point_value === 1 ? '' : 's'}!`}
-                  </p>
-                </div>
-              ) : (
-                <div className="scoring-event-buttons">
-                  {normalEvents.map((event) => (
-                    <button
-                      type="button"
-                      key={event.id}
-                      className="btn scoring-event-btn"
-                      disabled={advancing}
-                      onClick={() => recordScore(event)}
-                    >
-                      {event.label} (+{event.point_value})
-                    </button>
-                  ))}
-                  {missEvent && (
-                    <button
-                      type="button"
-                      key={missEvent.id}
-                      className="btn scoring-event-btn scoring-miss-btn"
-                      disabled={advancing}
-                      onClick={() => recordScore(missEvent)}
-                    >
-                      Miss
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                    {player}
+                  </span>,
+                ])}
+              </div>
 
-        <table className="scoring-running-scores">
-          <tbody>
-            {session.players.map((player) => (
-              <tr key={player} className={player === session.current_player ? 'scoring-running-scores-current-row' : ''}>
-                <td>{player}</td>
-                <td className="scoring-final-totals-score">{session.totals[player] ?? 0}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              <div className="scoring-current-player-panel">
+                <div className="scoring-player-header">
+                  <span className="scoring-player-name">{session.current_player}'s turn</span>
+                  <span className="scoring-player-total">{session.totals[session.current_player ?? ''] ?? 0}</span>
+                </div>
+                {turnResult ? (
+                  <div className="scoring-turn-result" role="status">
+                    <p
+                      className={`scoring-turn-result-text${turnResult.event.is_miss ? ' scoring-turn-result-miss' : ''}`}
+                    >
+                      {turnResult.event.is_miss
+                        ? `Maybe next shot, ${turnResult.playerName}!`
+                        : `${turnResult.playerName} scored ${turnResult.event.point_value} point${turnResult.event.point_value === 1 ? '' : 's'}!`}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="scoring-event-buttons">
+                    {normalEvents.map((event) => (
+                      <button
+                        type="button"
+                        key={event.id}
+                        className="btn scoring-event-btn"
+                        disabled={advancing}
+                        onClick={() => recordScore(event)}
+                      >
+                        {event.label} (+{event.point_value})
+                      </button>
+                    ))}
+                    {missEvent && (
+                      <button
+                        type="button"
+                        key={missEvent.id}
+                        className="btn scoring-event-btn scoring-miss-btn"
+                        disabled={advancing}
+                        onClick={() => recordScore(missEvent)}
+                      >
+                        Miss
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
-        {entryError && <p className="screen-error">{entryError}</p>}
+          <table className="scoring-running-scores">
+            <tbody>
+              {session.players.map((player) => (
+                <tr key={player} className={player === session.current_player ? 'scoring-running-scores-current-row' : ''}>
+                  <td>{player}</td>
+                  <td className="scoring-final-totals-score">{session.totals[player] ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {entryError && <p className="screen-error">{entryError}</p>}
+        </div>
       </div>
       {resultAnimation && <MilestoneBanner event={resultAnimation} onDone={handleResultAnimationDone} />}
     </Modal>

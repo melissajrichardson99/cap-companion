@@ -1,6 +1,19 @@
 /* Wood-grain frame/border treatment, same recipe as Puzzles'
-   .puzzle-modal-frame. */
-.contact-staff-modal-frame {
+   .puzzle-modal-frame. Also the same element as Modal.css's .modal-panel
+   (Modal.tsx applies both classes to one div), so this is the "outer frame"
+   that must stay overflow: hidden (inherited from .modal-panel) -- decorative
+   leaf accents live on .contact-staff-modal-inner below and must never
+   trigger scroll here. display:flex + min-height:0 (scoped to this compound
+   selector, not .modal-panel alone, so other wood-frame modals are
+   untouched) lets .contact-staff-modal-inner size to the space actually left
+   inside modal-panel's 85vh cap, so real overflow (the locations list is now
+   35 buttons deep, taller than 85vh on any viewport -- confirmed via
+   Playwright: content measured ~1.3-1.5x the visible height) scrolls inside
+   .contact-staff-modal-scroll instead of being silently clipped. */
+.modal-panel.contact-staff-modal-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border-radius: var(--cap-radius-md);
   background:
     repeating-linear-gradient(
@@ -26,12 +39,57 @@
 .contact-staff-modal-inner {
   position: relative;
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   background-color: var(--cap-color-parchment);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   border: 2px solid var(--cap-color-outline);
   border-radius: calc(var(--cap-radius-md) - 4px);
   padding: var(--cap-space-4);
   font-family: var(--cap-font-body);
+}
+
+/* The one actual scroll container: only real content (title through the
+   submit/back buttons) lives in here, never the decorative leaf accents
+   above (those stay on .contact-staff-modal-inner itself, outside this
+   wrapper, so they can't inflate this element's scrollHeight). Both axes set
+   explicitly -- overflow-x: hidden, not folded into a shorthand -- so
+   neither axis is left at its 'visible' default, which is what caused the
+   original phantom-scrollbar spec quirk (see Modal.css's .modal-panel
+   comment) on the outer frame. */
+.contact-staff-modal-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Sinks the scrollbar 6px into .contact-staff-modal-inner's own padding
+     gutter (padding-right adds back 10px so button content doesn't follow
+     it) -- moves the thin bar closer to the wood frame border and off the
+     button edges, instead of overlaying flush against them. */
+  padding-right: 10px;
+  margin-right: -6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cap-scrollbar-thumb) var(--cap-scrollbar-track);
+}
+
+.contact-staff-modal-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.contact-staff-modal-scroll::-webkit-scrollbar-track {
+  background: var(--cap-scrollbar-track);
+  border-radius: var(--cap-radius-pill);
+}
+
+.contact-staff-modal-scroll::-webkit-scrollbar-thumb {
+  background: var(--cap-scrollbar-thumb);
+  border-radius: var(--cap-radius-pill);
+}
+
+.contact-staff-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--cap-scrollbar-thumb-hover);
 }
 
 /* Small corner leaf accents (visual language rollout) -- kept faint and
