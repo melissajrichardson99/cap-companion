@@ -92,6 +92,7 @@
   height: 160px;
   object-fit: cover;
   border-bottom: 2px solid var(--cap-color-outline);
+  cursor: pointer;
 }
 
 .foodtruck-ribbon {

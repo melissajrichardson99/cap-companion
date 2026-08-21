@@ -5,6 +5,7 @@ interface AnimalImageProps {
   candidates: string[]
   alt: string
   className?: string
+  onClick?: () => void
 }
 
 // Real animal photos vary in extension (.jpg/.png) and aren't all uploaded
@@ -12,7 +13,11 @@ interface AnimalImageProps {
 // order on each load failure, landing on the placeholder SVG only once every
 // real candidate has genuinely 404'd, rather than assuming the first
 // candidate always exists.
-export function AnimalImage({ candidates, alt, className }: AnimalImageProps) {
+//
+// onClick is optional (used to open the shared PhotoLightbox) -- when
+// present, the image gets button-equivalent keyboard semantics so it stays
+// reachable without a mouse.
+export function AnimalImage({ candidates, alt, className, onClick }: AnimalImageProps) {
   const [attempt, setAttempt] = useState(0)
   const src = attempt < candidates.length ? candidates[attempt] : PLACEHOLDER_PHOTO_SRC
 
@@ -22,6 +27,19 @@ export function AnimalImage({ candidates, alt, className }: AnimalImageProps) {
       alt={alt}
       className={className}
       onError={() => setAttempt((a) => a + 1)}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
     />
   )
 }

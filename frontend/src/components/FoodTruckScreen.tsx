@@ -2,6 +2,7 @@ import { useState, type ComponentType } from 'react'
 import { FOOD_TRUCKS } from '../foodTruckContent'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { BurgerIcon, CoffeeCupIcon, ForkKnifeIcon, IceCreamIcon } from './NavIcons'
+import { PhotoLightbox, type LightboxPhoto } from './PhotoLightbox'
 import './FoodTruckScreen.css'
 
 // One ribbon icon per truck, keyed by slug -- not derived from content data
@@ -15,14 +16,42 @@ const RIBBON_ICON: Record<string, ComponentType<{ className?: string }>> = {
 // Same jpg->png->placeholder fallback chain as AnimalImage (animalContent.ts)
 // -- walks the real-photo candidates on each load failure, landing on the
 // truck's themed placeholder SVG only once every candidate has 404'd.
-function FoodTruckPhoto({ candidates, placeholderSrc, alt }: { candidates: string[]; placeholderSrc: string; alt: string }) {
+function FoodTruckPhoto({
+  candidates,
+  placeholderSrc,
+  alt,
+  onClick,
+}: {
+  candidates: string[]
+  placeholderSrc: string
+  alt: string
+  onClick: () => void
+}) {
   const [attempt, setAttempt] = useState(0)
   const src = attempt < candidates.length ? candidates[attempt] : placeholderSrc
 
-  return <img className="foodtruck-photo" src={src} alt={alt} onError={() => setAttempt((a) => a + 1)} />
+  return (
+    <img
+      className="foodtruck-photo"
+      src={src}
+      alt={alt}
+      onError={() => setAttempt((a) => a + 1)}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+    />
+  )
 }
 
 export function FoodTruckScreen() {
+  const [lightboxPhoto, setLightboxPhoto] = useState<LightboxPhoto | null>(null)
+
   return (
     <div className="foodtruck-screen">
       <h1 className="cap-sign-board">
@@ -36,7 +65,12 @@ export function FoodTruckScreen() {
           const RibbonIcon = RIBBON_ICON[truck.slug]
           return (
             <section key={truck.slug} data-truck={truck.slug} className="foodtruck-card cap-parchment-card">
-              <FoodTruckPhoto candidates={truck.photoCandidates} placeholderSrc={truck.photoPlaceholderSrc} alt={truck.name} />
+              <FoodTruckPhoto
+                candidates={truck.photoCandidates}
+                placeholderSrc={truck.photoPlaceholderSrc}
+                alt={truck.name}
+                onClick={() => setLightboxPhoto({ candidates: truck.photoCandidates, alt: truck.name })}
+              />
 
               <div className="foodtruck-ribbon">
                 <RibbonIcon className="foodtruck-ribbon-icon" />
@@ -86,6 +120,8 @@ export function FoodTruckScreen() {
         </p>
         <p className="cap-sign-board foodtruck-closing-sign">Thank You &amp; Enjoy Your Visit!</p>
       </div>
+
+      {lightboxPhoto && <PhotoLightbox photos={[lightboxPhoto]} startIndex={0} onClose={() => setLightboxPhoto(null)} />}
     </div>
   )
 }

@@ -211,6 +211,7 @@
   object-fit: cover;
   display: block;
   border-radius: calc(var(--cap-radius-md) - 2px) calc(var(--cap-radius-md) - 2px) 0 0;
+  cursor: pointer;
 }
 
 .photo-card-footer {

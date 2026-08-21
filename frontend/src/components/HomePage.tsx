@@ -14,6 +14,7 @@ import {
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { fetchCurrentWeather, type CurrentWeather } from '../weather'
 import { CameraIcon, HomeIcon } from './NavIcons'
+import { PhotoLightbox } from './PhotoLightbox'
 import './HomePage.css'
 
 interface HomePageProps {
@@ -33,6 +34,7 @@ export function HomePage({ onBrowsePhotos }: HomePageProps) {
   // undefined = still loading, null = loaded but no shortlisted photos yet.
   const [photoOfTheDay, setPhotoOfTheDay] = useState<PhotoSubmission | null | undefined>(undefined)
   const [photoFailed, setPhotoFailed] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   useEffect(() => {
     fetchCurrentWeather(PARK_WEATHER_LOCATION.latitude, PARK_WEATHER_LOCATION.longitude)
@@ -141,6 +143,15 @@ export function HomePage({ onBrowsePhotos }: HomePageProps) {
                     : 'Favorite guest photo'
                 }
                 className="home-photo-image"
+                role="button"
+                tabIndex={0}
+                onClick={() => setLightboxOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setLightboxOpen(true)
+                  }
+                }}
               />
               <figcaption className="home-photo-caption">
                 {photoOfTheDay.guest_label ?? 'A guest'} — {photoOfTheDay.vote_count}{' '}
@@ -185,6 +196,21 @@ export function HomePage({ onBrowsePhotos }: HomePageProps) {
           </a>
         </section>
       </div>
+
+      {lightboxOpen && photoOfTheDay && (
+        <PhotoLightbox
+          photos={[
+            {
+              candidates: [photoOfTheDay.photo_url],
+              alt: photoOfTheDay.guest_label
+                ? `Favorite photo submitted by ${photoOfTheDay.guest_label}`
+                : 'Favorite guest photo',
+            },
+          ]}
+          startIndex={0}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   )
 }

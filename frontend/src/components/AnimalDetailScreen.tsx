@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { AnimalContent } from '../animalContent'
 import { AnimalImage } from './AnimalImage'
 import { ChevronLeftIcon, HeartIcon } from './NavIcons'
+import { PhotoLightbox, type LightboxPhoto } from './PhotoLightbox'
 import './AnimalDetailScreen.css'
 
 interface AnimalDetailScreenProps {
@@ -20,6 +21,7 @@ type DetailTab = 'about' | 'photos'
 // building a new favorites system for one screen.
 export function AnimalDetailScreen({ animal, onBack, onViewCards }: AnimalDetailScreenProps) {
   const [tab, setTab] = useState<DetailTab>('about')
+  const [lightbox, setLightbox] = useState<{ photos: LightboxPhoto[]; startIndex: number } | null>(null)
 
   return (
     <div className="animal-detail-screen">
@@ -42,6 +44,9 @@ export function AnimalDetailScreen({ animal, onBack, onViewCards }: AnimalDetail
         candidates={animal.photoCandidates}
         alt={`${animal.name}`}
         className="animal-detail-hero"
+        onClick={() =>
+          setLightbox({ photos: [{ candidates: animal.photoCandidates, alt: animal.name }], startIndex: 0 })
+        }
       />
 
       <div className="animal-detail-tabs" role="tablist">
@@ -89,10 +94,25 @@ export function AnimalDetailScreen({ animal, onBack, onViewCards }: AnimalDetail
         <section className="animal-detail-photos cap-parchment-card">
           <div className="animal-detail-photos-grid">
             {animal.photos.map((photo, i) => (
-              <AnimalImage key={i} candidates={photo.candidates} alt={photo.alt} className="animal-detail-photo" />
+              <AnimalImage
+                key={i}
+                candidates={photo.candidates}
+                alt={photo.alt}
+                className="animal-detail-photo"
+                onClick={() =>
+                  setLightbox({
+                    photos: animal.photos.map((p) => ({ candidates: p.candidates, alt: p.alt })),
+                    startIndex: i,
+                  })
+                }
+              />
             ))}
           </div>
         </section>
+      )}
+
+      {lightbox && (
+        <PhotoLightbox photos={lightbox.photos} startIndex={lightbox.startIndex} onClose={() => setLightbox(null)} />
       )}
     </div>
   )

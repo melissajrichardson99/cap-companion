@@ -3,6 +3,7 @@ import { api, type PhotoSubmission } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { getVoterSessionId } from '../voterSession'
 import { CameraIcon } from './NavIcons'
+import { PhotoLightbox } from './PhotoLightbox'
 import './PhotoScreen.css'
 
 interface PhotoScreenProps {
@@ -25,6 +26,7 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
   const [justSubmitted, setJustSubmitted] = useState(false)
   const [votingId, setVotingId] = useState<string | null>(null)
   const [voteError, setVoteError] = useState<string | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -107,12 +109,21 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
           <p className="photo-gallery-empty">No photos are up for voting yet — check back soon!</p>
         ) : (
           <div className="photo-gallery-grid">
-            {gallery.map((photo) => (
+            {gallery.map((photo, i) => (
               <div key={photo.id} className="photo-card cap-parchment-card">
                 <img
                   src={photo.photo_url}
                   alt={photo.guest_label ?? 'Guest submitted park photo'}
                   className="photo-card-image"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setLightboxIndex(i)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setLightboxIndex(i)
+                    }
+                  }}
                 />
                 <div className="photo-card-footer">
                   <span className="photo-card-label">{photo.guest_label ?? 'A guest'}</span>
@@ -134,6 +145,17 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
           </div>
         )}
       </section>
+
+      {lightboxIndex !== null && gallery && (
+        <PhotoLightbox
+          photos={gallery.map((photo) => ({
+            candidates: [photo.photo_url],
+            alt: photo.guest_label ?? 'Guest submitted park photo',
+          }))}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </div>
   )
 }
