@@ -33,7 +33,7 @@ export function AnimalsScreen({ onScanQr, initialSlug, onInitialSlugHandled }: A
   // character in the shared hunt-characters list for exactly that reason).
   const initialAnimal = initialSlug ? ANIMALS.find((a) => a.slug === initialSlug) ?? null : null
   const [view, setView] = useState<View>(initialSlug ? (initialAnimal ? 'detail' : 'invalid') : 'list')
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(initialAnimal ? initialSlug : null)
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(initialAnimal?.slug ?? null)
   const [search, setSearch] = useState('')
 
   // Pre-existing NavMenu quirk (not new to this screen): selecting a tab from
