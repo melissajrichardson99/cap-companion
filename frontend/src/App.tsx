@@ -29,6 +29,11 @@ import './App.css'
 
 type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'animals' | 'collectibles' | 'photos' | 'foodtrucks' | 'faq'
 
+// Direct QR signage links (e.g. /animals/capybara at an enclosure) -- a
+// separate URL scheme from Hunt's /scan/:code (see App.tsx comment below),
+// so the same animal name used by both features never collides on one path.
+const ANIMAL_DEEP_LINK_RE = /^\/animals\/([^/]+)$/
+
 const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
   { key: 'map', label: 'Map', icon: <MapPinIcon /> },
   { key: 'bingo', label: 'Bingo Card', icon: <GridIcon /> },
@@ -43,14 +48,19 @@ const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
 ]
 
 function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('map')
+  // A hard /animals/:slug deep link (QR signage) should land straight on
+  // that animal's detail screen, past Home, with the Our Animals tab
+  // already active -- computed once from the URL at mount, same idea as
+  // pendingMapKeySpot below.
+  const initialAnimalSlug = window.location.pathname.match(ANIMAL_DEEP_LINK_RE)?.[1] ?? null
+  const [activeTab, setActiveTab] = useState<Tab>(initialAnimalSlug ? 'animals' : 'map')
   // True root route (Plan.md build-priority item 4): guests land on Home
   // first, same as `path`/`activeTab` below this is state layered on the
   // single '/' route rather than its own URL -- consistent with the rest of
   // this hand-rolled router, which never gave individual tabs their own
   // paths either. Picking a tab (NavMenu) leaves Home; the navbar logo
   // (BrandLogo) always returns to it.
-  const [showHome, setShowHome] = useState(true)
+  const [showHome, setShowHome] = useState(!initialAnimalSlug)
 
   // Hand-rolled routing (no router lib elsewhere in this app): the only real
   // URL route is /scan/:code, which must work as a hard deep link (someone
@@ -66,6 +76,15 @@ function App() {
   // button) -- set right before switching activeTab to 'map', consumed and
   // cleared by MapScreen once it opens the key spot's highlight.
   const [pendingMapKeySpot, setPendingMapKeySpot] = useState<string | null>(null)
+  // /animals/:slug deep link (QR signage at an enclosure) -- consumed and
+  // cleared by AnimalsScreen once it has resolved the slug into its own
+  // initial view state, same pattern as pendingMapKeySpot above. Left set
+  // (not cleared here) so it flows into AnimalsScreen the first time it's
+  // rendered, even though `activeTab`/`showHome` above already jumped straight
+  // to the Our Animals tab.
+  const [pendingAnimalSlug, setPendingAnimalSlug] = useState<string | null>(
+    initialAnimalSlug ? decodeURIComponent(initialAnimalSlug) : null,
+  )
 
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname)
@@ -436,7 +455,13 @@ function App() {
             onScanQr={() => setShowScanEntry(true)}
           />
         )}
-        {!showHome && activeTab === 'animals' && <AnimalsScreen onScanQr={() => setShowScanEntry(true)} />}
+        {!showHome && activeTab === 'animals' && (
+          <AnimalsScreen
+            onScanQr={() => setShowScanEntry(true)}
+            initialSlug={pendingAnimalSlug}
+            onInitialSlugHandled={() => setPendingAnimalSlug(null)}
+          />
+        )}
         {!showHome && activeTab === 'collectibles' && (
           <CollectiblesScreen summary={coinsSummary} error={coinsError} onReload={reloadCoins} />
         )}
