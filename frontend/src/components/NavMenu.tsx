@@ -99,7 +99,19 @@ export function NavMenu<T extends string>({
         <span className="nav-menu-toggle-bar" />
       </button>
 
-      <div className={`nav-menu-backdrop ${open ? 'nav-menu-backdrop-open' : ''}`} aria-hidden="true" />
+      {/* Covers the full viewport (fixed, inset:0) while open, above every
+          other page element but below the toggle/panel (z-index 1 vs. 2-3
+          in NavMenu.css) -- so it visually and functionally IS "outside the
+          dropdown": any click/tap that isn't on the toggle or panel lands
+          here and closes the menu, on both mouse and touch since it's a
+          plain onClick. The toggle sits above it in stacking, so a click on
+          the toggle always hits the toggle itself, never this backdrop --
+          no fight with the toggle's own open/close handler. */}
+      <div
+        className={`nav-menu-backdrop ${open ? 'nav-menu-backdrop-open' : ''}`}
+        aria-hidden="true"
+        onClick={() => setOpen(false)}
+      />
 
       <div id="nav-menu-panel" className={`nav-menu-panel ${open ? 'nav-menu-panel-open' : ''}`} role="menu">
         <div className="nav-menu-frame">
