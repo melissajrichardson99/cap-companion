@@ -1,5 +1,5 @@
 // Real (mockup-stage) content for the "Our Animals" feature (rebranded
-// Encyclopedia, Plan.md 2.5/5) -- a fixed 6-animal roster, independent of
+// Encyclopedia, Plan.md 2.5/5) -- a 9-animal roster, independent of
 // both the Scavenger Hunt's 5-character roster (huntCharacterContent.ts) and
 // the minigame animal art library. Content below is Melissa's own draft copy
 // (not yet reviewed by park staff) -- real content to ship now, but expect
@@ -332,6 +332,135 @@ const ANIMAL_DEFINITIONS: AnimalDefinition[] = [
       {
         title: 'Smart Cookies',
         text: 'Goats can learn quickly. Animal-care teams can train goats to participate voluntarily in health checks and even perform fun behaviors.',
+      },
+    ],
+  },
+  {
+    name: 'Sloth',
+    slug: 'sloth',
+    aboutHeading: 'Meet the Sloth',
+    description:
+      "Slow and steady is the sloth's specialty! Get to know one of nature's most laid-back mammals and discover why life in the treetops is perfectly suited to this unusual animal.",
+    facts: [
+      { label: 'Scientific name', value: 'Choloepus didactylus' },
+      { label: 'Also known as', value: "Linnaeus's two-toed sloth" },
+      { label: "Where they're from", value: 'Central & northern South America' },
+      { label: 'Habitat', value: 'Tropical forests' },
+      { label: 'Diet', value: 'Leaves, fruit, flowers and other plant material' },
+      { label: 'Lifestyle', value: 'Mostly solitary and tree-dwelling' },
+      {
+        label: 'Fun fact',
+        value: 'Two-toed sloths actually have two claws on each front foot and three toes on their back feet',
+      },
+    ],
+    nuggets: [
+      {
+        title: 'Life in the Canopy',
+        text: 'Sloths spend most of their lives up in trees. Their long limbs and large curved claws help them grip branches while they move through the canopy.',
+      },
+      {
+        title: 'Why So Slow?',
+        text: 'Moving slowly takes less energy, which is useful for an animal that eats a relatively low-energy diet. Sloths have a very slow metabolism and spend much of their day resting.',
+      },
+      {
+        title: 'Upside-Down Specialists',
+        text: "A sloth's body is specially adapted for hanging beneath branches. Their curved claws act almost like built-in hooks, allowing them to hang on without constantly using their muscles.",
+      },
+      {
+        title: 'A Tiny Ecosystem',
+        text: "A sloth's coarse fur can develop a greenish tint because algae grow in grooves along the hairs. Their fur can also provide a home for tiny organisms such as moths and beetles.",
+      },
+      {
+        title: 'Sleepy... But Not Always!',
+        text: "Sloths spend a lot of time resting, but they're not completely inactive. They can climb, swim, forage and move surprisingly well when they need to.",
+      },
+      {
+        title: 'Built for the Trees',
+        text: 'Their large eyes help them navigate their environment, while their short, flat heads and snub noses are characteristic features of two-toed sloths.',
+      },
+    ],
+  },
+  {
+    name: 'Porcupine',
+    slug: 'porcupine',
+    aboutHeading: 'African Crested Porcupine',
+    description:
+      "Don't let those quills fool you! Porcupines are fascinating, slow-moving rodents with an incredible natural defense system and a surprisingly impressive ability to climb.",
+    facts: [
+      { label: 'Scientific name', value: 'Hystrix africaeaustralis (verify with Cobb\'s)' },
+      { label: 'Also known as', value: 'Cape porcupine / South African crested porcupine' },
+      { label: "Where they're from", value: 'Southern Africa' },
+      { label: 'Habitat', value: 'Savannas, grasslands, woodlands and rocky areas' },
+      { label: 'Diet', value: 'Plants, roots, bulbs, bark and other vegetation' },
+      { label: 'Lifestyle', value: 'Mostly nocturnal' },
+      { label: 'Size', value: "One of Africa's largest rodents" },
+      { label: 'Special feature', value: 'Long, black-and-white defensive quills' },
+    ],
+    nuggets: [
+      {
+        title: "Those Aren't Hair!",
+        text: "A porcupine's most famous feature is its quills. They're specialized hairs made of keratin — the same tough material found in our hair and fingernails.",
+      },
+      {
+        title: "No, They Can't Shoot Them!",
+        text: 'This is one of the biggest porcupine myths. Porcupines cannot shoot their quills. When threatened, they raise their quills and may turn their back toward a predator. Quills can detach when they make contact with an attacker.',
+      },
+      {
+        title: 'A Very Good Defense',
+        text: "Those dramatic black-and-white quills aren't just decoration. When a porcupine feels threatened, it can raise its quills to make itself look much larger and more intimidating.",
+      },
+      {
+        title: 'Night Owl... Sort Of',
+        text: "Porcupines are primarily nocturnal, meaning they're most active at night. During the day, they may rest in dens or other sheltered locations.",
+      },
+      {
+        title: "They're Vegetarians",
+        text: 'Porcupines are herbivores. Their diets can include roots, bulbs, bark, leaves and other plant material.',
+      },
+      {
+        title: 'Surprisingly Good Climbers',
+        text: 'Despite their chunky bodies and short legs, porcupines can climb. Their strong claws help them navigate trees and other surfaces while searching for food or shelter.',
+      },
+    ],
+  },
+  {
+    name: 'Pig',
+    slug: 'pig',
+    aboutHeading: 'Meet the Pig',
+    description:
+      'Smart, curious, and much more than just a curly tail! Pigs are surprisingly intelligent animals with excellent senses and lots of personality. Get to know these fascinating farm animals and see what makes them such great explorers.',
+    facts: [
+      { label: 'Scientific name', value: 'Sus scrofa domesticus' },
+      { label: 'Also known as', value: 'Domestic pig' },
+      { label: 'Diet', value: 'Omnivorous' },
+      { label: 'Habitat', value: 'Farms, grasslands, woodlands, and other managed environments' },
+      { label: 'Lifespan', value: 'Often 10–15 years with proper care' },
+      { label: 'Special talents', value: 'Excellent sense of smell, strong memory, and problem-solving skills' },
+    ],
+    nuggets: [
+      {
+        title: 'A Nose for Adventure',
+        text: "A pig's snout isn't just cute — it's an incredibly useful tool. Their excellent sense of smell helps them find food and investigate their surroundings.",
+      },
+      {
+        title: 'Surprisingly Smart',
+        text: 'Pigs are highly intelligent animals. They can learn routines, remember things they\'ve encountered before, and solve problems to get what they want.',
+      },
+      {
+        title: "What's for Dinner?",
+        text: "Pigs are omnivores, meaning they can eat both plant and animal-based foods. At Cobb's, their diet is carefully managed to make sure they get the nutrition they need.",
+      },
+      {
+        title: 'The Snout Does the Work',
+        text: 'Pigs use their noses to explore the world around them. They can root through soil looking for interesting smells and tasty food.',
+      },
+      {
+        title: 'Pigs Have a Lot to Say',
+        text: 'Pigs communicate using a surprising variety of sounds, including grunts, squeals, and other vocalizations. Different sounds can mean different things depending on the situation.',
+      },
+      {
+        title: "Mud Isn't Just for Fun!",
+        text: "You've probably seen pigs rolling around in mud. It can actually help them cool down and protect their skin from the sun. Pigs don't have very effective sweat glands, so mud can be an important part of staying comfortable.",
       },
     ],
   },

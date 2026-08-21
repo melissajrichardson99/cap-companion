@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { ANIMALS, PLACEHOLDER_PHOTO_SRC } from '../src/animalContent'
 
 // Covers the "Our Animals" feature (rebranded Encyclopedia, Plan.md 2.5/5):
-// the 6-animal list + name search, the individual animal detail page's
+// the 9-animal list + name search, the individual animal detail page's
 // About/Photos tabs (no third Fun Facts tab), the Photos tab's plain
 // uncategorized grid (no filter/voting UI), the information-cards flashcard
 // view's text counter + linear side-arrow navigation (no dots, no Shuffle/
@@ -27,7 +27,7 @@ function animalCard(page: Page, name: string) {
 }
 
 test.describe('Our Animals', () => {
-  test('renders all 6 animal cards, searchable by name', async ({ page }) => {
+  test('renders all animal cards, searchable by name', async ({ page }) => {
     await openAnimalsTab(page)
     await expect(page.locator('.animal-card')).toHaveCount(ANIMALS.length)
     for (const animal of ANIMALS) {
@@ -239,6 +239,103 @@ test.describe('Our Animals', () => {
     }
     await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
     await expect(img).toHaveAttribute('src', '/animals/goat/1.jpg')
+  })
+
+  test('Sloth, Porcupine, and Pig show the newly added real content', async ({ page }) => {
+    await openAnimalsTab(page)
+
+    await animalCard(page, 'Sloth').click()
+    await expect(page.getByRole('heading', { name: 'Sloth', exact: true })).toBeVisible()
+    await expect(page.locator('.animal-detail-about-heading')).toHaveText('Meet the Sloth')
+    await expect(page.locator('.animal-detail-description')).toContainText("laid-back mammals")
+    await expect(page.locator('.animal-detail-facts-table')).toContainText('Choloepus didactylus')
+    await page.getByRole('button', { name: 'View Information Cards' }).click()
+    await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
+    await expect(page.getByText('Life in the Canopy')).toBeVisible()
+    await page.getByRole('button', { name: 'Back to animal details' }).click()
+    await page.getByRole('button', { name: 'Back to Our Animals' }).click()
+
+    await animalCard(page, 'Porcupine').click()
+    await expect(page.getByRole('heading', { name: 'Porcupine', exact: true })).toBeVisible()
+    await expect(page.locator('.animal-detail-about-heading')).toHaveText('African Crested Porcupine')
+    await expect(page.locator('.animal-detail-description')).toContainText("Don't let those quills fool you")
+    await expect(page.locator('.animal-detail-facts-table')).toContainText('Hystrix africaeaustralis')
+    await page.getByRole('button', { name: 'View Information Cards' }).click()
+    await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
+    await expect(page.getByText("Those Aren't Hair!")).toBeVisible()
+    await page.getByRole('button', { name: 'Back to animal details' }).click()
+    await page.getByRole('button', { name: 'Back to Our Animals' }).click()
+
+    await animalCard(page, 'Pig').click()
+    await expect(page.getByRole('heading', { name: 'Pig', exact: true })).toBeVisible()
+    await expect(page.locator('.animal-detail-about-heading')).toHaveText('Meet the Pig')
+    await expect(page.locator('.animal-detail-description')).toContainText('curly tail')
+    await expect(page.locator('.animal-detail-facts-table')).toContainText('Sus scrofa domesticus')
+    await page.getByRole('button', { name: 'View Information Cards' }).click()
+    await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
+    await expect(page.getByText('A Nose for Adventure')).toBeVisible()
+  })
+
+  test('Photo resolution reflects the real-photo drop for new and updated animals', async ({ page }) => {
+    await openAnimalsTab(page)
+
+    // Kangaroo: 2 real photos uploaded, slots 3-5 fall back to the placeholder.
+    await animalCard(page, 'Kangaroo').click()
+    await page.getByRole('tab', { name: 'Photos' }).click()
+    const kangarooImgs = page.locator('.animal-detail-photos-grid img')
+    await expect(kangarooImgs).toHaveCount(5)
+    await expect(kangarooImgs.nth(0)).toHaveAttribute('src', '/animals/kangaroo/1.jpg')
+    await expect(kangarooImgs.nth(1)).toHaveAttribute('src', '/animals/kangaroo/2.jpg')
+    await expect(kangarooImgs.nth(2)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
+    await expect(kangarooImgs.nth(4)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
+    await page.getByRole('tab', { name: 'About' }).click()
+    await page.getByRole('button', { name: 'Back to Our Animals' }).click()
+
+    // Wallaby: 4 real photos, slot 1 is a .png (jpg candidate 404s first), slot 5 falls back.
+    await animalCard(page, 'Wallaby').click()
+    await page.getByRole('tab', { name: 'Photos' }).click()
+    const wallabyImgs = page.locator('.animal-detail-photos-grid img')
+    await expect(wallabyImgs).toHaveCount(5)
+    await expect(wallabyImgs.nth(0)).toHaveAttribute('src', '/animals/wallaby/1.png')
+    await expect(wallabyImgs.nth(1)).toHaveAttribute('src', '/animals/wallaby/2.jpg')
+    await expect(wallabyImgs.nth(3)).toHaveAttribute('src', '/animals/wallaby/4.jpg')
+    await expect(wallabyImgs.nth(4)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
+    await page.getByRole('tab', { name: 'About' }).click()
+    await page.getByRole('button', { name: 'Back to Our Animals' }).click()
+
+    // Sloth: all 5 real photos uploaded -- none should fall back.
+    await animalCard(page, 'Sloth').click()
+    await page.getByRole('tab', { name: 'Photos' }).click()
+    const slothImgs = page.locator('.animal-detail-photos-grid img')
+    await expect(slothImgs).toHaveCount(5)
+    for (let i = 0; i < 5; i++) {
+      await expect(slothImgs.nth(i)).toHaveAttribute('src', `/animals/sloth/${i + 1}.jpg`)
+    }
+    await page.getByRole('tab', { name: 'About' }).click()
+    await page.getByRole('button', { name: 'Back to Our Animals' }).click()
+
+    // Porcupine: 4 real photos, slot 5 falls back.
+    await animalCard(page, 'Porcupine').click()
+    await page.getByRole('tab', { name: 'Photos' }).click()
+    const porcupineImgs = page.locator('.animal-detail-photos-grid img')
+    await expect(porcupineImgs).toHaveCount(5)
+    for (let i = 0; i < 4; i++) {
+      await expect(porcupineImgs.nth(i)).toHaveAttribute('src', `/animals/porcupine/${i + 1}.jpg`)
+    }
+    await expect(porcupineImgs.nth(4)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
+    await page.getByRole('tab', { name: 'About' }).click()
+    await page.getByRole('button', { name: 'Back to Our Animals' }).click()
+
+    // Pig: 3 real photos, slots 4-5 fall back.
+    await animalCard(page, 'Pig').click()
+    await page.getByRole('tab', { name: 'Photos' }).click()
+    const pigImgs = page.locator('.animal-detail-photos-grid img')
+    await expect(pigImgs).toHaveCount(5)
+    for (let i = 0; i < 3; i++) {
+      await expect(pigImgs.nth(i)).toHaveAttribute('src', `/animals/pig/${i + 1}.jpg`)
+    }
+    await expect(pigImgs.nth(3)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
+    await expect(pigImgs.nth(4)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
   })
 
   test('"Scan a QR Code" opens the existing scan-entry flow', async ({ page }) => {
