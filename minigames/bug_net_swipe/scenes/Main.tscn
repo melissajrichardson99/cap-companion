@@ -11,42 +11,91 @@ wait_time = 0.75
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="TopBar" type="Control" parent="UI"]
-offset_right = 400.0
+[node name="SignBar" type="Control" parent="UI"]
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 396.0
 offset_bottom = 60.0
 
-[node name="TimeLabel" type="Label" parent="UI/TopBar"]
-offset_left = 22.0
-offset_top = 20.0
-offset_right = 90.0
-offset_bottom = 44.0
-theme_override_font_sizes/font_size = 13
-text = "Time: 30"
+[node name="TitleLabel" type="Label" parent="UI/SignBar"]
+offset_left = 44.0
+offset_top = 0.0
+offset_right = 336.0
+offset_bottom = 56.0
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 20
+text = "Bug Net Swipe"
 
-[node name="CatchLabel" type="Label" parent="UI/TopBar"]
-offset_left = 90.0
-offset_top = 20.0
-offset_right = 160.0
-offset_bottom = 44.0
-theme_override_font_sizes/font_size = 13
-text = "Caught: 0/8"
+[node name="ExitButton" type="Button" parent="UI/SignBar"]
+offset_left = 346.0
+offset_top = 10.0
+offset_right = 384.0
+offset_bottom = 50.0
+text = "X"
 
-[node name="StatusLabel" type="Label" parent="UI/TopBar"]
-offset_left = 172.0
-offset_top = 16.0
-offset_right = 348.0
-offset_bottom = 48.0
+[node name="StatsBar" type="Control" parent="UI"]
+offset_left = 4.0
+offset_top = 68.0
+offset_right = 396.0
+offset_bottom = 122.0
+
+[node name="TimePill" type="Control" parent="UI/StatsBar"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 191.0
+offset_bottom = 44.0
+
+[node name="CaptionLabel" type="Label" parent="UI/StatsBar/TimePill"]
+offset_left = 0.0
+offset_top = 2.0
+offset_right = 181.0
+offset_bottom = 18.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 12
+text = "TIME"
+
+[node name="ValueLabel" type="Label" parent="UI/StatsBar/TimePill"]
+offset_left = 0.0
+offset_top = 15.0
+offset_right = 181.0
+offset_bottom = 34.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+text = "30"
+
+[node name="CaughtPill" type="Control" parent="UI/StatsBar"]
+offset_left = 201.0
+offset_top = 10.0
+offset_right = 382.0
+offset_bottom = 44.0
+
+[node name="CaptionLabel" type="Label" parent="UI/StatsBar/CaughtPill"]
+offset_left = 0.0
+offset_top = 2.0
+offset_right = 181.0
+offset_bottom = 18.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 12
+text = "CAUGHT"
+
+[node name="ValueLabel" type="Label" parent="UI/StatsBar/CaughtPill"]
+offset_left = 0.0
+offset_top = 15.0
+offset_right = 181.0
+offset_bottom = 34.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+text = "0 / 8"
+
+[node name="StatusLabel" type="Label" parent="UI"]
+offset_left = 4.0
+offset_top = 130.0
+offset_right = 396.0
+offset_bottom = 162.0
 horizontal_alignment = 1
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 18
 text = "Ready?"
-
-[node name="ExitButton" type="Button" parent="UI/TopBar"]
-offset_left = 350.0
-offset_top = 10.0
-offset_right = 388.0
-offset_bottom = 50.0
-text = "X"
 
 [node name="GameOverLayer" type="Control" parent="UI"]
 visible = false

@@ -201,17 +201,6 @@ func _draw_page_bg() -> void:
 
 func _draw_sign_plank() -> void:
 	_draw_wood_panel(SIGN_RECT, 14.0)
-	var cx := SIGN_RECT.position.x + 30
-	var cy := SIGN_RECT.position.y + SIGN_RECT.size.y * 0.5
-	_draw_capy_glyph(Vector2(cx, cy), 15.0)
-
-func _draw_capy_glyph(center: Vector2, r: float) -> void:
-	# Small capybara-face mark to the left of the title text.
-	var h := r * 2.1
-	var tex_size := CAPYBARA_TEXTURE.get_size()
-	var w := h * tex_size.x / tex_size.y
-	var rect := Rect2(center - Vector2(w * 0.5, h * 0.5), Vector2(w, h))
-	draw_texture_rect(CAPYBARA_TEXTURE, rect, false)
 
 func _draw_stat_pills() -> void:
 	_draw_parchment_pill(STATS_RECT, 16.0)

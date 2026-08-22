@@ -33,51 +33,41 @@ offset_right = 372.0
 offset_bottom = 46.0
 text = "X"
 
-[node name="InstructionBar" type="Control" parent="UI"]
+[node name="StatsBar" type="Control" parent="UI"]
 offset_left = 10.0
 offset_top = 74.0
 offset_right = 390.0
-offset_bottom = 166.0
+offset_bottom = 128.0
 
-[node name="InstructionLabel" type="Label" parent="UI/InstructionBar"]
-offset_left = 16.0
-offset_top = 8.0
-offset_right = 186.0
-offset_bottom = 84.0
-autowrap_mode = 2
-vertical_alignment = 1
-theme_override_font_sizes/font_size = 13
-text = "Flip the cards and find all the matching pairs as fast as you can!"
-
-[node name="StatBox" type="Control" parent="UI/InstructionBar"]
-offset_left = 196.0
-offset_top = 8.0
-offset_right = 360.0
-offset_bottom = 84.0
-
-[node name="CaptionLabel" type="Label" parent="UI/InstructionBar/StatBox"]
-offset_left = 8.0
+[node name="PairsPill" type="Control" parent="UI/StatsBar"]
+offset_left = 115.0
 offset_top = 10.0
-offset_right = 156.0
-offset_bottom = 30.0
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 13
-text = "Pairs Found"
+offset_right = 285.0
+offset_bottom = 44.0
 
-[node name="ValueLabel" type="Label" parent="UI/InstructionBar/StatBox"]
-offset_left = 8.0
-offset_top = 32.0
-offset_right = 156.0
-offset_bottom = 68.0
+[node name="CaptionLabel" type="Label" parent="UI/StatsBar/PairsPill"]
+offset_left = 0.0
+offset_top = 2.0
+offset_right = 170.0
+offset_bottom = 18.0
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 12
+text = "PAIRS FOUND"
+
+[node name="ValueLabel" type="Label" parent="UI/StatsBar/PairsPill"]
+offset_left = 0.0
+offset_top = 15.0
+offset_right = 170.0
+offset_bottom = 34.0
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
 text = "0 / 8"
 
 [node name="CardGrid" type="GridContainer" parent="UI"]
 offset_left = 28.0
-offset_top = 184.0
+offset_top = 146.0
 offset_right = 372.0
-offset_bottom = 528.0
+offset_bottom = 490.0
 theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 8
 columns = 4
@@ -160,7 +150,7 @@ offset_bottom = 50.0
 autowrap_mode = 2
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 13
-text = "Tip: Try to remember where you saw each card!"
+text = "Tip: Flip the cards to find all 8 matching pairs. Try to remember where you saw each one!"
 
 [node name="GameOverLayer" type="Control" parent="UI"]
 visible = false

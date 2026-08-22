@@ -3,7 +3,7 @@ extends Node2D
 const LANE_COUNT := 3
 const VIEWPORT_WIDTH := 400.0
 const LANE_WIDTH := VIEWPORT_WIDTH / LANE_COUNT
-const PLAY_TOP := 60.0
+const PLAY_TOP := 162.0
 const PLAY_BOTTOM := 500.0
 const PLAYER_Y := 460.0
 const PLAYER_SIZE := Vector2(70, 46)
@@ -20,10 +20,11 @@ const READY_STEP_DURATION := 0.5
 # cosmetic - none of this feeds gameplay math, which stays anchored to
 # PLAY_TOP/PLAY_BOTTOM/PLAYER_Y/LANE_WIDTH and only touches pixels at draw
 # time. See mini_snake/scripts/Main.gd for the pattern this mirrors.
-const HEADER_RECT := Rect2(4, 4, 392, 48)
-const TIME_PILL_RECT := Rect2(6, 10, 100, 32)
-const DODGED_PILL_RECT := Rect2(114, 10, 108, 32)
-const FRAME_RECT := Rect2(2, 56, 396, 446)
+const SIGN_RECT := Rect2(4, 4, 392, 48)
+const STATS_RECT := Rect2(4, 60, 392, 54)
+const TIME_PILL_RECT := Rect2(14, 70, 181, 34)
+const DODGED_PILL_RECT := Rect2(205, 70, 181, 34)
+const FRAME_RECT := Rect2(2, 158, 396, 344)
 const CONTROLS_RECT := Rect2(4, 506, 392, 90)
 
 # --- Brand palette. Mirrors frontend/src/index.css's --cap-* tokens so this
@@ -57,14 +58,17 @@ const COLOR_ALPACA_EAR_INNER := Color("#bc6825")
 const ALPACA_TEXTURE := preload("res://assets/alpaca.png")
 
 @onready var spawn_timer: Timer = $SpawnTimer
-@onready var time_label: Label = $UI/TopBar/TimeLabel
-@onready var dodged_label: Label = $UI/TopBar/DodgedLabel
-@onready var status_label: Label = $UI/TopBar/StatusLabel
+@onready var title_label: Label = $UI/SignBar/TitleLabel
+@onready var time_label: Label = $UI/StatsBar/TimePill/ValueLabel
+@onready var dodged_label: Label = $UI/StatsBar/DodgedPill/ValueLabel
+@onready var time_caption_label: Label = $UI/StatsBar/TimePill/CaptionLabel
+@onready var dodged_caption_label: Label = $UI/StatsBar/DodgedPill/CaptionLabel
+@onready var status_label: Label = $UI/StatusLabel
 @onready var game_over_layer: Control = $UI/GameOverLayer
 @onready var result_label: Label = $UI/GameOverLayer/ResultLabel
 @onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
 @onready var restart_button: Button = $UI/GameOverLayer/RestartButton
-@onready var top_exit_button: Button = $UI/TopBar/ExitButton
+@onready var top_exit_button: Button = $UI/SignBar/ExitButton
 @onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 @onready var btn_left: Button = $UI/Controls/BtnLeft
 @onready var btn_right: Button = $UI/Controls/BtnRight
@@ -229,8 +233,8 @@ func _notify_host_complete() -> void:
 		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'obstacle_dodge' }, '*');")
 
 func _update_labels() -> void:
-	time_label.text = "Time: %d" % ceili(max(0.0, ROUND_DURATION - elapsed_time))
-	dodged_label.text = "Dodged: %d" % dodged_count
+	time_label.text = "%d" % ceili(max(0.0, ROUND_DURATION - elapsed_time))
+	dodged_label.text = "%d" % dodged_count
 
 # ---------------------------------------------------------------------------
 # Drawing. Main is a Node2D so everything here renders beneath the $UI
@@ -240,8 +244,8 @@ func _update_labels() -> void:
 
 func _draw() -> void:
 	_draw_page_bg()
-	_draw_header_plank()
-	_draw_stat_pills()
+	_draw_sign_plank()
+	_draw_stats_bar()
 	_draw_trail()
 	for obstacle in obstacles:
 		_draw_rock(Vector2(_lane_x(obstacle["lane"]), obstacle["y"]))
@@ -252,10 +256,11 @@ func _draw_page_bg() -> void:
 	var vp := get_viewport_rect().size
 	draw_rect(Rect2(Vector2.ZERO, vp), COLOR_PAGE_BG, true)
 
-func _draw_header_plank() -> void:
-	_draw_wood_panel(HEADER_RECT, 14.0)
+func _draw_sign_plank() -> void:
+	_draw_wood_panel(SIGN_RECT, 14.0)
 
-func _draw_stat_pills() -> void:
+func _draw_stats_bar() -> void:
+	_draw_parchment_pill(STATS_RECT, 16.0)
 	_draw_parchment_pill(TIME_PILL_RECT, 10.0)
 	_draw_parchment_pill(DODGED_PILL_RECT, 10.0)
 	_draw_hourglass_icon(TIME_PILL_RECT.position + Vector2(18, TIME_PILL_RECT.size.y * 0.5), 8.0)
@@ -413,8 +418,15 @@ func _style_ui() -> void:
 	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
 	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
+	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	title_label.add_theme_constant_override("shadow_offset_x", 1)
+	title_label.add_theme_constant_override("shadow_offset_y", 1)
+
 	time_label.add_theme_color_override("font_color", COLOR_INK)
 	dodged_label.add_theme_color_override("font_color", COLOR_INK)
+	time_caption_label.add_theme_color_override("font_color", COLOR_INK)
+	dodged_caption_label.add_theme_color_override("font_color", COLOR_INK)
 	status_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	status_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
 	status_label.add_theme_constant_override("shadow_offset_x", 1)

@@ -63,8 +63,14 @@ test.describe('Cobb Coins', () => {
     await page.getByRole('button', { name: 'Completed Challenge' }).click()
     // The minigame overlay is full-screen (z-index above the nav menu), so
     // it must close first -- otherwise it blocks the nav toggle button and
-    // the coin total underneath can't be checked.
-    await page.getByRole('button', { name: 'Close minigame' }).click()
+    // the coin total underneath can't be checked. The overlay has no close
+    // button of its own (removed for UI standardization -- closing is the
+    // in-game Godot canvas button's job now, which isn't a real DOM element
+    // Playwright can click), so fire the same postMessage the game sends on
+    // completion instead.
+    const iframeHandle = await page.locator('.minigame-overlay-frame').elementHandle()
+    const frame = await iframeHandle?.contentFrame()
+    await frame?.evaluate(() => window.parent.postMessage({ type: 'minigame-complete' }, '*'))
     await expect(page.locator('.minigame-overlay')).toHaveCount(0)
     await expectCoinTotal(page, 14)
 

@@ -68,11 +68,22 @@ test.describe('Arcade Pad parent/child interconnectivity', () => {
     await expect(page.locator('.map-pin.map-pin-visited[aria-label^="Arcade Pad"]')).toBeVisible()
     await expect(page.locator('.map-pin[aria-label^="Arcade Pad"] .map-pin-tile-badge')).toHaveText('2')
 
-    // Each of the 2 confirmed tile completions draws a minigame overlay;
-    // dismiss whatever queued up before switching tabs.
-    while (await page.locator('.minigame-overlay-close').isVisible().catch(() => false)) {
-      await page.locator('.minigame-overlay-close').click()
+    // Each of the 2 confirmed tile completions draws a minigame overlay, and
+    // closing one can immediately swap in the next queued one (a fresh
+    // iframe, not a moment of zero overlays) -- so this can't assert
+    // toHaveCount(0) after each postMessage the way a single-overlay case
+    // could. Post to whatever's showing, give React a beat to swap/close,
+    // and repeat a bounded number of times, then assert none remain at the
+    // end. The overlay has no close button of its own (removed for UI
+    // standardization), so fire the same postMessage the game sends on
+    // completion instead of clicking anything.
+    for (let i = 0; i < 5 && (await page.locator('.minigame-overlay-frame').isVisible().catch(() => false)); i++) {
+      const iframeHandle = await page.locator('.minigame-overlay-frame').elementHandle()
+      const frame = await iframeHandle?.contentFrame()
+      await frame?.evaluate(() => window.parent.postMessage({ type: 'minigame-complete' }, '*'))
+      await page.waitForTimeout(300)
     }
+    await expect(page.locator('.minigame-overlay')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Open menu' }).click()
     await page.getByRole('menuitemradio', { name: 'Bingo Card' }).click()

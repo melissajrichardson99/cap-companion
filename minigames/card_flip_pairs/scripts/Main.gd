@@ -7,9 +7,9 @@ const ICON_SIZE := 80
 # --- Layout rects (design canvas is 400x600, see project.godot). Purely
 # cosmetic - mirrors mini_snake's SIGN_RECT/STATS_RECT-style layout consts.
 const SIGN_RECT := Rect2(10, 10, 380, 56)
-const INSTRUCTION_RECT := Rect2(10, 74, 380, 92)
-const STAT_BOX_RECT := Rect2(206, 82, 164, 76)
-const GRID_FRAME_RECT := Rect2(10, 174, 380, 364)
+const STATS_RECT := Rect2(10, 74, 380, 54)
+const PAIRS_PILL_RECT := Rect2(115, 84, 170, 34)
+const GRID_FRAME_RECT := Rect2(10, 136, 380, 364)
 const TIP_RECT := Rect2(10, 546, 380, 50)
 
 # --- Brand palette. Mirrors frontend/src/index.css's --cap-* tokens so this
@@ -44,9 +44,8 @@ const ANIMAL_TEXTURES := {
 }
 
 @onready var title_label: Label = $UI/SignBar/TitleLabel
-@onready var instruction_label: Label = $UI/InstructionBar/InstructionLabel
-@onready var stat_caption_label: Label = $UI/InstructionBar/StatBox/CaptionLabel
-@onready var stat_value_label: Label = $UI/InstructionBar/StatBox/ValueLabel
+@onready var stat_caption_label: Label = $UI/StatsBar/PairsPill/CaptionLabel
+@onready var stat_value_label: Label = $UI/StatsBar/PairsPill/ValueLabel
 @onready var tip_label: Label = $UI/TipBar/TipLabel
 @onready var card_grid: GridContainer = $UI/CardGrid
 @onready var mismatch_timer: Timer = $MismatchTimer
@@ -238,7 +237,7 @@ func _update_labels() -> void:
 func _draw() -> void:
 	_draw_page_bg()
 	_draw_sign_plank()
-	_draw_instruction_panel()
+	_draw_stats_bar()
 	_draw_grid_frame()
 	_draw_tip_bar()
 
@@ -248,13 +247,10 @@ func _draw_page_bg() -> void:
 
 func _draw_sign_plank() -> void:
 	_draw_wood_panel(SIGN_RECT, 14.0)
-	var cx := SIGN_RECT.position.x + 30
-	var cy := SIGN_RECT.position.y + SIGN_RECT.size.y * 0.5
-	_draw_paw_icon(Vector2(cx, cy), 13.0, COLOR_PARCHMENT)
 
-func _draw_instruction_panel() -> void:
-	_draw_parchment_pill(INSTRUCTION_RECT, 16.0)
-	_draw_stat_box(STAT_BOX_RECT, 14.0)
+func _draw_stats_bar() -> void:
+	_draw_parchment_pill(STATS_RECT, 16.0)
+	_draw_parchment_pill(PAIRS_PILL_RECT)
 
 func _draw_grid_frame() -> void:
 	_draw_wood_panel(GRID_FRAME_RECT, 18.0)
@@ -265,12 +261,6 @@ func _draw_tip_bar() -> void:
 	_draw_lightbulb_icon(icon_center, 16.0)
 
 # --- Small procedural icons --------------------------------------------------
-
-func _draw_paw_icon(center: Vector2, r: float, color: Color) -> void:
-	draw_circle(center + Vector2(0, r * 0.28), r * 0.6, color)
-	var toe_offsets := [Vector2(-0.5, -0.62), Vector2(-0.18, -0.82), Vector2(0.18, -0.82), Vector2(0.5, -0.62)]
-	for off in toe_offsets:
-		draw_circle(center + off * r, r * 0.24, color)
 
 func _draw_lightbulb_icon(center: Vector2, r: float) -> void:
 	draw_circle(center + Vector2(0, -r * 0.15), r * 0.62, Color("#f2b705"))
@@ -322,21 +312,6 @@ func _draw_parchment_pill(rect: Rect2, radius: float = 12.0) -> void:
 	sb.border_color = COLOR_OUTLINE
 	draw_style_box(sb, rect)
 
-func _draw_stat_box(rect: Rect2, radius: float) -> void:
-	var shadow_sb := StyleBoxFlat.new()
-	shadow_sb.bg_color = COLOR_OUTLINE
-	shadow_sb.set_corner_radius_all(int(radius))
-	draw_style_box(shadow_sb, Rect2(rect.position + Vector2(2, 2), rect.size))
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = COLOR_HEADER_GREEN
-	sb.set_corner_radius_all(int(radius))
-	sb.border_width_top = 2
-	sb.border_width_bottom = 2
-	sb.border_width_left = 2
-	sb.border_width_right = 2
-	sb.border_color = COLOR_OUTLINE
-	draw_style_box(sb, rect)
-
 # ---------------------------------------------------------------------------
 # UI node styling - applied once in _ready() to real Control/Button nodes
 # (which need to stay real nodes for input + text layout) rather than
@@ -358,9 +333,8 @@ func _style_ui() -> void:
 	title_label.add_theme_constant_override("shadow_offset_x", 1)
 	title_label.add_theme_constant_override("shadow_offset_y", 1)
 
-	instruction_label.add_theme_color_override("font_color", COLOR_INK)
-	stat_caption_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	stat_value_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	stat_caption_label.add_theme_color_override("font_color", COLOR_INK)
+	stat_value_label.add_theme_color_override("font_color", COLOR_INK)
 	tip_label.add_theme_color_override("font_color", COLOR_INK)
 
 	result_label.add_theme_color_override("font_color", COLOR_INK)

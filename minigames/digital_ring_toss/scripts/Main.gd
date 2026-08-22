@@ -312,23 +312,11 @@ func _draw_page_bg() -> void:
 
 func _draw_sign_plank() -> void:
 	_draw_wood_panel(SIGN_RECT, 14.0)
-	var cx := SIGN_RECT.position.x + 28
-	var cy := SIGN_RECT.position.y + SIGN_RECT.size.y * 0.5
-	_draw_ring_icon(Vector2(cx, cy), 12.0, COLOR_SUNSET_ORANGE, COLOR_WOOD_MID)
-	# Small leaf-vine flourish in the plank's bottom-left corner.
-	var vine_base := SIGN_RECT.position + Vector2(14, SIGN_RECT.size.y - 10)
-	_draw_leaf_icon(vine_base, 6.0)
-	_draw_leaf_icon(vine_base + Vector2(11, -3), 5.0)
-	_draw_leaf_icon(vine_base + Vector2(20, -9), 4.0)
 
 func _draw_ring_icon(center: Vector2, r: float, ring_color: Color, hole_color: Color) -> void:
 	draw_circle(center, r, ring_color)
 	draw_circle(center, r * 0.5, hole_color)
 	draw_circle(center, r, Color(0, 0, 0, 0.3), false, 1.5, true)
-
-func _draw_leaf_icon(center: Vector2, r: float) -> void:
-	draw_circle(center, r, COLOR_GRASS_BLADE)
-	draw_line(center + Vector2(-r * 0.6, r * 0.2), center + Vector2(r * 0.6, -r * 0.2), COLOR_HEADER_GREEN, 1.5)
 
 func _draw_star_icon(center: Vector2, r: float) -> void:
 	var points := PackedVector2Array()

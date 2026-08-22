@@ -11,7 +11,7 @@ const LANE_COUNT := 3
 const VIEWPORT_WIDTH := 400.0
 const VIEWPORT_HEIGHT := 600.0
 const LANE_WIDTH := VIEWPORT_WIDTH / LANE_COUNT
-const PLAY_TOP := 60.0
+const PLAY_TOP := 170.0
 const PLAY_BOTTOM := 500.0
 const BIN_TOP := PLAY_BOTTOM
 const BIN_BOTTOM := VIEWPORT_HEIGHT
@@ -42,11 +42,10 @@ const SPECIES_POOL := ["Capybara", "Alpaca", "Chicken"]
 # PLAY_TOP/PLAY_BOTTOM/BIN_TOP/BIN_BOTTOM/LANE_WIDTH above (left untouched by
 # this art pass) and only touches pixels through those same constants at draw
 # time, mirroring Mini Snake's SIGN_RECT/STATS_RECT-style layout consts.
-const SIGN_RECT := Rect2(4, 4, 392, 52)
-const SIGN_ICON_CENTER := Vector2(24, 30)
-const SIGN_ICON_RADIUS := 13.0
-const CORRECT_PILL_RECT := Rect2(44, 12, 96, 36)
-const MISSED_PILL_RECT := Rect2(148, 12, 96, 36)
+const SIGN_RECT := Rect2(4, 4, 392, 56)
+const STATS_RECT := Rect2(4, 68, 392, 54)
+const CORRECT_PILL_RECT := Rect2(14, 78, 181, 34)
+const MISSED_PILL_RECT := Rect2(205, 78, 181, 34)
 const BINS_SHELF_RECT := Rect2(4, 504, 392, 92)
 const BUCKET_PANEL_TOP := BIN_TOP + 12.0
 const BUCKET_PANEL_HEIGHT := 78.0
@@ -101,10 +100,13 @@ const SPECIES_TEXTURES := {
 }
 
 @onready var spawn_timer: Timer = $SpawnTimer
-@onready var correct_label: Label = $UI/TopBar/CorrectLabel
-@onready var missed_label: Label = $UI/TopBar/MissedLabel
-@onready var status_label: Label = $UI/TopBar/StatusLabel
-@onready var top_exit_button: Button = $UI/TopBar/ExitButton
+@onready var title_label: Label = $UI/SignBar/TitleLabel
+@onready var correct_label: Label = $UI/StatsBar/CorrectPill/ValueLabel
+@onready var missed_label: Label = $UI/StatsBar/MissedPill/ValueLabel
+@onready var correct_caption_label: Label = $UI/StatsBar/CorrectPill/CaptionLabel
+@onready var missed_caption_label: Label = $UI/StatsBar/MissedPill/CaptionLabel
+@onready var status_label: Label = $UI/StatusLabel
+@onready var top_exit_button: Button = $UI/SignBar/ExitButton
 @onready var bin_labels: Array[Label] = [$UI/Bins/BinLabel0, $UI/Bins/BinLabel1, $UI/Bins/BinLabel2]
 @onready var game_over_layer: Control = $UI/GameOverLayer
 @onready var result_label: Label = $UI/GameOverLayer/ResultLabel
@@ -308,8 +310,8 @@ func _notify_host_complete() -> void:
 		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'sort_the_species' }, '*');")
 
 func _update_labels() -> void:
-	correct_label.text = "Correct: %d" % correct_count
-	missed_label.text = "Missed: %d / %d" % [missed_count, MAX_MISSES]
+	correct_label.text = "%d" % correct_count
+	missed_label.text = "%d / %d" % [missed_count, MAX_MISSES]
 
 # ---------------------------------------------------------------------------
 # Drawing. Main is a Node2D so everything here renders beneath the $UI
@@ -322,7 +324,8 @@ func _draw() -> void:
 	_draw_page_bg()
 	_draw_field()
 	_draw_bins()
-	_draw_sign()
+	_draw_sign_plank()
+	_draw_stats_bar()
 
 func _draw_page_bg() -> void:
 	var vp := get_viewport_rect().size
@@ -359,27 +362,13 @@ func _draw_bucket_panel(lane: int) -> void:
 	draw_style_box(accent_sb, accent_rect)
 	_draw_species_icon(species, Vector2(_lane_x(lane), BIN_ICON_Y), BIN_ICON_RADIUS)
 
-func _draw_sign() -> void:
+func _draw_sign_plank() -> void:
 	_draw_wood_panel(SIGN_RECT, 14.0)
-	_draw_sort_icon(SIGN_ICON_CENTER, SIGN_ICON_RADIUS)
+
+func _draw_stats_bar() -> void:
+	_draw_parchment_pill(STATS_RECT, 16.0)
 	_draw_parchment_pill(CORRECT_PILL_RECT, 10.0)
 	_draw_parchment_pill(MISSED_PILL_RECT, 10.0)
-
-# A tiny procedural "sorting funnel" mark: three species-colored dots
-# converging into a parchment funnel with a green spout. Tied directly to
-# this game's own sorting mechanic (not ambient/plant decoration).
-func _draw_sort_icon(center: Vector2, r: float) -> void:
-	var funnel := PackedVector2Array([
-		center + Vector2(-r * 0.9, -r * 0.7),
-		center + Vector2(r * 0.9, -r * 0.7),
-		center + Vector2(r * 0.25, r * 0.5),
-		center + Vector2(-r * 0.25, r * 0.5),
-	])
-	draw_polygon(funnel, PackedColorArray([COLOR_PARCHMENT]))
-	draw_circle(center + Vector2(-r * 0.5, -r * 1.0), r * 0.22, COLOR_CHICKEN_ACCENT)
-	draw_circle(center, r * 0.22, COLOR_ALPACA_ACCENT)
-	draw_circle(center + Vector2(r * 0.5, -r * 1.0), r * 0.22, COLOR_CAPYBARA_ACCENT)
-	draw_circle(center + Vector2(0, r * 0.85), r * 0.16, COLOR_ADVENTURE_GREEN)
 
 func _species_accent_color(species: String) -> Color:
 	match species:
@@ -466,12 +455,19 @@ func _style_ui() -> void:
 	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
 	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
-	for lbl in [correct_label, missed_label, status_label]:
-		lbl.add_theme_color_override("font_color", Color(1, 1, 1))
-		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
-		lbl.add_theme_constant_override("shadow_offset_x", 1)
-		lbl.add_theme_constant_override("shadow_offset_y", 1)
-		lbl.add_theme_font_size_override("font_size", 14)
+	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	title_label.add_theme_constant_override("shadow_offset_x", 1)
+	title_label.add_theme_constant_override("shadow_offset_y", 1)
+
+	for lbl in [correct_label, missed_label, correct_caption_label, missed_caption_label]:
+		lbl.add_theme_color_override("font_color", COLOR_INK)
+
+	status_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	status_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
+	status_label.add_theme_constant_override("shadow_offset_x", 1)
+	status_label.add_theme_constant_override("shadow_offset_y", 1)
+	status_label.add_theme_font_size_override("font_size", 14)
 
 	for bin_label in bin_labels:
 		bin_label.add_theme_font_size_override("font_size", 15)

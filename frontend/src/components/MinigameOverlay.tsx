@@ -59,12 +59,6 @@ export function MinigameOverlay({ game, onClose }: MinigameOverlayProps) {
   return (
     <div className="minigame-overlay">
       <div className="minigame-overlay-panel" role="dialog" aria-modal="true" aria-label={game.name}>
-        <div className="minigame-overlay-header">
-          <span className="minigame-overlay-title">{game.name}</span>
-          <button type="button" className="minigame-overlay-close" onClick={onClose} aria-label="Close minigame">
-            ✕
-          </button>
-        </div>
         <iframe
           ref={iframeRef}
           className="minigame-overlay-frame"

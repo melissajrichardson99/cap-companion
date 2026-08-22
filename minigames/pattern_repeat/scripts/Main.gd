@@ -16,13 +16,13 @@ const ANIMAL_NAMES := ["ALPACA", "PIG", "HEN", "EWE"]
 # sequence/index space. Mirrors Mini Snake's SIGN_RECT/STATS_RECT const
 # pattern.
 const SIGN_RECT := Rect2(10, 10, 380, 56)
-const INSTRUCTION_RECT := Rect2(10, 74, 380, 92)
-const ROUND_PILL_RECT := Rect2(266, 84, 104, 72)
+const STATS_RECT := Rect2(10, 74, 380, 54)
+const ROUND_PILL_RECT := Rect2(115, 84, 170, 34)
 const TIP_RECT := Rect2(10, 530, 380, 58)
-const TILE_COW_RECT := Rect2(43, 208, 150, 150)
-const TILE_PIG_RECT := Rect2(207, 208, 150, 150)
-const TILE_HEN_RECT := Rect2(43, 372, 150, 150)
-const TILE_EWE_RECT := Rect2(207, 372, 150, 150)
+const TILE_COW_RECT := Rect2(43, 170, 150, 150)
+const TILE_PIG_RECT := Rect2(207, 170, 150, 150)
+const TILE_HEN_RECT := Rect2(43, 334, 150, 150)
+const TILE_EWE_RECT := Rect2(207, 334, 150, 150)
 const TILE_RECTS := [TILE_COW_RECT, TILE_PIG_RECT, TILE_HEN_RECT, TILE_EWE_RECT]
 
 # --- Brand palette. Mirrors frontend/src/index.css's --cap-* tokens so this
@@ -73,9 +73,8 @@ const TILE_TEXTURES := [
 const NAME_LABEL_IDLE_COLOR := Color(0.97, 0.95, 0.9)
 
 @onready var status_label: Label = $UI/StatusLabel
-@onready var round_caption_label: Label = $UI/InstructionBar/RoundPill/CaptionLabel
-@onready var round_value_label: Label = $UI/InstructionBar/RoundPill/ValueLabel
-@onready var instruction_label: Label = $UI/InstructionBar/InstructionLabel
+@onready var round_caption_label: Label = $UI/StatsBar/RoundPill/CaptionLabel
+@onready var round_value_label: Label = $UI/StatsBar/RoundPill/ValueLabel
 @onready var title_label: Label = $UI/SignBar/TitleLabel
 @onready var animal_buttons: Array = [
 	$UI/AnimalGrid/BtnCow,
@@ -233,7 +232,7 @@ func _update_labels() -> void:
 func _draw() -> void:
 	_draw_page_bg()
 	_draw_sign_plank()
-	_draw_instruction_panel()
+	_draw_stats_bar()
 	_draw_animal_tiles()
 	_draw_tip_bar()
 
@@ -243,47 +242,10 @@ func _draw_page_bg() -> void:
 
 func _draw_sign_plank() -> void:
 	_draw_wood_panel(SIGN_RECT, 14.0)
-	var cx := SIGN_RECT.position.x + 30
-	var cy := SIGN_RECT.position.y + SIGN_RECT.size.y * 0.5
-	_draw_badge_icon(Vector2(cx, cy), 13.0)
 
-func _draw_badge_icon(center: Vector2, r: float) -> void:
-	# Small 3-dot "traffic light" badge in a rounded wood chip.
-	var chip_rect := Rect2(center - Vector2(r * 0.85, r * 1.55), Vector2(r * 1.7, r * 3.1))
-	var chip_sb := StyleBoxFlat.new()
-	chip_sb.bg_color = COLOR_WOOD_DARK
-	chip_sb.set_corner_radius_all(int(r * 0.9))
-	chip_sb.set_border_width_all(1)
-	chip_sb.border_color = COLOR_OUTLINE
-	draw_style_box(chip_sb, chip_rect)
-	draw_circle(center + Vector2(0, -r * 0.95), r * 0.38, Color("#d9432e"))
-	draw_circle(center, r * 0.38, Color("#f2b705"))
-	draw_circle(center + Vector2(0, r * 0.95), r * 0.38, COLOR_ADVENTURE_GREEN)
-
-func _draw_instruction_panel() -> void:
-	_draw_parchment_pill(INSTRUCTION_RECT, 16.0)
-	var paw_center := INSTRUCTION_RECT.position + Vector2(26, 46)
-	_draw_paw_icon(paw_center, 13.0)
-	_draw_round_pill()
-
-func _draw_paw_icon(center: Vector2, r: float) -> void:
-	draw_circle(center + Vector2(0, r * 0.35), r * 0.62, COLOR_WOOD_DARK)
-	draw_circle(center + Vector2(-r * 0.55, -r * 0.35), r * 0.27, COLOR_WOOD_DARK)
-	draw_circle(center + Vector2(-r * 0.18, -r * 0.62), r * 0.27, COLOR_WOOD_DARK)
-	draw_circle(center + Vector2(r * 0.18, -r * 0.62), r * 0.27, COLOR_WOOD_DARK)
-	draw_circle(center + Vector2(r * 0.55, -r * 0.35), r * 0.27, COLOR_WOOD_DARK)
-
-func _draw_round_pill() -> void:
-	var shadow_sb := StyleBoxFlat.new()
-	shadow_sb.bg_color = COLOR_OUTLINE
-	shadow_sb.set_corner_radius_all(14)
-	draw_style_box(shadow_sb, Rect2(ROUND_PILL_RECT.position + Vector2(3, 3), ROUND_PILL_RECT.size))
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = COLOR_HEADER_GREEN
-	sb.set_corner_radius_all(14)
-	sb.set_border_width_all(2)
-	sb.border_color = COLOR_OUTLINE
-	draw_style_box(sb, ROUND_PILL_RECT)
+func _draw_stats_bar() -> void:
+	_draw_parchment_pill(STATS_RECT, 16.0)
+	_draw_parchment_pill(ROUND_PILL_RECT)
 
 func _draw_tip_bar() -> void:
 	_draw_parchment_pill(TIP_RECT, 14.0)
@@ -409,10 +371,9 @@ func _style_ui() -> void:
 	title_label.add_theme_constant_override("shadow_offset_x", 1)
 	title_label.add_theme_constant_override("shadow_offset_y", 1)
 
-	instruction_label.add_theme_color_override("font_color", COLOR_INK)
 	status_label.add_theme_color_override("font_color", COLOR_INK)
-	round_caption_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	round_value_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	round_caption_label.add_theme_color_override("font_color", COLOR_INK)
+	round_value_label.add_theme_color_override("font_color", COLOR_INK)
 
 	result_label.add_theme_color_override("font_color", COLOR_INK)
 	score_result_label.add_theme_color_override("font_color", COLOR_INK)

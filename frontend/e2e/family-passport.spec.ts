@@ -117,13 +117,16 @@ test.describe('Family Passport', () => {
     await page.getByRole('menuitemradio', { name: 'Bingo Card' }).click()
     await page.locator('.bingo-tile-open').first().click()
     await page.getByRole('button', { name: 'Completed Challenge' }).click()
-    // Completing a tile draws a minigame asynchronously. Dismiss it via the
-    // overlay's own close button, not Escape -- the Godot iframe grabs
-    // keyboard focus once it loads, so an Escape keypress from here can
-    // land on the iframe's own document instead of bubbling to the parent
-    // page's listener, leaving the overlay stuck open and blocking every
-    // click underneath it for the rest of the test.
-    await page.getByRole('button', { name: 'Close minigame' }).click()
+    // Completing a tile draws a minigame asynchronously. The overlay has no
+    // close button of its own (removed for UI standardization) and Escape is
+    // flaky here -- the Godot iframe grabs keyboard focus once it loads, so
+    // an Escape keypress from here can land on the iframe's own document
+    // instead of bubbling to the parent page's listener, leaving the overlay
+    // stuck open and blocking every click underneath it for the rest of the
+    // test. Fire the same postMessage the game sends on completion instead.
+    const iframeHandle = await page.locator('.minigame-overlay-frame').elementHandle()
+    const frame = await iframeHandle?.contentFrame()
+    await frame?.evaluate(() => window.parent.postMessage({ type: 'minigame-complete' }, '*'))
     await expect(page.locator('.minigame-overlay')).toHaveCount(0)
 
     // Puzzle Timer: "Right Turn Only" -- untouched by puzzle-timer.spec.ts

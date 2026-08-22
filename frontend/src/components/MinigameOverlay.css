@@ -24,39 +24,6 @@
   overflow: hidden;
 }
 
-.minigame-overlay-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.minigame-overlay-title {
-  font-family: var(--heading);
-  font-weight: 700;
-  color: var(--text-h);
-}
-
-.minigame-overlay-close {
-  font: inherit;
-  font-size: 16px;
-  line-height: 1;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-h);
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  transition: transform 0.1s ease;
-}
-
-.minigame-overlay-close:hover {
-  transform: translateY(-1px);
-}
-
 .minigame-overlay-frame {
   flex: 1;
   width: 100%;

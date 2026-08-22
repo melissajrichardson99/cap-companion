@@ -251,16 +251,6 @@ func _draw_page_bg() -> void:
 
 func _draw_sign_plank() -> void:
 	_draw_wood_panel(SIGN_RECT, 14.0)
-	# Small procedural snake mark to the left of the title text.
-	var cx := SIGN_RECT.position.x + 30
-	var cy := SIGN_RECT.position.y + SIGN_RECT.size.y * 0.5
-	_draw_snake_glyph(Vector2(cx, cy), 13.0)
-
-func _draw_snake_glyph(center: Vector2, r: float) -> void:
-	draw_circle(center + Vector2(-r * 0.8, r * 0.5), r * 0.55, COLOR_SNAKE_BODY)
-	draw_circle(center + Vector2(0, -r * 0.1), r * 0.62, COLOR_SNAKE_HEAD)
-	draw_circle(center + Vector2(r * 0.75, -r * 0.55), r * 0.5, COLOR_SNAKE_HEAD)
-	draw_circle(center + Vector2(r * 0.95, -r * 0.85), r * 0.12, COLOR_OUTLINE)
 
 func _draw_stat_pills() -> void:
 	_draw_parchment_pill(STATS_RECT, 16.0)

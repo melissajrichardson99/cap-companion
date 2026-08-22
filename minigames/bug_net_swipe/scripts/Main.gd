@@ -2,7 +2,7 @@ extends Node2D
 
 const VIEWPORT_WIDTH := 400.0
 const VIEWPORT_HEIGHT := 600.0
-const PLAY_TOP := 64.0
+const PLAY_TOP := 170.0
 const PLAY_BOTTOM := 596.0
 
 const TIME_LIMIT := 30.0
@@ -37,11 +37,12 @@ const BACKGROUND_COLOR := Color(0.11, 0.16, 0.1)
 
 # --- Layout rects (design canvas is 400x600, see project.godot). Purely
 # cosmetic - mirrors card_flip_pairs/mini_snake's SIGN_RECT-style layout
-# consts. PLAY_TOP/PLAY_BOTTOM above stay untouched since gameplay (spawn
-# ranges, off-screen culling) is anchored to them; the sign plank fits in
-# the 0..PLAY_TOP strip that already existed for TopBar.
+# consts. PLAY_TOP above is anchored to clear this SignBar+StatsBar+status
+# chrome stack (0..PLAY_TOP), not just a single TopBar strip anymore.
 const SIGN_RECT := Rect2(4, 4, 392, 56)
-const STAT_PILL_RECT := Rect2(14, 14, 150, 36)
+const STATS_RECT := Rect2(4, 68, 392, 54)
+const TIME_PILL_RECT := Rect2(14, 78, 181, 34)
+const CAUGHT_PILL_RECT := Rect2(205, 78, 181, 34)
 const GAMEOVER_OUTER_RECT := Rect2(30, 195, 340, 250)
 const GAMEOVER_INNER_RECT := Rect2(44, 209, 312, 222)
 
@@ -61,14 +62,17 @@ const COLOR_SUNSET_ORANGE := Color("#f38630")
 const COLOR_SUNSET_ORANGE_DEEP := Color("#bc6825")
 
 @onready var spawn_timer: Timer = $SpawnTimer
-@onready var time_label: Label = $UI/TopBar/TimeLabel
-@onready var catch_label: Label = $UI/TopBar/CatchLabel
-@onready var status_label: Label = $UI/TopBar/StatusLabel
+@onready var title_label: Label = $UI/SignBar/TitleLabel
+@onready var time_label: Label = $UI/StatsBar/TimePill/ValueLabel
+@onready var catch_label: Label = $UI/StatsBar/CaughtPill/ValueLabel
+@onready var time_caption_label: Label = $UI/StatsBar/TimePill/CaptionLabel
+@onready var catch_caption_label: Label = $UI/StatsBar/CaughtPill/CaptionLabel
+@onready var status_label: Label = $UI/StatusLabel
 @onready var game_over_layer: Control = $UI/GameOverLayer
 @onready var result_label: Label = $UI/GameOverLayer/ResultLabel
 @onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
 @onready var restart_button: Button = $UI/GameOverLayer/RestartButton
-@onready var top_exit_button: Button = $UI/TopBar/ExitButton
+@onready var top_exit_button: Button = $UI/SignBar/ExitButton
 @onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 
 # Each entry is a Dictionary: {spawn_pos, pos, vel, perp, amplitude, freq,
@@ -282,8 +286,8 @@ func _notify_host_complete() -> void:
 		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'bug_net_swipe' }, '*');")
 
 func _update_labels() -> void:
-	time_label.text = "Time: %d" % ceili(max(0.0, TIME_LIMIT - elapsed_time))
-	catch_label.text = "Caught: %d/%d" % [catch_count, TARGET_CATCHES]
+	time_label.text = "%d" % ceili(max(0.0, TIME_LIMIT - elapsed_time))
+	catch_label.text = "%d / %d" % [catch_count, TARGET_CATCHES]
 
 func _draw() -> void:
 	_draw_page_bg()
@@ -291,6 +295,7 @@ func _draw() -> void:
 	for bug in bugs:
 		_draw_bug(bug)
 	_draw_sign_plank()
+	_draw_stats_bar()
 	if game_over_layer.visible:
 		_draw_game_over_panel()
 
@@ -300,7 +305,11 @@ func _draw_page_bg() -> void:
 
 func _draw_sign_plank() -> void:
 	_draw_wood_panel(SIGN_RECT, 12.0)
-	_draw_parchment_pill(STAT_PILL_RECT, 10.0)
+
+func _draw_stats_bar() -> void:
+	_draw_parchment_pill(STATS_RECT, 16.0)
+	_draw_parchment_pill(TIME_PILL_RECT, 10.0)
+	_draw_parchment_pill(CAUGHT_PILL_RECT, 10.0)
 
 func _draw_game_over_panel() -> void:
 	_draw_wood_panel(GAMEOVER_OUTER_RECT, 18.0)
@@ -362,8 +371,15 @@ func _style_ui() -> void:
 	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
 	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
+	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+	title_label.add_theme_constant_override("shadow_offset_x", 1)
+	title_label.add_theme_constant_override("shadow_offset_y", 1)
+
 	time_label.add_theme_color_override("font_color", COLOR_INK)
 	catch_label.add_theme_color_override("font_color", COLOR_INK)
+	time_caption_label.add_theme_color_override("font_color", COLOR_INK)
+	catch_caption_label.add_theme_color_override("font_color", COLOR_INK)
 	status_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	status_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
 	status_label.add_theme_constant_override("shadow_offset_x", 1)

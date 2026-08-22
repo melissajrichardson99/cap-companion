@@ -29,50 +29,41 @@ offset_right = 372.0
 offset_bottom = 46.0
 text = "X"
 
-[node name="InstructionBar" type="Control" parent="UI"]
+[node name="StatsBar" type="Control" parent="UI"]
 offset_left = 10.0
 offset_top = 74.0
 offset_right = 390.0
-offset_bottom = 166.0
+offset_bottom = 128.0
 
-[node name="InstructionLabel" type="Label" parent="UI/InstructionBar"]
-offset_left = 46.0
-offset_top = 8.0
-offset_right = 246.0
-offset_bottom = 84.0
-theme_override_font_sizes/font_size = 12
-autowrap_mode = 3
-text = "Watch the pattern, then repeat it back. How long of a pattern can you remember?"
-
-[node name="RoundPill" type="Control" parent="UI/InstructionBar"]
-offset_left = 256.0
+[node name="RoundPill" type="Control" parent="UI/StatsBar"]
+offset_left = 115.0
 offset_top = 10.0
-offset_right = 360.0
-offset_bottom = 82.0
+offset_right = 285.0
+offset_bottom = 44.0
 
-[node name="CaptionLabel" type="Label" parent="UI/InstructionBar/RoundPill"]
+[node name="CaptionLabel" type="Label" parent="UI/StatsBar/RoundPill"]
 offset_left = 0.0
-offset_top = 8.0
-offset_right = 104.0
-offset_bottom = 24.0
+offset_top = 2.0
+offset_right = 170.0
+offset_bottom = 18.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 12
 text = "ROUND"
 
-[node name="ValueLabel" type="Label" parent="UI/InstructionBar/RoundPill"]
+[node name="ValueLabel" type="Label" parent="UI/StatsBar/RoundPill"]
 offset_left = 0.0
-offset_top = 26.0
-offset_right = 104.0
-offset_bottom = 64.0
+offset_top = 15.0
+offset_right = 170.0
+offset_bottom = 34.0
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 18
 text = "1"
 
 [node name="StatusLabel" type="Label" parent="UI"]
 offset_left = 10.0
-offset_top = 174.0
+offset_top = 136.0
 offset_right = 390.0
-offset_bottom = 198.0
+offset_bottom = 160.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 13
 text = "Tap the items in the same order as the pattern."
@@ -83,38 +74,38 @@ offset_bottom = 600.0
 
 [node name="BtnCow" type="Button" parent="UI/AnimalGrid"]
 offset_left = 43.0
-offset_top = 208.0
+offset_top = 170.0
 offset_right = 193.0
-offset_bottom = 358.0
+offset_bottom = 320.0
 text = ""
 
 [node name="BtnPig" type="Button" parent="UI/AnimalGrid"]
 offset_left = 207.0
-offset_top = 208.0
+offset_top = 170.0
 offset_right = 357.0
-offset_bottom = 358.0
+offset_bottom = 320.0
 text = ""
 
 [node name="BtnHen" type="Button" parent="UI/AnimalGrid"]
 offset_left = 43.0
-offset_top = 372.0
+offset_top = 334.0
 offset_right = 193.0
-offset_bottom = 522.0
+offset_bottom = 484.0
 text = ""
 
 [node name="BtnEwe" type="Button" parent="UI/AnimalGrid"]
 offset_left = 207.0
-offset_top = 372.0
+offset_top = 334.0
 offset_right = 357.0
-offset_bottom = 522.0
+offset_bottom = 484.0
 text = ""
 
 [node name="NameCow" type="Label" parent="UI/AnimalGrid"]
 mouse_filter = 2
 offset_left = 43.0
-offset_top = 314.0
+offset_top = 276.0
 offset_right = 193.0
-offset_bottom = 350.0
+offset_bottom = 312.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 15
 text = "ALPACA"
@@ -122,9 +113,9 @@ text = "ALPACA"
 [node name="NamePig" type="Label" parent="UI/AnimalGrid"]
 mouse_filter = 2
 offset_left = 207.0
-offset_top = 314.0
+offset_top = 276.0
 offset_right = 357.0
-offset_bottom = 350.0
+offset_bottom = 312.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 15
 text = "PIG"
@@ -132,9 +123,9 @@ text = "PIG"
 [node name="NameHen" type="Label" parent="UI/AnimalGrid"]
 mouse_filter = 2
 offset_left = 43.0
-offset_top = 478.0
+offset_top = 440.0
 offset_right = 193.0
-offset_bottom = 514.0
+offset_bottom = 476.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 15
 text = "HEN"
@@ -142,9 +133,9 @@ text = "HEN"
 [node name="NameEwe" type="Label" parent="UI/AnimalGrid"]
 mouse_filter = 2
 offset_left = 207.0
-offset_top = 478.0
+offset_top = 440.0
 offset_right = 357.0
-offset_bottom = 514.0
+offset_bottom = 476.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 15
 text = "EWE"
