@@ -173,6 +173,11 @@ class MilestoneEvent(BaseModel):
     type: MilestoneType
     message: str
     tile_ids: list[UUID]
+    # Coins awarded for reaching this milestone tier (bingo_milestone amount
+    # for event.type, per app/services/coins.py's bingo_milestone_amount()),
+    # 0 if none -- lets the frontend show it inline on MilestoneBanner
+    # instead of a separate, competing toast.
+    coins_awarded: int = Field(default=0, ge=0)
 
 
 class TileCompletionResult(BaseModel):
@@ -182,6 +187,10 @@ class TileCompletionResult(BaseModel):
     milestones: list[MilestoneEvent]
     minigames_drawn: list[Minigame]
     card_milestones_achieved: MilestonesAchieved
+    # Coins awarded by this completion (mirrors milestones[0].coins_awarded
+    # when a milestone fired, 0 otherwise -- Bingo coins only ever come from
+    # a milestone tier, there's no separate flat per-tile award).
+    coins_awarded: int = Field(default=0, ge=0)
 
 
 class VisitNodeRequest(BaseModel):
@@ -191,6 +200,11 @@ class VisitNodeRequest(BaseModel):
 class VisitNodeResponse(BaseModel):
     node: MapNode
     tile_completions: list[TileCompletionResult]
+    # The one-time Map Exploration bonus (50, see coins.MAP_EXPLORATION_AMOUNT)
+    # if this visit completed it, 0 otherwise. Separate from any
+    # tile_completions[].coins_awarded, which are bingo-milestone coins from
+    # this same visit's confirmed linked tiles.
+    coins_awarded: int = Field(default=0, ge=0)
 
 
 class SetNodeOpenStatusRequest(BaseModel):
@@ -330,6 +344,11 @@ class HuntCharacter(BaseModel):
     # False until a guest scans/enters this character's QR code
     # (hunt_progress.unlocked_at is not null) -- gates challenge access.
     unlocked: bool = False
+    # Coins awarded by the action that produced this response (only ever
+    # non-zero from complete_challenge() -- 15 when this call completed the
+    # character, +25 more if it was also the 5th/last character in the hunt.
+    # list_characters()/get_character()/unlock_character() leave this at 0.
+    coins_awarded: int = Field(default=0, ge=0)
 
 
 class EncyclopediaStatus(StrEnum):
@@ -398,7 +417,9 @@ class CoinSourceType(StrEnum):
     SCAVENGER_HUNT = "scavenger_hunt"
     PUZZLE_TIMER = "puzzle_timer"
     SCORING_SHEET_WIN = "scoring_sheet_win"
-    BINGO_TILE = "bingo_tile"
+    BINGO_MILESTONE = "bingo_milestone"
+    HUNT_COMPLETE = "hunt_complete"
+    MAP_EXPLORATION = "map_exploration"
 
 
 class CoinAward(BaseModel):
@@ -496,14 +517,18 @@ class ResetSessionResult(BaseModel):
     """Result of the guest-facing "Reset Session" action (nav dropdown).
 
     Narrower than backend/scripts/reset_demo_data.py's dev-only reset: this
-    only clears Bingo tile completion/milestones, Map node visited state, and
-    Scavenger Hunt challenge progress -- Cobb Coins, puzzle attempts, photos,
-    and passports are left untouched.
+    clears Bingo tile completion/milestones, Map node visited state,
+    Scavenger Hunt challenge progress, and the entire Cobb Coins ledger --
+    puzzle attempts, photos, and passports are left untouched (note that
+    puzzle/scoring-sheet *completion* state itself isn't reset, only the
+    coins tied to it, since coin_awards is cleared wholesale regardless of
+    source_type).
     """
 
     bingo_tiles_reset: int = Field(ge=0)
     map_nodes_reset: int = Field(ge=0)
     hunt_characters_reset: int = Field(ge=0)
+    coins_reset: int = Field(ge=0)
 
 
 class PassportSession(BaseModel):

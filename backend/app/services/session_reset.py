@@ -1,12 +1,15 @@
 """Guest-facing "Reset Session" — narrower than the dev-only reset_demo_data.py script.
 
-Clears only: Bingo tile completion + milestone state, Map node visited state,
-and Scavenger Hunt challenge/unlock progress (so the next group must re-scan
-each character's QR code, same as a fresh visit). Unlike reset_demo_data.py, this
-deliberately leaves Cobb Coins, puzzle attempts, staff requests, photos, and
-passports untouched -- a guest handing the phone to the next group shouldn't
-lose coins/photos already earned, just the "what have we already done"
-progress on the three exploration features.
+Clears: Bingo tile completion + milestone state, Map node visited state,
+Scavenger Hunt challenge/unlock progress (so the next group must re-scan
+each character's QR code, same as a fresh visit), and the entire Cobb Coins
+ledger (coin_awards) -- coins are tied to this session, not persistent
+identity, so nothing coin-related should survive a reset. Note this clears
+*all* coin_awards rows regardless of source_type, including puzzle_timer and
+scoring_sheet_win awards -- those features' own completion state (puzzle
+attempts, scoring sheet sessions) is untouched by Reset Session, only the
+coins earned from them. Unlike reset_demo_data.py, this still leaves staff
+requests, photos, and passports untouched.
 """
 
 from __future__ import annotations
@@ -51,8 +54,11 @@ def reset_session() -> ResetSessionResult:
         .data
     )
 
+    coin_rows = client.table("coin_awards").delete().neq("id", _MATCH_ALL_ID).execute().data
+
     return ResetSessionResult(
         bingo_tiles_reset=len(tile_rows),
         map_nodes_reset=len(node_rows),
         hunt_characters_reset=len(progress_rows),
+        coins_reset=len(coin_rows),
     )

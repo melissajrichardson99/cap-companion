@@ -74,6 +74,7 @@ export interface MilestoneEvent {
   type: 'line' | 'x' | 'blackout' | 'double_bingo'
   message: string
   tile_ids: string[]
+  coins_awarded: number
 }
 
 export interface TileCompletionResult {
@@ -81,11 +82,13 @@ export interface TileCompletionResult {
   milestones: MilestoneEvent[]
   minigames_drawn: Minigame[]
   card_milestones_achieved: MilestonesAchieved
+  coins_awarded: number
 }
 
 export interface VisitNodeResponse {
   node: MapNode
   tile_completions: TileCompletionResult[]
+  coins_awarded: number
 }
 
 export type SolutionType = 'exact' | 'strategy' | 'none'
@@ -221,6 +224,7 @@ export interface HuntCharacter {
   challenges_completed: number[]
   completed_at: string | null
   unlocked: boolean
+  coins_awarded: number
 }
 
 export type EncyclopediaStatus = 'placeholder' | 'published'
@@ -254,7 +258,13 @@ export interface StaffRequest {
 // description is rejected (422) past this length, not truncated.
 export const STAFF_REQUEST_DESCRIPTION_MAX_LENGTH = 500
 
-export type CoinSourceType = 'scavenger_hunt' | 'puzzle_timer' | 'scoring_sheet_win' | 'bingo_tile'
+export type CoinSourceType =
+  | 'scavenger_hunt'
+  | 'puzzle_timer'
+  | 'scoring_sheet_win'
+  | 'bingo_milestone'
+  | 'hunt_complete'
+  | 'map_exploration'
 
 export interface Collectible {
   id: string
@@ -305,6 +315,7 @@ export interface ResetSessionResult {
   bingo_tiles_reset: number
   map_nodes_reset: number
   hunt_characters_reset: number
+  coins_reset: number
 }
 
 export interface Announcement {

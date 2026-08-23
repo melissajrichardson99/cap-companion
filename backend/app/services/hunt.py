@@ -112,13 +112,37 @@ def complete_challenge(challenge_id: UUID) -> HuntCharacter:
 
     completed = set(progress_row["challenges_completed"]) | {challenge_row["order_index"]}
     update = {"challenges_completed": sorted(completed)}
-    if {1, 2, 3}.issubset(completed) and progress_row["completed_at"] is None:
+    just_completed_character = {1, 2, 3}.issubset(completed) and progress_row["completed_at"] is None
+    if just_completed_character:
         update["completed_at"] = datetime.now(timezone.utc).isoformat()
+
+    client.table("hunt_progress").update(update).eq("character_id", character_id).execute()
+
+    coins_awarded = 0
+    if just_completed_character:
         coins_service.award_coins(
             CoinSourceType.SCAVENGER_HUNT, UUID(character_id), coins_service.SCAVENGER_HUNT_CHARACTER_AMOUNT
         )
+        coins_awarded += coins_service.SCAVENGER_HUNT_CHARACTER_AMOUNT
 
-    client.table("hunt_progress").update(update).eq("character_id", character_id).execute()
+        # Check whether this character was the last of the 5 to complete,
+        # i.e. the whole hunt is now done. Existence-check against
+        # coin_awards is the idempotency guard (Reset Session clears the
+        # ledger, which resets this guard for free -- see coins.py).
+        all_progress = client.table("hunt_progress").select("completed_at").execute().data
+        if all(r["completed_at"] is not None for r in all_progress):
+            existing_bonus = (
+                client.table("coin_awards")
+                .select("id")
+                .eq("source_type", CoinSourceType.HUNT_COMPLETE.value)
+                .execute()
+                .data
+            )
+            if not existing_bonus:
+                coins_service.award_coins(
+                    CoinSourceType.HUNT_COMPLETE, UUID(character_id), coins_service.SCAVENGER_HUNT_COMPLETE_BONUS
+                )
+                coins_awarded += coins_service.SCAVENGER_HUNT_COMPLETE_BONUS
 
     char_rows = client.table("hunt_characters").select("*").eq("id", character_id).execute().data
     challenge_rows_for_character = (
@@ -126,4 +150,6 @@ def complete_challenge(challenge_id: UUID) -> HuntCharacter:
     )
     progress_row = client.table("hunt_progress").select("*").eq("character_id", character_id).execute().data[0]
 
-    return _character_from_rows(char_rows[0], challenge_rows_for_character, progress_row)
+    character = _character_from_rows(char_rows[0], challenge_rows_for_character, progress_row)
+    character.coins_awarded = coins_awarded
+    return character

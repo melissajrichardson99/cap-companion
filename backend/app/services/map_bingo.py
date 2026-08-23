@@ -207,7 +207,6 @@ def complete_tile(tile_id: UUID) -> TileCompletionResult:
         .data[0]
     )
     tile = _row_to_bingo_tile(updated_tile_row)
-    coins_service.award_coins(CoinSourceType.BINGO_TILE, tile.id, coins_service.BINGO_TILE_AMOUNT)
 
     card_rows = client.table("bingo_cards").select("*").eq("id", str(tile.card_id)).execute().data
     card_row = card_rows[0]
@@ -235,13 +234,20 @@ def complete_tile(tile_id: UUID) -> TileCompletionResult:
     # Only the single highest-priority hit is ever reported to the frontend
     # for animation -- achieved-lines/x/blackout bookkeeping below still
     # covers every hit in `hits`, regardless of which one (if any) is shown.
+    # Bingo coins are derived from this same display_hit (not from `hits`),
+    # so a completion that satisfies multiple tiers at once pays only the
+    # highest tier -- always in agreement with what the banner shows.
     display_hit = milestone_service.select_display_milestone(hits)
+    coins_awarded = coins_service.bingo_milestone_amount(display_hit.type) if display_hit else 0
+    if display_hit:
+        coins_service.award_coins(CoinSourceType.BINGO_MILESTONE, tile.id, coins_awarded)
     milestone_events = (
         [
             MilestoneEvent(
                 type=display_hit.type,
                 message=display_hit.message,
                 tile_ids=[index_to_tile_id[i] for i in display_hit.tile_indices],
+                coins_awarded=coins_awarded,
             )
         ]
         if display_hit
@@ -282,7 +288,40 @@ def complete_tile(tile_id: UUID) -> TileCompletionResult:
         milestones=milestone_events,
         minigames_drawn=drawn,
         card_milestones_achieved=_milestones_from_card_row(card_row),
+        coins_awarded=coins_awarded,
     )
+
+
+def _check_map_exploration_bonus(client, node_id: UUID) -> int:
+    """Award the one-time 50-coin Map Exploration bonus once every
+    currently-open top-level node has been visited.
+
+    Scoped to parent_node_id IS NULL: children (the Arcade Pad/Ground Games
+    sub-nodes) render no pin/card of their own in MapScreen.tsx and their
+    `state` never leaves 'not_visited' through any code path, so including
+    them here would make the bonus permanently unreachable by default.
+    Closed nodes (is_open false) don't count, and the `top_level_open` guard
+    below avoids vacuously awarding when every top-level node is closed.
+    Idempotent: guarded by whether a map_exploration award already exists,
+    which Reset Session clears along with the rest of coin_awards.
+    """
+    all_nodes = client.table("map_nodes").select("id,is_open,state,parent_node_id").execute().data
+    top_level_open = [n for n in all_nodes if n["is_open"] and n["parent_node_id"] is None]
+    if not top_level_open or not all(n["state"] == "visited" for n in top_level_open):
+        return 0
+
+    already_awarded = (
+        client.table("coin_awards")
+        .select("id")
+        .eq("source_type", CoinSourceType.MAP_EXPLORATION.value)
+        .execute()
+        .data
+    )
+    if already_awarded:
+        return 0
+
+    coins_service.award_coins(CoinSourceType.MAP_EXPLORATION, node_id, coins_service.MAP_EXPLORATION_AMOUNT)
+    return coins_service.MAP_EXPLORATION_AMOUNT
 
 
 def visit_node(node_id: UUID, completed_tile_ids: list[UUID]) -> VisitNodeResponse:
@@ -326,6 +365,8 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID]) -> VisitNodeRespon
         client.table("map_nodes").update({"state": "visited"}).eq("id", str(node_id)).execute().data[0]
     )
 
+    map_exploration_bonus = _check_map_exploration_bonus(client, node_id)
+
     tiles = (
         client.table("bingo_tiles")
         .select("id,label,completed")
@@ -337,7 +378,7 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID]) -> VisitNodeRespon
     children = [ChildNode(id=c["id"], name=c["name"]) for c in child_rows]
 
     node = _row_to_map_node(updated_node_row, linked_tiles, children)
-    return VisitNodeResponse(node=node, tile_completions=tile_completions)
+    return VisitNodeResponse(node=node, tile_completions=tile_completions, coins_awarded=map_exploration_bonus)
 
 
 def set_node_open_status(node_id: UUID, is_open: bool) -> MapNode:

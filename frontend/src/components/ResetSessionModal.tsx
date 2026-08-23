@@ -10,10 +10,11 @@ interface ResetSessionModalProps {
 }
 
 // Narrower, guest-facing counterpart to backend/scripts/reset_demo_data.py
-// (dev-only, clears far more). This only clears Bingo tiles, Map visited
-// state, and Scavenger Hunt progress -- Cobb Coins/photos/puzzle times are
-// untouched -- so it's safe to expose in the nav dropdown, but it's still
-// destructive and irreversible, hence the confirm step.
+// (dev-only, clears far more). This clears Bingo tiles, Map visited state,
+// Scavenger Hunt progress, and the Cobb Coins balance -- coins are tied to
+// this shared kiosk session, not persistent identity -- while photos/puzzle
+// times are untouched -- so it's safe to expose in the nav dropdown, but
+// it's still destructive and irreversible, hence the confirm step.
 export function ResetSessionModal({ onClose, onReset }: ResetSessionModalProps) {
   const [resetting, setResetting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,8 +42,8 @@ export function ResetSessionModal({ onClose, onReset }: ResetSessionModalProps) 
           Reset Session
         </h2>
         <p className="reset-session-body">
-          This clears every Bingo tile, Map visit, and Scavenger Hunt challenge back to not-started. Cobb Coins,
-          photos, and puzzle times are not affected.
+          This clears every Bingo tile, Map visit, and Scavenger Hunt challenge back to not-started, and resets Cobb
+          Coins to 0. Photos and puzzle times are not affected.
         </p>
         <p className="reset-session-warning">Are you sure? This can&rsquo;t be undone.</p>
         {error && <p className="screen-error">Couldn&rsquo;t reset: {error}</p>}

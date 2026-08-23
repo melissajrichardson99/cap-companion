@@ -140,7 +140,7 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
         setAdvancing(false)
         setTurnResult(null)
         if (updated.status === 'won' && autoFinishesOnWin(game)) {
-          setResultAnimation({ type: 'blackout', message: `🏆 ${updated.winner} wins!`, tile_ids: [] })
+          setResultAnimation({ type: 'blackout', message: `🏆 ${updated.winner} wins!`, tile_ids: [], coins_awarded: 0 })
           onCoinsChanged()
         }
       }, TURN_ADVANCE_DELAY_MS)
@@ -157,7 +157,7 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
     try {
       const finished = await api.finishScoreSheetSession(session.id)
       setSession(finished)
-      setResultAnimation({ type: 'blackout', message: `🏆 ${finished.winner} wins!`, tile_ids: [] })
+      setResultAnimation({ type: 'blackout', message: `🏆 ${finished.winner} wins!`, tile_ids: [], coins_awarded: 0 })
       onCoinsChanged()
     } catch (err) {
       setEntryError(String(err))

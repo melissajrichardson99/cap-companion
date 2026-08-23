@@ -232,6 +232,16 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Bingo's coin amount rides along with its MilestoneBanner (see
+  // MilestoneEvent.coins_awarded) instead of a toast, since a bingo tile
+  // completion only ever earns coins when it also hits a milestone -- a
+  // separate toast here would be redundant with the banner. Hunt and Map
+  // Exploration have no competing banner, so they get a toast of their own.
+  const toastCoinsEarned = (amount: number) => {
+    if (amount <= 0) return
+    setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `\u{1FA99} +${amount} Cobb Coins!` }])
+  }
+
   const toastUnbuiltMinigame = (game: Minigame) => {
     setToasts((prev) => [
       ...prev,
@@ -289,6 +299,7 @@ function App() {
     if (cardId) reloadCard(cardId)
     reloadNodes()
     reloadHuntCharacters()
+    reloadCoins()
     // Defensive: any minigame/milestone state left over from before the
     // reset refers to tiles/nodes that no longer exist in their prior form.
     setMilestoneQueue([])
@@ -319,7 +330,8 @@ function App() {
   const handleVisitResult = (result: VisitNodeResponse) => {
     if (cardId) reloadCard(cardId)
     reloadNodes()
-    if (result.tile_completions.length > 0) reloadCoins()
+    if (result.tile_completions.length > 0 || result.coins_awarded > 0) reloadCoins()
+    toastCoinsEarned(result.coins_awarded)
     for (const tc of result.tile_completions) {
       processTileCompletion(tc)
     }
@@ -329,6 +341,7 @@ function App() {
     api.completeHuntChallenge(challengeId).then((updated) => {
       setHuntCharacters((prev) => (prev ? prev.map((c) => (c.id === updated.id ? updated : c)) : prev))
       reloadCoins()
+      toastCoinsEarned(updated.coins_awarded)
       return updated
     })
 

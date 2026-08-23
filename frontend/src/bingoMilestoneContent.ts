@@ -4,11 +4,10 @@
 // (ROWS/DIAGONAL_A/DIAGONAL_B/BLACKOUT) so each diagram matches what the app
 // actually checks for, not an approximation.
 //
-// Milestones don't award their own coin bonus today -- only individual tile
-// completions do (BINGO_TILE_AMOUNT, backend/app/services/coins.py).
-// Completing a milestone instead unlocks one bonus minigame draw
-// (backend/app/services/map_bingo.py), which is what the reward text below
-// reflects rather than an invented coin number.
+// Reaching a milestone also unlocks one bonus minigame draw
+// (backend/app/services/map_bingo.py) on top of the coins below -- keep
+// bingoMilestoneCoinAmount in sync with backend/app/services/coins.py's
+// bingo_milestone_amount().
 
 export interface BingoMilestoneExample {
   type: 'line' | 'x' | 'double_bingo' | 'blackout'
@@ -49,4 +48,17 @@ export const BINGO_MILESTONE_EXAMPLES: BingoMilestoneExample[] = [
   },
 ]
 
-export const BINGO_MILESTONE_REWARD_TEXT = '🎮 Bonus Minigame'
+const BINGO_MILESTONE_COIN_AMOUNTS: Record<BingoMilestoneExample['type'], number> = {
+  line: 10,
+  x: 25,
+  double_bingo: 25,
+  blackout: 50,
+}
+
+export function bingoMilestoneCoinAmount(type: BingoMilestoneExample['type']): number {
+  return BINGO_MILESTONE_COIN_AMOUNTS[type]
+}
+
+export function bingoMilestoneRewardText(type: BingoMilestoneExample['type']): string {
+  return `🎮 Bonus Minigame + 🪙 ${bingoMilestoneCoinAmount(type)} Cobb Coins`
+}

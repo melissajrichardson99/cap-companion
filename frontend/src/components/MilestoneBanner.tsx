@@ -46,6 +46,9 @@ export function MilestoneBanner({ event, onDone }: MilestoneBannerProps) {
         />
       ))}
       <span className="milestone-banner-text">{event.message}</span>
+      {event.coins_awarded > 0 && (
+        <span className="milestone-banner-coins">{`🪙 +${event.coins_awarded} Cobb Coins`}</span>
+      )}
     </div>
   )
 }

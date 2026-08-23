@@ -295,15 +295,18 @@ create index if not exists staff_requests_location_node_id_idx on staff_requests
 -- ---------------------------------------------------------------------------
 create table if not exists coin_awards (
     id          uuid primary key default gen_random_uuid(),
-    source_type text not null check (source_type in ('scavenger_hunt', 'puzzle_timer', 'scoring_sheet_win', 'bingo_tile')),
+    source_type text not null check (source_type in ('scavenger_hunt', 'puzzle_timer', 'scoring_sheet_win', 'bingo_milestone', 'hunt_complete', 'map_exploration')),
     -- Id of the row that triggered this award (hunt_characters.id,
     -- puzzle_attempts.id, score_sheet_sessions.id, or bingo_tiles.id
-    -- depending on source_type) -- a plain uuid, not an FK, since it's
-    -- polymorphic across 4 tables (same tradeoff as scannable_codes' typed
-    -- pair, minus the exactly-one-of constraint since the type tag alone
-    -- already disambiguates the table). This is an append-only ledger, not
+    -- depending on source_type; hunt_complete/map_exploration reuse the
+    -- triggering character/node id even though they're one-time bonuses,
+    -- not per-row awards) -- a plain uuid, not an FK, since it's polymorphic
+    -- across several tables (same tradeoff as scannable_codes' typed pair,
+    -- minus the exactly-one-of constraint since the type tag alone already
+    -- disambiguates the table). This is an append-only ledger, not
     -- a mutable balance column -- the running total is always derived by
-    -- summing it (app/services/coins.py's get_total()).
+    -- summing it (app/services/coins.py's get_total()). Reset Session
+    -- (app/services/session_reset.py) clears this table entirely.
     source_id   uuid not null,
     amount      integer not null check (amount > 0),
     created_at  timestamptz not null default now()

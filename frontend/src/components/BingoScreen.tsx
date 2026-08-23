@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api, type BingoCard, type BingoTile, type MilestoneEvent, type Minigame, type TileCompletionResult } from '../api'
-import { BINGO_MILESTONE_EXAMPLES, BINGO_MILESTONE_REWARD_TEXT } from '../bingoMilestoneContent'
+import { BINGO_MILESTONE_EXAMPLES, bingoMilestoneRewardText } from '../bingoMilestoneContent'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { BingoTileModal } from './BingoTileModal'
 import { MilestoneBanner } from './MilestoneBanner'
@@ -137,7 +137,7 @@ export function BingoScreen({
               </div>
               <h3 className="bingo-milestone-example-label">{example.label}</h3>
               <p className="bingo-milestone-example-desc">{example.description}</p>
-              <span className="bingo-milestone-example-reward">{BINGO_MILESTONE_REWARD_TEXT}</span>
+              <span className="bingo-milestone-example-reward">{bingoMilestoneRewardText(example.type)}</span>
             </div>
           ))}
         </div>
