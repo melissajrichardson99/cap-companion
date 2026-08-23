@@ -67,6 +67,46 @@ test.describe('Contact Staff', () => {
     await expect(emergencyDialog.getByText('Help is on the way')).toBeVisible()
   })
 
+  test('name and description are optional -- submitting with both blank still works exactly as before', async ({
+    page,
+  }) => {
+    const dialog = await openContactStaff(page)
+    await dialog.getByRole('button', { name: 'I have a question' }).click()
+    await dialog.getByRole('button', { name: 'Restrooms', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Submit Question' }).click()
+    await expect(dialog.getByText('Question sent')).toBeVisible()
+  })
+
+  test('description over the character limit cannot be typed/submitted', async ({ page }) => {
+    const dialog = await openContactStaff(page)
+    await dialog.getByRole('button', { name: 'I have a question' }).click()
+    const description = dialog.getByPlaceholder("What's going on? (optional)")
+    await description.fill('x'.repeat(600))
+    await expect(description).toHaveValue('x'.repeat(500))
+  })
+
+  test('a submitted question with name and description populates correctly on the Staff Page', async ({
+    page,
+    context,
+  }) => {
+    const dialog = await openContactStaff(page)
+    await dialog.getByRole('button', { name: 'I have a question' }).click()
+    await dialog.getByPlaceholder('Your name (optional)').fill('Jane Guest')
+    await dialog.getByPlaceholder("What's going on? (optional)").fill('The water fountain is broken.')
+    await dialog.getByRole('button', { name: 'General Store', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Submit Question' }).click()
+    await expect(dialog.getByText('Question sent')).toBeVisible()
+
+    const staffPage = await context.newPage()
+    await loginAsStaff(staffPage)
+    await staffPage.getByRole('tab', { name: 'Contact Requests' }).click()
+
+    const row = staffPage.locator('.staff-request-row', { hasText: 'General Store' })
+    await expect(row).toBeVisible()
+    await expect(row.getByText('from Jane Guest')).toBeVisible()
+    await expect(row.getByText('The water fountain is broken.')).toBeVisible()
+  })
+
   test('a submitted question carries the chosen location through to the staff view', async ({ page, context }) => {
     const dialog = await openContactStaff(page)
     await dialog.getByRole('button', { name: 'I have a question' }).click()

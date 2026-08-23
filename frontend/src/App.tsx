@@ -25,7 +25,7 @@ import { ScoringScreen } from './components/ScoringScreen'
 import { StaffPage } from './components/StaffPage'
 import { ToastStack, type ToastItem } from './components/ToastStack'
 import { clearDismissedAnnouncements } from './dismissedAnnouncements'
-import { getVoterSessionId } from './voterSession'
+import { clearVoterSession, getVoterSessionId } from './voterSession'
 import './components/shared.css'
 import './App.css'
 
@@ -300,6 +300,13 @@ function App() {
     // rows reset above, just stored client-side (dismissedAnnouncements.ts).
     clearDismissedAnnouncements()
     setAnnouncementResetSignal((n) => n + 1)
+    // Same "next guest" boundary for Favorite Photo's per-device vote-dedup
+    // marker (voterSession.ts) -- purely local, doesn't touch already-cast
+    // votes/tallies server-side. Reload the gallery so voted_by_me reflects
+    // the fresh id getVoterSessionId() mints on next use, instead of staying
+    // stuck true from the just-cleared one until the next unrelated reload.
+    clearVoterSession()
+    reloadPhotoGallery()
   }
 
   const handleTileResult = (result: TileCompletionResult) => {

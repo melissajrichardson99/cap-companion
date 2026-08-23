@@ -243,10 +243,16 @@ export interface StaffRequest {
   type: StaffRequestType
   location_node_id: string | null
   location_name: string | null
+  name: string | null
+  description: string | null
   status: StaffRequestStatus
   created_at: string
   resolved_at: string | null
 }
+
+// Keep in sync with backend/app/models.py's CreateStaffRequestRequest --
+// description is rejected (422) past this length, not truncated.
+export const STAFF_REQUEST_DESCRIPTION_MAX_LENGTH = 500
 
 export type CoinSourceType = 'scavenger_hunt' | 'puzzle_timer' | 'scoring_sheet_win' | 'bingo_tile'
 
@@ -378,10 +384,15 @@ export const api = {
   unlockHuntCharacter: (characterId: string) =>
     request<HuntCharacter>(`/hunt/characters/${characterId}/unlock`, { method: 'POST' }),
   resolveScanCode: (code: string) => request<ScanResult>(`/scan/${encodeURIComponent(code)}`),
-  createStaffRequest: (type: StaffRequestType, locationNodeId: string | null) =>
+  createStaffRequest: (
+    type: StaffRequestType,
+    locationNodeId: string | null,
+    name: string | null,
+    description: string | null,
+  ) =>
     request<StaffRequest>('/staff-requests', {
       method: 'POST',
-      body: JSON.stringify({ type, location_node_id: locationNodeId }),
+      body: JSON.stringify({ type, location_node_id: locationNodeId, name, description }),
     }),
   listStaffRequests: (includeResolved = false) =>
     staffRequest<StaffRequest[]>(`/staff-requests?include_resolved=${includeResolved}`),

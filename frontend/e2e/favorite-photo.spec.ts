@@ -80,3 +80,62 @@ test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', 
   await staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel }).getByRole('button', { name: 'Remove' }).click()
   await expect(staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel })).toHaveCount(0)
 })
+
+// Reset Session (voterSession.ts) previously left this device's vote-dedup
+// marker untouched by original design -- that's the gap this covers: the
+// marker must now be cleared so a fresh session can vote again, while the
+// vote already cast (and its tally) stays exactly as-is server-side, same
+// as Reset Session leaving Hunt/Coin history from other visits alone.
+test('Reset Session clears the local vote-dedup marker so the guest can vote again, without touching the already-cast vote or its tally', async ({
+  page,
+  context,
+}) => {
+  const guestLabel = `E2E Guest ResetVote ${Date.now()}`
+
+  await page.goto('/')
+  await openFavoritePhoto(page)
+  await page.locator('.photo-submit-form input[type="file"]').setInputFiles(FIXTURE_PHOTO)
+  await page.getByPlaceholder('Your name (optional)').fill(guestLabel)
+  await page.getByRole('button', { name: 'Submit Photo' }).click()
+  await expect(page.getByText('Thanks! Your photo is in for staff review.')).toBeVisible()
+
+  const staffPage = await context.newPage()
+  staffPage.on('dialog', (dialog) => dialog.accept())
+  await loginAsStaff(staffPage)
+  const staffRow = staffPage.locator('.staff-photo-row', { hasText: guestLabel })
+  await expect(staffRow).toBeVisible()
+  await staffRow.getByRole('button', { name: 'Approve' }).click()
+  await expect(staffPage.locator('.staff-photo-row', { hasText: guestLabel })).toHaveCount(0)
+
+  await page.goto('/')
+  await openFavoritePhoto(page)
+  const galleryCard = page.locator('.photo-card', { hasText: guestLabel })
+  await expect(galleryCard).toBeVisible()
+  await galleryCard.getByRole('button', { name: 'Vote (0)' }).click()
+  await expect(galleryCard.getByRole('button', { name: '✓ Voted (1)' })).toBeDisabled()
+
+  const originalVoterSessionId = await page.evaluate(() => localStorage.getItem('cap-voter-session-id'))
+
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  await page.getByRole('button', { name: 'Reset Session' }).click()
+  const resetConfirmDialog = page.getByRole('dialog', { name: 'Reset Session' })
+  await resetConfirmDialog.getByRole('button', { name: 'Reset Session' }).click()
+  await expect(resetConfirmDialog).toHaveCount(0)
+
+  // The prior vote's tally is untouched (still 1) -- only this device's own
+  // "have I voted" marker was cleared, so the button re-enables.
+  const voteButtonAfterReset = galleryCard.getByRole('button', { name: 'Vote (1)' })
+  await expect(voteButtonAfterReset).toBeEnabled()
+
+  // Reset Session's own reload of the gallery (App.tsx's handleResetSession)
+  // already mints a fresh id via getVoterSessionId() to fetch voted_by_me
+  // with, so the old id is gone by now, not merely absent-until-next-vote.
+  const voterSessionIdAfterReset = await page.evaluate(() => localStorage.getItem('cap-voter-session-id'))
+  expect(voterSessionIdAfterReset).not.toBe(originalVoterSessionId)
+
+  await voteButtonAfterReset.click()
+  await expect(galleryCard.getByRole('button', { name: '✓ Voted (2)' })).toBeDisabled()
+
+  await staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel }).getByRole('button', { name: 'Remove' }).click()
+  await expect(staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel })).toHaveCount(0)
+})

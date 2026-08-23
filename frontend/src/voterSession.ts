@@ -14,3 +14,13 @@ export function getVoterSessionId(): string {
   }
   return id
 }
+
+// Wired into Reset Session (App.tsx's handleResetSession), same "next
+// guest" boundary as clearDismissedAnnouncements(). Dropping this id only
+// resets this device's own "have I voted" marker -- getVoterSessionId()
+// mints a fresh one on next use -- it never touches already-cast votes or
+// their tallies server-side, same as Reset Session leaving Hunt/Coin history
+// from other visits alone and only resetting the current session's view.
+export function clearVoterSession(): void {
+  localStorage.removeItem(STORAGE_KEY)
+}

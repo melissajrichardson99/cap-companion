@@ -28,6 +28,8 @@ def _row_to_request(row: dict) -> StaffRequest:
         type=row["type"],
         location_node_id=row["location_node_id"],
         location_name=node["name"] if node else None,
+        name=row.get("name"),
+        description=row.get("description"),
         status=row["status"],
         created_at=_parse_timestamptz(row["created_at"]),
         resolved_at=_parse_timestamptz(row["resolved_at"]) if row["resolved_at"] else None,
@@ -42,11 +44,28 @@ def get_request(request_id: UUID) -> StaffRequest:
     return _row_to_request(rows[0])
 
 
-def create_request(type_: StaffRequestType, location_node_id: UUID | None) -> StaffRequest:
+def create_request(
+    type_: StaffRequestType,
+    location_node_id: UUID | None,
+    name: str | None = None,
+    description: str | None = None,
+) -> StaffRequest:
     client = get_supabase_client()
+    # Normalize a blank/whitespace-only optional field to null rather than
+    # storing an empty string, so the staff view's "omit if not provided"
+    # check (falsy) works the same regardless of how the guest left it blank.
+    name = name.strip() or None if name else None
+    description = description.strip() or None if description else None
     row = (
         client.table("staff_requests")
-        .insert({"type": type_.value, "location_node_id": str(location_node_id) if location_node_id else None})
+        .insert(
+            {
+                "type": type_.value,
+                "location_node_id": str(location_node_id) if location_node_id else None,
+                "name": name,
+                "description": description,
+            }
+        )
         .execute()
         .data[0]
     )

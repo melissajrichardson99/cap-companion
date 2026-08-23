@@ -224,6 +224,35 @@
   color: var(--cap-color-body-text);
 }
 
+.contact-staff-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.contact-staff-name-input,
+.contact-staff-description-input {
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: var(--cap-radius-sm);
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--cap-color-ink);
+}
+
+.contact-staff-description-input {
+  resize: vertical;
+  min-height: 44px;
+  font-family: inherit;
+}
+
+.contact-staff-name-input:disabled,
+.contact-staff-description-input:disabled {
+  opacity: 0.5;
+}
+
 .contact-staff-locations {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

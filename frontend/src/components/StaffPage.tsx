@@ -442,15 +442,19 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
             <ul className="staff-requests-list">
               {requests.map((r) => (
                 <li key={r.id} className={`staff-request-row cap-parchment-card staff-request-${r.type}`}>
-                  <div className="staff-request-main">
-                    <span className={`staff-request-type-badge staff-request-type-badge-${r.type}`}>
-                      {TYPE_LABEL[r.type]}
-                    </span>
-                    <span className="staff-request-location">{r.location_name ?? 'Location not specified'}</span>
-                    <span className="staff-request-time">{new Date(r.created_at).toLocaleTimeString()}</span>
-                    <span className={`staff-request-status-badge staff-request-status-badge-${r.status}`}>
-                      {STATUS_LABEL[r.status]}
-                    </span>
+                  <div className="staff-request-content">
+                    <div className="staff-request-main">
+                      <span className={`staff-request-type-badge staff-request-type-badge-${r.type}`}>
+                        {TYPE_LABEL[r.type]}
+                      </span>
+                      <span className="staff-request-location">{r.location_name ?? 'Location not specified'}</span>
+                      {r.name && <span className="staff-request-name">from {r.name}</span>}
+                      <span className="staff-request-time">{new Date(r.created_at).toLocaleTimeString()}</span>
+                      <span className={`staff-request-status-badge staff-request-status-badge-${r.status}`}>
+                        {STATUS_LABEL[r.status]}
+                      </span>
+                    </div>
+                    {r.description && <p className="staff-request-description">{r.description}</p>}
                   </div>
                   <div className="staff-request-actions">
                     {r.status === 'open' && (

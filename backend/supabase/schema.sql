@@ -276,6 +276,10 @@ create table if not exists staff_requests (
     -- No GPS/location tracking in this POC -- the guest picks their nearest
     -- node from the map node list, so this can be null if they skip it.
     location_node_id  uuid references map_nodes(id) on delete set null,
+    -- Both optional (migration 020) -- a guest can always submit with just a
+    -- type and nothing else. description is capped so it stays a brief note.
+    name              text,
+    description       text check (description is null or char_length(description) <= 500),
     -- One-way: open -> acknowledged -> resolved. See
     -- app/services/staff_requests.py's _transition for the allowed-from checks.
     status            text not null default 'open' check (status in ('open', 'acknowledged', 'resolved')),

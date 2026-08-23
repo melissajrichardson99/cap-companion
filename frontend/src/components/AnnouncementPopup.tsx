@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Announcement } from '../api'
-import { dismissAnnouncement, getDismissedAnnouncementIds } from '../dismissedAnnouncements'
+import { dismissAnnouncement, getDismissedAnnouncementKeys, isAnnouncementDismissed } from '../dismissedAnnouncements'
 import './AnnouncementPopup.css'
 
 interface AnnouncementPopupProps {
@@ -16,17 +16,19 @@ interface AnnouncementPopupProps {
 // to document.body -- screen roots (MapScreen, BingoScreen, etc.) use
 // isolation:isolate for their foliage decorations, which would otherwise trap
 // this popup's stacking context if it rendered inline on one of them (known
-// app gotcha, see CLAUDE.md). Dismissal is tracked per-announcement id
-// (dismissedAnnouncements.ts), not a single flag, so dismissing one
-// announcement never suppresses a different, still-new one.
+// app gotcha, see CLAUDE.md). Dismissal is tracked per-announcement id +
+// updated_at (dismissedAnnouncements.ts), not id alone, so dismissing one
+// announcement never suppresses a different, still-new one -- and editing an
+// announcement's text (which bumps updated_at) makes it reappear for guests
+// who already dismissed the prior text.
 export function AnnouncementPopup({ announcements, resetSignal }: AnnouncementPopupProps) {
-  const [dismissedIds, setDismissedIds] = useState<string[]>(() => getDismissedAnnouncementIds())
+  const [dismissedKeys, setDismissedKeys] = useState<string[]>(() => getDismissedAnnouncementKeys())
 
   // Reset Session clears the shared kiosk's dismissed-ids localStorage entry
   // (App.tsx) -- re-read it here so previously-dismissed announcements
   // reappear without requiring a full page reload.
   useEffect(() => {
-    setDismissedIds(getDismissedAnnouncementIds())
+    setDismissedKeys(getDismissedAnnouncementKeys())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetSignal])
 
@@ -37,13 +39,13 @@ export function AnnouncementPopup({ announcements, resetSignal }: AnnouncementPo
   const undismissed = announcements
     .slice()
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .filter((a) => !dismissedIds.includes(a.id))
+    .filter((a) => !isAnnouncementDismissed(dismissedKeys, a.id, a.updated_at))
 
   if (undismissed.length === 0) return null
 
   const current = undismissed[0]
 
-  const dismiss = () => setDismissedIds(dismissAnnouncement(current.id))
+  const dismiss = () => setDismissedKeys(dismissAnnouncement(current.id, current.updated_at))
 
   return createPortal(
     <div className="announcement-popup-backdrop" onClick={dismiss}>

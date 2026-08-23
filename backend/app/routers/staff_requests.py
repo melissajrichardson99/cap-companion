@@ -12,7 +12,7 @@ router = APIRouter(prefix="/staff-requests", tags=["staff-requests"])
 
 @router.post("", response_model=StaffRequest)
 def create_request(body: CreateStaffRequestRequest) -> StaffRequest:
-    return staff_requests_service.create_request(body.type, body.location_node_id)
+    return staff_requests_service.create_request(body.type, body.location_node_id, body.name, body.description)
 
 
 @router.get("", response_model=list[StaffRequest], dependencies=[Depends(require_staff)])

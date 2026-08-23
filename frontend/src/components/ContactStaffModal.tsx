@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api, type MapNode, type StaffRequestType } from '../api'
+import { api, STAFF_REQUEST_DESCRIPTION_MAX_LENGTH, type MapNode, type StaffRequestType } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { Modal } from './Modal'
 import { MessageIcon } from './NavIcons'
@@ -21,6 +21,8 @@ interface ContactStaffModalProps {
 export function ContactStaffModal({ nodes, onClose }: ContactStaffModalProps) {
   const [step, setStep] = useState<Step>('menu')
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [submittedType, setSubmittedType] = useState<StaffRequestType | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +38,7 @@ export function ContactStaffModal({ nodes, onClose }: ContactStaffModalProps) {
     setSubmitting(true)
     setError(null)
     api
-      .createStaffRequest(type, locationNodeId)
+      .createStaffRequest(type, locationNodeId, name.trim() || null, description.trim() || null)
       .then(() => {
         setSubmittedType(type)
         setStep('submitted')
@@ -98,6 +100,26 @@ export function ContactStaffModal({ nodes, onClose }: ContactStaffModalProps) {
                 : 'Pick your nearest location, then send your question.'}
             </p>
             {error && <p className="screen-error">{error}</p>}
+            <div className="contact-staff-details">
+              <input
+                type="text"
+                className="contact-staff-name-input"
+                placeholder="Your name (optional)"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={submitting}
+                maxLength={100}
+              />
+              <textarea
+                className="contact-staff-description-input"
+                placeholder="What's going on? (optional)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={submitting}
+                maxLength={STAFF_REQUEST_DESCRIPTION_MAX_LENGTH}
+                rows={2}
+              />
+            </div>
             {nodes === null ? (
               <p className="contact-staff-loading">Loading locations…</p>
             ) : (

@@ -375,6 +375,10 @@ class StaffRequest(BaseModel):
     # name without a second round trip -- same embedding pattern as
     # BingoTile/LinkedTile.
     location_name: str | None = None
+    # Both optional -- a guest can always submit with just a type and
+    # nothing else (see CreateStaffRequestRequest below).
+    name: str | None = None
+    description: str | None = None
     status: StaffRequestStatus = StaffRequestStatus.OPEN
     created_at: datetime
     resolved_at: datetime | None = None
@@ -383,6 +387,11 @@ class StaffRequest(BaseModel):
 class CreateStaffRequestRequest(BaseModel):
     type: StaffRequestType
     location_node_id: UUID | None = None
+    name: str | None = None
+    # Capped so it stays a brief note, not a wall of text -- matches
+    # staff_requests_description_length_check in migration 020. Rejects
+    # (422) rather than truncating if the frontend's own cap is bypassed.
+    description: str | None = Field(default=None, max_length=500)
 
 
 class CoinSourceType(StrEnum):

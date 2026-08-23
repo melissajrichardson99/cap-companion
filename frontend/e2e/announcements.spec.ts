@@ -160,6 +160,73 @@ test('dismissal is per-announcement: dismissing one never suppresses another or 
   await expect(announcementPopup(page)).toBeVisible()
 })
 
+test('editing re-triggers the popup for a guest who already dismissed the original text, without duplicating the announcement', async ({
+  page,
+  context,
+}) => {
+  const originalText = uniqueText('Otter Feeding Moved to 2pm')
+  const updatedText = uniqueText('Otter Feeding Moved to 3pm')
+
+  const staffPage = await context.newPage()
+  await loginAsStaff(staffPage)
+  await createAnnouncement(staffPage, originalText)
+
+  await page.goto('/')
+  const popup = announcementPopup(page)
+  await expect(popup).toContainText(originalText)
+  await popup.getByRole('button', { name: 'Got it' }).click()
+  await expect(announcementPopup(page)).toHaveCount(0)
+
+  // Stays dismissed across a plain reload until it's actually edited.
+  await page.reload()
+  await expect(announcementPopup(page)).toHaveCount(0)
+
+  const row = staffPage.locator('.staff-announcement-row', { hasText: originalText })
+  await row.getByRole('button', { name: 'Edit' }).click()
+  const editingRow = staffPage.locator('.staff-announcement-edit')
+  await editingRow.locator('.staff-announcement-textarea').fill(updatedText)
+  await editingRow.getByRole('button', { name: 'Save' }).click()
+
+  // Still one row, same announcement -- editing must never create a second.
+  await expect(staffPage.locator('.staff-announcement-row', { hasText: updatedText })).toHaveCount(1)
+
+  // The edit bumped updated_at server-side, so this guest's prior dismissal
+  // (keyed off id + updated_at, not id alone) no longer matches -- the
+  // popup must reappear with the new text on next page load, with no
+  // Reset Session involved.
+  await page.goto('/')
+  const popupAfterEdit = announcementPopup(page)
+  await expect(popupAfterEdit).toContainText(updatedText)
+  await expect(page.locator('.home-announcement-item', { hasText: updatedText })).toHaveCount(1)
+
+  // Dismissing the edited version is sticky again until it's edited once more.
+  await popupAfterEdit.getByRole('button', { name: 'Got it' }).click()
+  await page.reload()
+  await expect(announcementPopup(page)).toHaveCount(0)
+})
+
+test('the "Post Announcement" and "Got it" buttons render the app brand orange, not the unstyled purple accent', async ({
+  page,
+  context,
+}) => {
+  const text = uniqueText('Color Check')
+  const BRAND_ORANGE = 'rgb(243, 134, 48)' // --cap-color-sunset-orange (#f38630)
+
+  const staffPage = await context.newPage()
+  await loginAsStaff(staffPage)
+  await openAnnouncementsTab(staffPage)
+
+  const postButton = staffPage.getByRole('button', { name: 'Post Announcement' })
+  expect(await postButton.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(BRAND_ORANGE)
+
+  await createAnnouncement(staffPage, text)
+
+  await page.goto('/')
+  const gotItButton = announcementPopup(page).getByRole('button', { name: 'Got it' })
+  expect(await gotItButton.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(BRAND_ORANGE)
+  await gotItButton.click()
+})
+
 test('a real guest deep-link entry (not in-app nav) shows the popup, portaled outside any screen root with correct stacking', async ({
   page,
   context,

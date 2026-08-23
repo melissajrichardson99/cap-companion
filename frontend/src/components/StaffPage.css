@@ -159,6 +159,13 @@
   padding: 14px 16px;
 }
 
+.staff-request-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
 .staff-request-emergency {
   border-color: var(--cap-color-contact-red);
   background: color-mix(in srgb, var(--cap-color-contact-red) 10%, var(--cap-color-parchment));
@@ -194,9 +201,23 @@
   color: var(--cap-color-ink);
 }
 
+.staff-request-name {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--cap-color-body-text);
+}
+
 .staff-request-time {
   font-size: 13px;
   color: var(--cap-color-body-text);
+}
+
+.staff-request-description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--cap-color-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .staff-request-status-badge {
@@ -404,6 +425,20 @@
 
 .staff-page .btn-delete:hover:not(:disabled) {
   background: var(--cap-color-contact-red-deep);
+}
+
+/* Scoped override, same fix as .bingo-milestone-prompt/.nav-menu-actions/
+   .hunt-scan-cta .btn-primary -- shared.css's bare .btn-primary resolves to
+   the generic site --accent (purple), not this app's sunset-orange CTA
+   color. */
+.staff-page .btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.staff-page .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
 }
 
 .staff-announcement-create-form {
