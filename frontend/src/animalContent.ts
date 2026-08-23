@@ -45,7 +45,10 @@ export interface AnimalContent {
 export const PLACEHOLDER_PHOTO_SRC = '/animal-photo-placeholder.svg'
 const PHOTOS_PER_ANIMAL = 5
 
-function imageCandidates(slug: string, index: number): string[] {
+// Exported for reuse by the Collectible Cards feature (collectibleCardImage
+// helpers/components), which resolves a purchased card's photo via the same
+// slug + 1-based index convention -- see CollectibleCard.photo_index.
+export function imageCandidates(slug: string, index: number): string[] {
   return [`/animals/${slug}/${index}.jpg`, `/animals/${slug}/${index}.png`]
 }
 

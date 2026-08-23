@@ -596,18 +596,10 @@ join (values
 ) as v(code, animal_name) on v.animal_name = e.animal_name
 on conflict (code) do nothing;
 
--- ---------------------------------------------------------------------------
--- collectibles (Cobb Coins) -- fixture content. Thresholds are cumulative
--- totals across every award source (bingo tiles, puzzle completions, hunt
--- characters, scoring sheet wins all feed the same running total), tuned to
--- be reachable through normal play rather than deliberately grindy.
--- ---------------------------------------------------------------------------
-insert into collectibles (name, icon, unlock_threshold) values
-    ('Bronze Explorer',   '🥉', 10),
-    ('Silver Adventurer', '🥈', 30),
-    ('Gold Champion',     '🥇', 60),
-    ('Cobb''s Legend',    '🏆', 100)
-on conflict (name) do nothing;
+-- collectible_redemptions (Collectible Cards, migration 022) gets no seed
+-- rows -- same as coin_awards and staff_requests, it's runtime
+-- guest-generated data, not fixture content. The generic badge system this
+-- replaced (a `collectibles` fixture table) is gone.
 
 -- ---------------------------------------------------------------------------
 -- coin_awards (Cobb Coins ledger) -- intentionally no seed rows, same as

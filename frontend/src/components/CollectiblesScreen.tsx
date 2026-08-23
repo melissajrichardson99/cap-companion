@@ -1,28 +1,62 @@
-import type { CoinsSummary } from '../api'
+import { useState } from 'react'
+import type { CollectibleCard, CollectibleCatalogEntry, CoinsSummary } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
+import { CollectibleGallery } from './CollectibleGallery'
+import { CollectiblePurchaseModal } from './CollectiblePurchaseModal'
+import { CollectibleShop } from './CollectibleShop'
 import { PawIcon } from './NavIcons'
 import './CollectiblesScreen.css'
 
 interface CollectiblesScreenProps {
-  summary: CoinsSummary | null
-  error: string | null
-  onReload: () => void
+  catalog: CollectibleCatalogEntry[] | null
+  catalogError: string | null
+  onReloadCatalog: () => void
+  cards: CollectibleCard[] | null
+  cardsError: string | null
+  onReloadCards: () => void
+  coinsSummary: CoinsSummary | null
+  onPurchase: (animalSlug: string, guestName: string) => Promise<CollectibleCard>
 }
 
-export function CollectiblesScreen({ summary, error, onReload }: CollectiblesScreenProps) {
+type SubTab = 'shop' | 'gallery'
+
+// Repurposes the former badge-unlock "Collectibles" nav tab (same slot,
+// same PawIcon) for the Cobb Coins spend feature -- Card Shop + Your
+// Collection gallery -- rather than adding a second top-level nav entry.
+export function CollectiblesScreen({
+  catalog,
+  catalogError,
+  onReloadCatalog,
+  cards,
+  cardsError,
+  onReloadCards,
+  coinsSummary,
+  onPurchase,
+}: CollectiblesScreenProps) {
+  const [subTab, setSubTab] = useState<SubTab>('shop')
+  const [purchasing, setPurchasing] = useState<CollectibleCatalogEntry | null>(null)
+
+  const error = catalogError ?? cardsError
   if (error) {
     return (
       <div className="collectibles-screen">
-        <p className="screen-error">Couldn't load collectibles: {error}</p>
-        <button type="button" className="btn btn-secondary" onClick={onReload}>
+        <p className="screen-error">Couldn't load Collectible Cards: {error}</p>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => {
+            onReloadCatalog()
+            onReloadCards()
+          }}
+        >
           Retry
         </button>
       </div>
     )
   }
 
-  if (!summary) {
-    return <div className="collectibles-screen collectibles-loading">Loading collectibles…</div>
+  if (!catalog || !cards) {
+    return <div className="collectibles-screen collectibles-loading">Loading Collectible Cards…</div>
   }
 
   return (
@@ -33,27 +67,36 @@ export function CollectiblesScreen({ summary, error, onReload }: CollectiblesScr
       </h1>
       <p className="cap-page-subheader">{PAGE_SUBHEADERS.collectibles}</p>
 
-      <p className="collectibles-intro">
-        Earn Cobb Coins by finishing Scavenger Hunt characters, Puzzle Timer challenges, Scoring Sheet wins, and
-        Bingo tiles. Collect every badge!
-      </p>
-      <div className="collectibles-total">🪙 {summary.total} Cobb Coins earned</div>
-      <div className="collectibles-grid">
-        {summary.collectibles.map((collectible) => (
-          <div
-            key={collectible.id}
-            className={`collectible-card cap-parchment-card ${collectible.unlocked ? 'collectible-unlocked' : 'collectible-locked'}`}
-          >
-            <span className="collectible-icon" aria-hidden="true">
-              {collectible.unlocked ? collectible.icon : '🔒'}
-            </span>
-            <span className="collectible-name">{collectible.name}</span>
-            <span className="collectible-status">
-              {collectible.unlocked ? 'Unlocked' : `Unlock at ${collectible.unlock_threshold} coins`}
-            </span>
-          </div>
-        ))}
+      <div className="collectibles-sub-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={subTab === 'shop'}
+          className={`collectibles-sub-tab${subTab === 'shop' ? ' collectibles-sub-tab-active' : ''}`}
+          onClick={() => setSubTab('shop')}
+        >
+          Card Shop
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={subTab === 'gallery'}
+          className={`collectibles-sub-tab${subTab === 'gallery' ? ' collectibles-sub-tab-active' : ''}`}
+          onClick={() => setSubTab('gallery')}
+        >
+          Your Collection ({cards.length})
+        </button>
       </div>
+
+      {subTab === 'shop' ? (
+        <CollectibleShop catalog={catalog} coinsSummary={coinsSummary} onSelectAnimal={setPurchasing} />
+      ) : (
+        <CollectibleGallery cards={cards} />
+      )}
+
+      {purchasing && (
+        <CollectiblePurchaseModal entry={purchasing} onClose={() => setPurchasing(null)} onPurchase={onPurchase} />
+      )}
     </div>
   )
 }

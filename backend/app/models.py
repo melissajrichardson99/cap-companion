@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class NodeCategory(StrEnum):
@@ -430,19 +430,51 @@ class CoinAward(BaseModel):
     created_at: datetime
 
 
-class Collectible(BaseModel):
-    id: UUID
-    name: str
-    icon: str
-    unlock_threshold: int = Field(gt=0)
-    # Computed at read time (total >= unlock_threshold), never stored -- see
-    # app/services/coins.py -- so it can't drift out of sync with the ledger.
-    unlocked: bool = False
-
-
 class CoinsSummary(BaseModel):
     total: int = Field(ge=0)
-    collectibles: list[Collectible] = Field(default_factory=list)
+
+
+class CollectibleTier(StrEnum):
+    STANDARD = "standard"
+    SPECIAL = "special"
+
+
+class CollectibleCatalogEntry(BaseModel):
+    """One purchasable animal in the Card Shop -- price/tier are backend-owned
+    (see app/services/collectibles.py) so the frontend never hardcodes them."""
+
+    animal_slug: str
+    tier: CollectibleTier
+    price: int = Field(gt=0)
+
+
+class CollectibleCard(BaseModel):
+    """A single purchase from collectible_redemptions -- doubles as both the
+    spend-ledger entry and a gallery item (see app/services/collectibles.py)."""
+
+    id: UUID
+    animal_slug: str
+    tier: CollectibleTier
+    # Which of the animal's curated photo pool slots (1-based) this purchase
+    # rolled -- the frontend resolves the actual image via animalContent.ts's
+    # imageCandidates(), same convention as Our Animals.
+    photo_index: int = Field(gt=0)
+    guest_name: str
+    coins_spent: int = Field(gt=0)
+    created_at: datetime
+
+
+class PurchaseCollectibleRequest(BaseModel):
+    animal_slug: str
+    guest_name: str = Field(min_length=1, max_length=60)
+
+    @field_validator("guest_name")
+    @classmethod
+    def _guest_name_not_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("guest_name cannot be blank")
+        return stripped
 
 
 class PhotoStatus(StrEnum):
@@ -518,17 +550,18 @@ class ResetSessionResult(BaseModel):
 
     Narrower than backend/scripts/reset_demo_data.py's dev-only reset: this
     clears Bingo tile completion/milestones, Map node visited state,
-    Scavenger Hunt challenge progress, and the entire Cobb Coins ledger --
-    puzzle attempts, photos, and passports are left untouched (note that
-    puzzle/scoring-sheet *completion* state itself isn't reset, only the
-    coins tied to it, since coin_awards is cleared wholesale regardless of
-    source_type).
+    Scavenger Hunt challenge progress, the entire Cobb Coins earn ledger, and
+    every purchased Collectible Card -- puzzle attempts, photos, and
+    passports are left untouched (note that puzzle/scoring-sheet
+    *completion* state itself isn't reset, only the coins tied to it, since
+    coin_awards is cleared wholesale regardless of source_type).
     """
 
     bingo_tiles_reset: int = Field(ge=0)
     map_nodes_reset: int = Field(ge=0)
     hunt_characters_reset: int = Field(ge=0)
     coins_reset: int = Field(ge=0)
+    collectible_cards_reset: int = Field(ge=0)
 
 
 class PassportSession(BaseModel):

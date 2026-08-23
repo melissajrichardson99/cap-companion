@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { api, type Announcement, type BingoCard, type CoinsSummary, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { api, type Announcement, type BingoCard, type CoinsSummary, type CollectibleCard, type CollectibleCatalogEntry, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { AnimalsScreen } from './components/AnimalsScreen'
 import { AnnouncementPopup } from './components/AnnouncementPopup'
 import { BingoScreen } from './components/BingoScreen'
@@ -121,7 +121,12 @@ function App() {
   const [minigames, setMinigames] = useState<Minigame[] | null>(null)
 
   const [coinsSummary, setCoinsSummary] = useState<CoinsSummary | null>(null)
-  const [coinsError, setCoinsError] = useState<string | null>(null)
+
+  const [collectibleCatalog, setCollectibleCatalog] = useState<CollectibleCatalogEntry[] | null>(null)
+  const [collectibleCatalogError, setCollectibleCatalogError] = useState<string | null>(null)
+
+  const [collectibleCards, setCollectibleCards] = useState<CollectibleCard[] | null>(null)
+  const [collectibleCardsError, setCollectibleCardsError] = useState<string | null>(null)
 
   const [photoGallery, setPhotoGallery] = useState<PhotoSubmission[] | null>(null)
   const [photoGalleryError, setPhotoGalleryError] = useState<string | null>(null)
@@ -190,9 +195,28 @@ function App() {
   }
 
   const reloadCoins = () => {
-    setCoinsError(null)
-    api.getCoinsSummary().then(setCoinsSummary).catch((err) => setCoinsError(String(err)))
+    api
+      .getCoinsSummary()
+      .then(setCoinsSummary)
+      .catch((err) => setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `Couldn't load Cobb Coins: ${err}` }]))
   }
+
+  const reloadCollectibleCatalog = () => {
+    setCollectibleCatalogError(null)
+    api.listCollectibleCatalog().then(setCollectibleCatalog).catch((err) => setCollectibleCatalogError(String(err)))
+  }
+
+  const reloadCollectibleCards = () => {
+    setCollectibleCardsError(null)
+    api.listCollectibles().then(setCollectibleCards).catch((err) => setCollectibleCardsError(String(err)))
+  }
+
+  const purchaseCollectible = (animalSlug: string, guestName: string): Promise<CollectibleCard> =>
+    api.purchaseCollectible(animalSlug, guestName).then((card) => {
+      setCollectibleCards((prev) => (prev ? [card, ...prev] : [card]))
+      reloadCoins()
+      return card
+    })
 
   const reloadPhotoGallery = () => {
     setPhotoGalleryError(null)
@@ -216,6 +240,8 @@ function App() {
     reloadHuntCharacters()
     reloadMinigames()
     reloadCoins()
+    reloadCollectibleCatalog()
+    reloadCollectibleCards()
     reloadPhotoGallery()
     reloadAnnouncements()
     api
@@ -300,6 +326,7 @@ function App() {
     reloadNodes()
     reloadHuntCharacters()
     reloadCoins()
+    reloadCollectibleCards()
     // Defensive: any minigame/milestone state left over from before the
     // reset refers to tiles/nodes that no longer exist in their prior form.
     setMilestoneQueue([])
@@ -506,7 +533,16 @@ function App() {
           />
         )}
         {!showHome && activeTab === 'collectibles' && (
-          <CollectiblesScreen summary={coinsSummary} error={coinsError} onReload={reloadCoins} />
+          <CollectiblesScreen
+            catalog={collectibleCatalog}
+            catalogError={collectibleCatalogError}
+            onReloadCatalog={reloadCollectibleCatalog}
+            cards={collectibleCards}
+            cardsError={collectibleCardsError}
+            onReloadCards={reloadCollectibleCards}
+            coinsSummary={coinsSummary}
+            onPurchase={purchaseCollectible}
+          />
         )}
         {!showHome && activeTab === 'photos' && (
           <PhotoScreen gallery={photoGallery} error={photoGalleryError} onReload={reloadPhotoGallery} />

@@ -2,16 +2,22 @@
 
 coin_awards is an append-only ledger, not a mutable balance column -- the
 running total is always derived by summing it, same "derive, don't
-duplicate" discipline as MapNode.linked_bingo_tile_ids in models.py. There's
-no spend/redemption in this POC: award_coins() is the only writer, called
-from the existing completion trigger points in map_bingo.py (bingo_milestone,
-map_exploration), hunt.py (scavenger_hunt, hunt_complete), puzzles.py
-(puzzle_timer), and scoring_sheet.py (scoring_sheet_win) -- this module
-doesn't own any of those triggers itself. hunt_complete and map_exploration
-are one-time-per-session bonuses; their idempotency guard is simply checking
-whether a coin_awards row of that source_type already exists, which works
-because Reset Session (app/services/session_reset.py) clears this whole
-table, resetting that guard for free -- no separate tracking flag needed.
+duplicate" discipline as MapNode.linked_bingo_tile_ids in models.py.
+award_coins() is the only writer, called from the existing completion
+trigger points in map_bingo.py (bingo_milestone, map_exploration), hunt.py
+(scavenger_hunt, hunt_complete), puzzles.py (puzzle_timer), and
+scoring_sheet.py (scoring_sheet_win) -- this module doesn't own any of those
+triggers itself. hunt_complete and map_exploration are one-time-per-session
+bonuses; their idempotency guard is simply checking whether a coin_awards row
+of that source_type already exists, which works because Reset Session
+(app/services/session_reset.py) clears this whole table, resetting that
+guard for free -- no separate tracking flag needed.
+
+The spend side (Collectible Cards, app/services/collectibles.py) lives in
+its own append-only ledger, collectible_redemptions, rather than negative
+rows here -- this table's `amount > 0` CHECK stays earn-only. get_total()
+below nets the two ledgers together, so it's still the one place "how many
+coins does the guest have right now" is computed.
 """
 
 from __future__ import annotations
@@ -19,7 +25,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from app.models import CoinAward, Collectible, CoinsSummary, CoinSourceType
+from app.models import CoinAward, CoinsSummary, CoinSourceType
 from app.supabase_client import get_supabase_client
 
 SCAVENGER_HUNT_CHARACTER_AMOUNT = 15
@@ -84,22 +90,12 @@ def award_coins(source_type: CoinSourceType, source_id: UUID, amount: int) -> Co
 
 def get_total() -> int:
     client = get_supabase_client()
-    rows = client.table("coin_awards").select("amount").execute().data
-    return sum(r["amount"] for r in rows)
+    earned_rows = client.table("coin_awards").select("amount").execute().data
+    spent_rows = client.table("collectible_redemptions").select("coins_spent").execute().data
+    earned = sum(r["amount"] for r in earned_rows)
+    spent = sum(r["coins_spent"] for r in spent_rows)
+    return earned - spent
 
 
 def get_summary() -> CoinsSummary:
-    total = get_total()
-    client = get_supabase_client()
-    collectible_rows = client.table("collectibles").select("*").order("unlock_threshold").execute().data
-    collectibles = [
-        Collectible(
-            id=r["id"],
-            name=r["name"],
-            icon=r["icon"],
-            unlock_threshold=r["unlock_threshold"],
-            unlocked=total >= r["unlock_threshold"],
-        )
-        for r in collectible_rows
-    ]
-    return CoinsSummary(total=total, collectibles=collectibles)
+    return CoinsSummary(total=get_total())

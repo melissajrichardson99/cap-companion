@@ -1,0 +1,183 @@
+/* The purchasable/collected animal photo card artwork -- rasterized to PNG
+   for download/share by collectibleCardImage.ts. Reuses the app's existing
+   wood-grain gradient recipe (same values as .map-legend-frame in
+   MapScreen.css) for the outer frame and .cap-parchment-card for the inner
+   surface, rather than inventing a new frame treatment. */
+
+.collectible-card-frame {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  border-radius: var(--cap-radius-lg);
+  padding: 9px;
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.collectible-card-visual {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  aspect-ratio: 2 / 3;
+  box-shadow: none;
+  /* Establishes the container the name/collected-name text sizes (cqw units
+     below) scale against, so type stays proportional whether this renders
+     at purchase-reveal size or shrunk down in the gallery grid. */
+  container-type: inline-size;
+}
+
+/* Compound selector (two classes, not one) so this reliably outweighs
+   .cap-parchment-card's own border-radius regardless of CSS load order --
+   same fix this app already applies in HuntScreen.css for the same class of
+   bug (see cap_companion_parchment_card_specificity_gotcha memory). */
+.collectible-card-visual.cap-parchment-card {
+  border-radius: calc(var(--cap-radius-lg) - 4px);
+}
+
+.collectible-card-photo-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.collectible-card-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.collectible-card-mountain {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 25%;
+  height: auto;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+
+.collectible-card-logo {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58%;
+  max-width: 170px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.collectible-card-name-banner {
+  position: relative;
+  z-index: 1;
+  margin: -8% 12px 0;
+  padding: 10px 16px 14px;
+  background-color: var(--cap-color-parchment);
+  text-align: center;
+  /* Ragged torn-paper top/bottom edges, straight sides -- CSS clip-path
+     zigzag rather than an SVG/image asset, so it scales cleanly at any
+     card size (purchase reveal vs. gallery thumbnail). */
+  clip-path: polygon(
+    0% 20%, 7% 4%, 14% 18%, 21% 2%, 29% 16%, 36% 3%, 43% 17%, 50% 2%, 57% 17%, 64% 3%, 71% 16%, 79% 2%, 86% 18%, 93% 4%, 100% 20%,
+    100% 80%, 93% 96%, 86% 82%, 79% 98%, 71% 84%, 64% 97%, 57% 83%, 50% 98%, 43% 83%, 36% 97%, 29% 84%, 21% 98%, 14% 82%, 7% 96%, 0% 80%
+  );
+}
+
+.collectible-card-name-text {
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: clamp(16px, 6.5cqw, 24px);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--cap-color-ink);
+}
+
+.collectible-card-collected {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 4px 14px 2px;
+}
+
+.collectible-card-collected-label {
+  font-family: var(--cap-font-body);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--cap-color-body-text);
+}
+
+.collectible-card-collected-name {
+  font-family: 'Dancing Script', cursive;
+  font-weight: 700;
+  font-size: clamp(18px, 7cqw, 28px);
+  line-height: 1;
+  color: var(--cap-color-header-green);
+  /* Long typed names shouldn't blow out the card's fixed aspect ratio. */
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.collectible-card-heart {
+  align-self: center;
+  width: 15px;
+  height: 15px;
+  color: var(--cap-color-adventure-green);
+  flex-shrink: 0;
+}
+
+.collectible-card-bottom-banner {
+  margin-top: auto;
+  background: var(--cap-color-header-green);
+  color: var(--cap-color-on-header);
+  padding: 8px 14px 10px;
+  text-align: center;
+}
+
+.collectible-card-thanks {
+  margin: 0 0 3px;
+  font-family: var(--cap-font-display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.collectible-card-website {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-family: var(--cap-font-body);
+  font-size: 11px;
+  color: var(--cap-color-on-header-muted);
+}
+
+.collectible-card-globe {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* One-off gold, not an existing token -- matches the reference mockup's
+   website-link accent, used nowhere else in the app. */
+.collectible-card-website-link {
+  color: #f5c04a;
+  font-weight: 700;
+}

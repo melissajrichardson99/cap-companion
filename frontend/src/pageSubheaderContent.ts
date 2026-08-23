@@ -29,7 +29,8 @@ export const PAGE_SUBHEADERS: PageSubheaders = {
   hunt: "Keep your eyes open—there's plenty to discover! Find the hidden characters around the park and complete challenges along the way.",
   animals: "Meet the animals that call Cobb's home! Discover fun facts, learn something new, and explore photos of the animals you can see around the park.",
   photo: "See what other visitors are capturing at Cobb's. Browse today's photos, find your favourite, and cast your vote.",
-  collectibles: "Collect your memories from around the park! Unlock badges, discoveries, and special collectibles as you explore Cobb's.",
+  collectibles:
+    "Spend your Cobb Coins on a personalized photo card for your favourite animals! Buy a card, add your name, and build your collection for the visit.",
   foodTrucks: "Hungry? We've got you covered! Browse today's food trucks and find something delicious for lunch, a snack, or a sweet treat.",
   contactStaff: "Need a hand? We're happy to help. Find out how to reach the Cobb's team during your visit.",
   faq: "Find answers to common questions to help make your visit to Cobb's even better!",

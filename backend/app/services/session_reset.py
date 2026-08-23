@@ -2,14 +2,18 @@
 
 Clears: Bingo tile completion + milestone state, Map node visited state,
 Scavenger Hunt challenge/unlock progress (so the next group must re-scan
-each character's QR code, same as a fresh visit), and the entire Cobb Coins
-ledger (coin_awards) -- coins are tied to this session, not persistent
-identity, so nothing coin-related should survive a reset. Note this clears
-*all* coin_awards rows regardless of source_type, including puzzle_timer and
-scoring_sheet_win awards -- those features' own completion state (puzzle
-attempts, scoring sheet sessions) is untouched by Reset Session, only the
-coins earned from them. Unlike reset_demo_data.py, this still leaves staff
-requests, photos, and passports untouched.
+each character's QR code, same as a fresh visit), the entire Cobb Coins earn
+ledger (coin_awards), and every purchased Collectible Card
+(collectible_redemptions) -- coins and collectible cards are tied to this
+session, not persistent identity, so nothing coin- or collectible-related
+should survive a reset (the guest's own downloaded/shared card image is the
+"real" persistence, per the feature's design -- nothing server-side is meant
+to outlive the visit). Note this clears *all* coin_awards rows regardless of
+source_type, including puzzle_timer and scoring_sheet_win awards -- those
+features' own completion state (puzzle attempts, scoring sheet sessions) is
+untouched by Reset Session, only the coins earned from them. Unlike
+reset_demo_data.py, this still leaves staff requests, photos, and passports
+untouched.
 """
 
 from __future__ import annotations
@@ -56,9 +60,14 @@ def reset_session() -> ResetSessionResult:
 
     coin_rows = client.table("coin_awards").delete().neq("id", _MATCH_ALL_ID).execute().data
 
+    collectible_rows = (
+        client.table("collectible_redemptions").delete().neq("id", _MATCH_ALL_ID).execute().data
+    )
+
     return ResetSessionResult(
         bingo_tiles_reset=len(tile_rows),
         map_nodes_reset=len(node_rows),
         hunt_characters_reset=len(progress_rows),
         coins_reset=len(coin_rows),
+        collectible_cards_reset=len(collectible_rows),
     )

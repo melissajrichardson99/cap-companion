@@ -119,7 +119,7 @@ test.describe('Cobb Coins', () => {
     await Promise.all(closedTopLevel.map((r) => setNodeOpen(request, token, r.id, true)))
   })
 
-  test('Puzzle Timer (+12) and a real Bingo line (+10 only on the 5th tile) -- the milestone banner shows the coin amount, and Bronze Explorer unlocks', async ({
+  test('Puzzle Timer (+12) and a real Bingo line (+10 only on the 5th tile) -- the milestone banner shows the coin amount', async ({
     page,
     request,
   }) => {
@@ -165,13 +165,6 @@ test.describe('Cobb Coins', () => {
     await banner.click() // dismiss
 
     await expectCoinTotal(page, 22)
-
-    await page.getByRole('menuitemradio', { name: 'Collectibles' }).click()
-    await expect(page.getByText('🪙 22 Cobb Coins earned')).toBeVisible()
-    const bronze = page.locator('.collectible-card', { hasText: 'Bronze Explorer' })
-    await expect(bronze).toHaveClass(/collectible-unlocked/)
-    const silver = page.locator('.collectible-card', { hasText: 'Silver Adventurer' })
-    await expect(silver).toHaveClass(/collectible-locked/)
   })
 
   test('a completion that closes the X shape without closing any row/col along the way pays the X/double-bingo tier (25) cleanly', async ({

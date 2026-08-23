@@ -1,0 +1,71 @@
+.collectible-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cap-space-4);
+}
+
+.collectible-gallery-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cap-space-2);
+}
+
+.collectible-gallery-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.collectible-gallery-tab {
+  font: inherit;
+  font-family: var(--cap-font-display);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-parchment);
+  color: var(--cap-color-ink);
+  cursor: pointer;
+}
+
+.collectible-gallery-tab-active {
+  background: var(--cap-color-adventure-green);
+  color: #fff;
+}
+
+.collectible-gallery-empty {
+  color: var(--cap-color-body-text);
+  font-size: 14px;
+}
+
+.collectible-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 210px));
+  justify-content: center;
+  gap: var(--cap-space-4);
+}
+
+.collectible-gallery-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.collectible-gallery-item-actions {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.collectible-gallery-item-actions .btn {
+  flex: 1 1 auto;
+  font-size: 13px;
+  padding: 7px 10px;
+}
+
+.collectible-gallery-item-error {
+  font-size: 12px;
+  padding: 0;
+}

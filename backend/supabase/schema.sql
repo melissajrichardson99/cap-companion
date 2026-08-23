@@ -291,7 +291,7 @@ create index if not exists staff_requests_status_idx on staff_requests(status);
 create index if not exists staff_requests_location_node_id_idx on staff_requests(location_node_id);
 
 -- ---------------------------------------------------------------------------
--- coin_awards / collectibles (Cobb Coins -- POC scope, no redemption)
+-- coin_awards / collectible_redemptions (Cobb Coins -- earn + spend ledgers)
 -- ---------------------------------------------------------------------------
 create table if not exists coin_awards (
     id          uuid primary key default gen_random_uuid(),
@@ -314,14 +314,29 @@ create table if not exists coin_awards (
 
 create index if not exists coin_awards_source_type_idx on coin_awards(source_type);
 
-create table if not exists collectibles (
-    id                uuid primary key default gen_random_uuid(),
-    name              text not null unique,
-    -- Emoji/icon reference, not an uploaded image -- POC scope.
-    icon              text not null,
-    unlock_threshold  integer not null check (unlock_threshold > 0),
-    created_at        timestamptz not null default now()
+-- Collectible Cards (migration 022) -- append-only spend ledger, sibling to
+-- coin_awards rather than negative rows in it (that table's `amount > 0`
+-- check stays earn-only). Each row doubles as both the spend record and a
+-- gallery item -- see app/services/collectibles.py. No FK to an animal
+-- table: the animal roster is a frontend-only constant
+-- (frontend/src/animalContent.ts), same reasoning as coin_awards.source_id
+-- above. Reset Session clears this table entirely too. Replaces the earlier
+-- generic badge system (a `collectibles` table of Bronze/Silver/Gold
+-- Explorer/Legend badges keyed off coin_awards' running total), which this
+-- migration drops.
+create table if not exists collectible_redemptions (
+    id           uuid primary key default gen_random_uuid(),
+    animal_slug  text not null,
+    tier         text not null check (tier in ('standard', 'special')),
+    -- 1-based index into the animal's curated photo pool (see
+    -- app/services/collectibles.py's PHOTO_POOL_SIZE).
+    photo_index  integer not null check (photo_index > 0),
+    guest_name   text not null,
+    coins_spent  integer not null check (coins_spent > 0),
+    created_at   timestamptz not null default now()
 );
+
+create index if not exists collectible_redemptions_created_at_idx on collectible_redemptions(created_at);
 
 -- ---------------------------------------------------------------------------
 -- photo_submissions / photo_votes (Favorite Photo -- Plan.md 2.14, POC scope:

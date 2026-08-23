@@ -1,0 +1,156 @@
+/* Wood-grain frame/border treatment, same recipe as Passport/Puzzles'
+   modal frames. */
+.collectible-purchase-modal-frame {
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+  max-width: 380px;
+}
+
+.collectible-purchase-modal-inner {
+  position: relative;
+  background-color: var(--cap-color-parchment);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+  border: 2px solid var(--cap-color-outline);
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-4);
+  font-family: var(--cap-font-body);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.collectible-purchase-title {
+  display: flex;
+  align-items: center;
+  gap: var(--cap-space-3);
+  font-family: var(--cap-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
+  margin: 0;
+}
+
+.collectible-purchase-icon-badge {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cap-color-adventure-green);
+  border: 2px solid var(--cap-color-outline);
+  color: #fff;
+}
+
+.collectible-purchase-icon-badge svg {
+  width: 18px;
+  height: 18px;
+}
+
+.collectible-purchase-price {
+  margin: 0;
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--cap-color-header-green);
+}
+
+.collectible-purchase-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.collectible-purchase-label {
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+}
+
+.collectible-purchase-input {
+  font: inherit;
+  font-size: 15px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--cap-color-ink);
+}
+
+.collectible-purchase-reveal-eyebrow {
+  margin: 0;
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--cap-color-sunset-orange-deep);
+}
+
+.collectible-purchase-reveal-card {
+  max-width: 260px;
+}
+
+.collectible-purchase-share-note {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cap-color-adventure-green);
+}
+
+.collectible-purchase-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.collectible-purchase-actions .btn {
+  flex: 1 1 auto;
+  min-width: 100px;
+}
+
+.collectible-purchase-modal-inner .btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.collectible-purchase-modal-inner .btn:hover:not(:disabled) {
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}
+
+.collectible-purchase-modal-inner .btn-primary {
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-outline);
+  color: #fff;
+}
+
+.collectible-purchase-modal-inner .btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
+}
+
+.collectible-purchase-modal-inner .btn-secondary {
+  background: transparent;
+  color: var(--cap-color-ink);
+}

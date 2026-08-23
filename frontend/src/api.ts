@@ -266,17 +266,26 @@ export type CoinSourceType =
   | 'hunt_complete'
   | 'map_exploration'
 
-export interface Collectible {
-  id: string
-  name: string
-  icon: string
-  unlock_threshold: number
-  unlocked: boolean
-}
-
 export interface CoinsSummary {
   total: number
-  collectibles: Collectible[]
+}
+
+export type CollectibleTier = 'standard' | 'special'
+
+export interface CollectibleCatalogEntry {
+  animal_slug: string
+  tier: CollectibleTier
+  price: number
+}
+
+export interface CollectibleCard {
+  id: string
+  animal_slug: string
+  tier: CollectibleTier
+  photo_index: number
+  guest_name: string
+  coins_spent: number
+  created_at: string
 }
 
 export type PhotoStatus = 'pending_review' | 'shortlisted' | 'rejected'
@@ -316,6 +325,7 @@ export interface ResetSessionResult {
   map_nodes_reset: number
   hunt_characters_reset: number
   coins_reset: number
+  collectible_cards_reset: number
 }
 
 export interface Announcement {
@@ -422,6 +432,13 @@ export const api = {
     }
   },
   getCoinsSummary: () => request<CoinsSummary>('/coins/summary'),
+  listCollectibleCatalog: () => request<CollectibleCatalogEntry[]>('/collectibles/catalog'),
+  listCollectibles: () => request<CollectibleCard[]>('/collectibles'),
+  purchaseCollectible: (animalSlug: string, guestName: string) =>
+    request<CollectibleCard>('/collectibles/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ animal_slug: animalSlug, guest_name: guestName }),
+    }),
   submitPhoto: async (file: File, guestLabel: string | null) => {
     const body = new FormData()
     body.append('file', file)
