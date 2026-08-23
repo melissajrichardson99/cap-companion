@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api, type PhotoSubmission } from '../api'
+import { api, type Announcement, type PhotoSubmission } from '../api'
 import {
   ANIMAL_SHOW_TIMES,
-  ANNOUNCEMENTS,
   GOOGLE_REVIEW_URL,
   PARK_HOURS_TEXT,
   PARK_OPEN_DAYS,
@@ -19,15 +18,18 @@ import './HomePage.css'
 
 interface HomePageProps {
   onBrowsePhotos: () => void
+  announcements: Announcement[] | null
 }
 
 // True root route (Plan.md build-priority item 4): a real landing page
 // instead of guests just falling into whichever tab happens to be default.
-// Schedule/hours/announcements are static (homePageContent.ts, edited
-// directly in code) -- the only live network call on this page is the
-// weather fetch, and it's designed to fail without blocking anything else
-// from rendering (see the weatherFailed branch below).
-export function HomePage({ onBrowsePhotos }: HomePageProps) {
+// Schedule/hours are static (homePageContent.ts, edited directly in code);
+// announcements are staff-managed and live (App.tsx fetches them, same
+// lifting pattern as nodes/puzzles/etc. -- see Staff Page's Announcements
+// tab). The only other live network call on this page is the weather fetch,
+// and it's designed to fail without blocking anything else from rendering
+// (see the weatherFailed branch below).
+export function HomePage({ onBrowsePhotos, announcements }: HomePageProps) {
   const [weather, setWeather] = useState<CurrentWeather | null>(null)
   const [weatherFailed, setWeatherFailed] = useState(false)
 
@@ -172,11 +174,11 @@ export function HomePage({ onBrowsePhotos }: HomePageProps) {
       </div>
 
       <div className="home-side-by-side">
-        {ANNOUNCEMENTS.length > 0 && (
+        {announcements && announcements.length > 0 && (
           <section className="home-card cap-parchment-card">
             <h2 className="home-section-title">Announcements</h2>
             <ul className="home-announcements-list">
-              {ANNOUNCEMENTS.map((a) => (
+              {announcements.map((a) => (
                 <li key={a.id} className="home-announcement-item">
                   📣 {a.text}
                 </li>

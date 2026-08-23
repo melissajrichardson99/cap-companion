@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.routers import (
+    announcements,
     bingo,
     coins,
     hunt,
@@ -73,6 +74,7 @@ app.include_router(coins.router)
 app.include_router(photos.router)
 app.include_router(passport.router)
 app.include_router(session.router)
+app.include_router(announcements.router)
 
 
 @app.get("/health")

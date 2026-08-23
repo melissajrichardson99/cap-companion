@@ -6,7 +6,7 @@ Proof-of-concept companion app for Cobb's Adventure Park (single-tenant, no mult
 - Frontend: React (Vite) — /frontend
 - Backend: FastAPI — /backend
 - Database: Supabase (Postgres)
-- Minigames: Godot 4.x → HTML5/WebGL, built into /minigames, exports copied to /frontend/public/games/
+- Minigames: Godot 4.x → HTML5/WebGL, built into /minigames, exports copied to /frontend/games-dist/ (NOT /frontend/public/games/ — the builds are too large for Cloudflare's bundled-asset limit, so a custom Vite middleware serves them from games-dist/ instead of the static public/ dir). Copying a new build to the wrong path fails silently — no error, the dev server just keeps serving the stale build.
 
 ## Build priority
 Full detail in CAP_Companion_App_TechSpec.md. Order:

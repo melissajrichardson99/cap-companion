@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { api, type BingoCard, type CoinsSummary, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { api, type Announcement, type BingoCard, type CoinsSummary, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { AnimalsScreen } from './components/AnimalsScreen'
+import { AnnouncementPopup } from './components/AnnouncementPopup'
 import { BingoScreen } from './components/BingoScreen'
 import { BrandLogo } from './components/BrandLogo'
 import { CollectiblesScreen } from './components/CollectiblesScreen'
@@ -23,6 +24,7 @@ import { ScanScreen } from './components/ScanScreen'
 import { ScoringScreen } from './components/ScoringScreen'
 import { StaffPage } from './components/StaffPage'
 import { ToastStack, type ToastItem } from './components/ToastStack'
+import { clearDismissedAnnouncements } from './dismissedAnnouncements'
 import { getVoterSessionId } from './voterSession'
 import './components/shared.css'
 import './App.css'
@@ -124,6 +126,12 @@ function App() {
   const [photoGallery, setPhotoGallery] = useState<PhotoSubmission[] | null>(null)
   const [photoGalleryError, setPhotoGalleryError] = useState<string | null>(null)
 
+  const [announcements, setAnnouncements] = useState<Announcement[] | null>(null)
+  // Bumped on Reset Session so the mounted AnnouncementPopup re-reads its
+  // dismissed-ids localStorage entry (see dismissedAnnouncements.ts) without
+  // needing a full page reload.
+  const [announcementResetSignal, setAnnouncementResetSignal] = useState(0)
+
   const [milestoneQueue, setMilestoneQueue] = useState<MilestoneEvent[]>([])
   // 'base' = the minigame a tile completion always draws; 'milestone' = the
   // one extra celebration minigame a milestone-triggering completion draws
@@ -194,6 +202,13 @@ function App() {
       .catch((err) => setPhotoGalleryError(String(err)))
   }
 
+  const reloadAnnouncements = () => {
+    api
+      .listAnnouncements()
+      .then(setAnnouncements)
+      .catch((err) => setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `Couldn't load announcements: ${err}` }]))
+  }
+
   useEffect(() => {
     reloadNodes()
     reloadPuzzles()
@@ -202,6 +217,7 @@ function App() {
     reloadMinigames()
     reloadCoins()
     reloadPhotoGallery()
+    reloadAnnouncements()
     api
       .listBingoCards()
       .then((summaries) => {
@@ -279,6 +295,11 @@ function App() {
     setMinigameQueue([])
     setPendingMilestoneMinigames([])
     setBaseFollowupQueue([])
+    // Reset Session is the shared kiosk's "next guest" boundary -- dismissed
+    // announcement ids are per-kiosk-session state, same spirit as the DB
+    // rows reset above, just stored client-side (dismissedAnnouncements.ts).
+    clearDismissedAnnouncements()
+    setAnnouncementResetSignal((n) => n + 1)
   }
 
   const handleTileResult = (result: TileCompletionResult) => {
@@ -377,6 +398,7 @@ function App() {
         </main>
         <ToastStack toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
         {activeMinigame && <MinigameOverlay game={activeMinigame} onClose={handleMinigameOverlayClose} />}
+        <AnnouncementPopup announcements={announcements} resetSignal={announcementResetSignal} />
       </div>
     )
   }
@@ -406,6 +428,7 @@ function App() {
       <main className="app-main">
         {showHome && (
           <HomePage
+            announcements={announcements}
             onBrowsePhotos={() => {
               setShowHome(false)
               setActiveTab('photos')
@@ -500,6 +523,8 @@ function App() {
       {showResetConfirm && (
         <ResetSessionModal onClose={() => setShowResetConfirm(false)} onReset={handleResetSession} />
       )}
+
+      <AnnouncementPopup announcements={announcements} resetSignal={announcementResetSignal} />
     </div>
   )
 }

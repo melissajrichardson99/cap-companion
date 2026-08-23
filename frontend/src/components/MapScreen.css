@@ -798,6 +798,11 @@
   color: var(--cap-color-body-text);
 }
 
+.map-legend-item-closed {
+  font-style: italic;
+  color: var(--cap-color-body-text);
+}
+
 .map-legend-children {
   list-style: none;
   margin: var(--cap-space-1) 0 0;

@@ -34,14 +34,9 @@ export const PARK_HOURS_TEXT = 'Wednesday – Sunday, 11:00 AM – 5:00 PM'
 // Closed Monday (1) and Tuesday (2).
 export const PARK_OPEN_DAYS: number[] = [0, 3, 4, 5, 6]
 
-export interface Announcement {
-  id: string
-  text: string
-}
-
-export const ANNOUNCEMENTS: Announcement[] = [
-  { id: 'capybara-experience-2026', text: 'Capybara Animal Experiences are included with general admission this year!' },
-]
+// Announcements are staff-managed and live (Staff Page "Announcements" tab,
+// backend/app/routers/announcements.py) -- see api.ts's Announcement type
+// and HomePage.tsx, not this file.
 
 // PLACEHOLDER -- update to the park's real coordinates. Used only for the
 // "Today at Cobb's" card's weather fetch (Open-Meteo, no API key required).

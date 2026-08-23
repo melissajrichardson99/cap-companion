@@ -245,8 +245,19 @@ const LEGEND_NUMBER: Record<string, number> = {
   'Private Event Animal Space': 7,
 }
 
+// Staff-managed is_open drives the same grey/lock visual treatment as
+// state === 'closed', but is a separate field (see map_nodes.is_open):
+// state tracks guest visit progress and is wiped by Reset Session, while
+// is_open is operational status that must survive it. This derives a
+// display-only state so all the existing state-keyed visuals (pin color,
+// icon, legend swatch) apply without touching node.state itself.
+function displayState(node: MapNode): MapNode['state'] {
+  return node.is_open ? node.state : 'closed'
+}
+
 function pinShapeContent(node: MapNode): string {
-  if (node.state !== 'not_visited') return STATE_ICON[node.state]
+  const state = displayState(node)
+  if (state !== 'not_visited') return STATE_ICON[state]
   const number = LEGEND_NUMBER[node.name]
   return number != null ? String(number) : ''
 }
@@ -596,7 +607,8 @@ export function MapScreen({
               <img src="/park-map.png" alt="Cobb's Adventure Park map" className="map-image" />
               {positioned.map((node) => {
                 const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
-                const stateNote = node.state !== 'not_visited' ? `, ${node.state.replace('_', ' ')}` : ''
+                const pinState = displayState(node)
+                const stateNote = pinState !== 'not_visited' ? `, ${pinState.replace('_', ' ')}` : ''
                 const nudge = nudges.get(node.id)
                 const pinStyle = {
                   left: `${node.x_pct}%`,
@@ -609,7 +621,7 @@ export function MapScreen({
                   <button
                     type="button"
                     key={node.id}
-                    className={`map-pin map-pin-${node.category} map-pin-${node.state}${isKeySpotHighlighted ? ' map-pin-keyspot-highlighted' : ''}`}
+                    className={`map-pin map-pin-${node.category} map-pin-${pinState}${isKeySpotHighlighted ? ' map-pin-keyspot-highlighted' : ''}`}
                     style={pinStyle}
                     onClick={() => setSelectedNode(node)}
                     aria-label={`${node.name} (${CATEGORY_LABEL[node.category]}${stateNote})`}
@@ -642,18 +654,19 @@ export function MapScreen({
           <div className="node-grid">
             {unplaced.map((node) => {
               const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
+              const cardState = displayState(node)
               return (
                 <button
                   type="button"
                   key={node.id}
-                  className={`node-card node-card-${node.state}`}
+                  className={`node-card node-card-${cardState}`}
                   onClick={() => setSelectedNode(node)}
                 >
                   <span className="node-card-top">
                     <span className="node-card-name">{node.name}</span>
-                    {STATE_ICON[node.state] && (
-                      <span className={`node-card-state-icon node-card-state-icon-${node.state}`} aria-hidden="true">
-                        {STATE_ICON[node.state]}
+                    {STATE_ICON[cardState] && (
+                      <span className={`node-card-state-icon node-card-state-icon-${cardState}`} aria-hidden="true">
+                        {STATE_ICON[cardState]}
                       </span>
                     )}
                   </span>
@@ -740,6 +753,7 @@ export function MapScreen({
                             <span className="map-legend-item-number">{LEGEND_NUMBER[node.name]}</span>
                           )}
                           {node.name}
+                          {!node.is_open && <span className="map-legend-item-closed"> (Closed)</span>}
                           {node.children.length > 0 && (
                             <ul className="map-legend-children">
                               {node.children.map((child) => (

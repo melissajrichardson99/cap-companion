@@ -227,6 +227,70 @@
   color: var(--cap-color-body-text);
 }
 
+.staff-attractions-hint {
+  color: var(--cap-color-body-text);
+  font-size: 13px;
+  margin: 0 0 var(--cap-space-2);
+}
+
+.staff-attractions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.staff-attraction-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+}
+
+.staff-attraction-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.staff-attraction-name {
+  font-weight: 700;
+  color: var(--cap-color-ink);
+}
+
+.staff-attraction-category {
+  font-size: 13px;
+  color: var(--cap-color-body-text);
+}
+
+.staff-attraction-status-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--cap-radius-sm);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1.5px solid var(--cap-color-outline);
+  color: var(--cap-color-body-text);
+}
+
+.staff-attraction-status-badge-open {
+  color: var(--cap-color-adventure-green);
+}
+
+.staff-attraction-status-badge-closed {
+  color: var(--cap-color-contact-red);
+}
+
+.staff-attraction-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .staff-photos-subheading {
   font-family: var(--cap-font-display);
   font-size: 16px;
@@ -340,4 +404,73 @@
 
 .staff-page .btn-delete:hover:not(:disabled) {
   background: var(--cap-color-contact-red-deep);
+}
+
+.staff-announcement-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--cap-space-5);
+}
+
+.staff-announcement-create-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--cap-color-ink);
+}
+
+.staff-announcement-textarea {
+  font: inherit;
+  font-family: var(--cap-font-body);
+  padding: 9px 12px;
+  border-radius: var(--cap-radius-sm);
+  border: 2px solid var(--cap-color-outline);
+  background: #fff;
+  color: var(--cap-color-ink);
+  resize: vertical;
+}
+
+.staff-announcement-post-btn {
+  align-self: flex-start;
+}
+
+.staff-announcements-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.staff-announcement-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+}
+
+.staff-announcement-text {
+  flex: 1;
+  min-width: 200px;
+  color: var(--cap-color-ink);
+}
+
+.staff-announcement-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.staff-announcement-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.staff-announcement-edit .staff-announcement-actions {
+  align-self: flex-end;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, type PhotoSubmission, type StaffRequest } from '../api'
+import { api, type Announcement, type MapNode, type PhotoSubmission, type StaffRequest } from '../api'
 import { clearStaffToken, getStaffToken } from '../staffAuth'
 import { ClearShortlistModal } from './ClearShortlistModal'
 import { ClipboardIcon } from './NavIcons'
@@ -11,7 +11,7 @@ import './StaffPage.css'
 // more than a POC.
 const POLL_INTERVAL_MS = 12_000
 
-type Tab = 'photos' | 'requests'
+type Tab = 'photos' | 'requests' | 'announcements' | 'attractions'
 
 const TYPE_LABEL: Record<StaffRequest['type'], string> = {
   question: 'Question',
@@ -22,6 +22,14 @@ const STATUS_LABEL: Record<StaffRequest['status'], string> = {
   open: 'Open',
   acknowledged: 'Acknowledged',
   resolved: 'Resolved',
+}
+
+const NODE_CATEGORY_LABEL: Record<MapNode['category'], string> = {
+  attraction: 'Attraction',
+  animal: 'Animal Habitat',
+  service: 'Service',
+  food: 'Food & Store',
+  seasonal: 'Seasonal',
 }
 
 export function StaffPage() {
@@ -70,6 +78,18 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [shortlistedError, setShortlistedError] = useState<string | null>(null)
   const [clearModalOpen, setClearModalOpen] = useState(false)
 
+  const [announcements, setAnnouncements] = useState<Announcement[] | null>(null)
+  const [announcementsError, setAnnouncementsError] = useState<string | null>(null)
+  const [pendingAnnouncementActionId, setPendingAnnouncementActionId] = useState<string | null>(null)
+  const [newAnnouncementText, setNewAnnouncementText] = useState('')
+  const [creatingAnnouncement, setCreatingAnnouncement] = useState(false)
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null)
+  const [editingAnnouncementText, setEditingAnnouncementText] = useState('')
+
+  const [attractionNodes, setAttractionNodes] = useState<MapNode[] | null>(null)
+  const [attractionsError, setAttractionsError] = useState<string | null>(null)
+  const [pendingAttractionActionId, setPendingAttractionActionId] = useState<string | null>(null)
+
   const reload = () => {
     api
       .listStaffRequests(showResolved)
@@ -107,19 +127,55 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
     reloadShortlisted()
   }
 
+  const reloadAnnouncements = () => {
+    api
+      .listAnnouncements()
+      .then((rows) => {
+        setAnnouncements(rows)
+        setAnnouncementsError(null)
+      })
+      .catch((err) => setAnnouncementsError(String(err)))
+  }
+
+  // Parented sub-games (e.g. Cornhole under Arcade Pad) don't get their own
+  // map pin/card -- they're not independently toggleable, so this list
+  // matches exactly what MapScreen.tsx's positioned/unplaced filters show.
+  const reloadAttractionNodes = () => {
+    api
+      .listMapNodes()
+      .then((rows) => {
+        setAttractionNodes(rows.filter((n) => n.parent_node_id == null))
+        setAttractionsError(null)
+      })
+      .catch((err) => setAttractionsError(String(err)))
+  }
+
   // Re-runs (and restarts the poll interval) whenever showResolved changes,
   // so toggling it doesn't wait up to POLL_INTERVAL_MS for a stale closure
   // to pick up the new value.
   useEffect(() => {
     reload()
     reloadAllPhotos()
+    reloadAnnouncements()
+    reloadAttractionNodes()
     const interval = setInterval(() => {
       reload()
       reloadAllPhotos()
+      reloadAnnouncements()
+      reloadAttractionNodes()
     }, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showResolved])
+
+  const toggleNodeOpen = (node: MapNode) => {
+    setPendingAttractionActionId(node.id)
+    api
+      .setNodeOpenStatus(node.id, !node.is_open)
+      .then(reloadAttractionNodes)
+      .catch((err) => setAttractionsError(String(err)))
+      .finally(() => setPendingAttractionActionId(null))
+  }
 
   const runAction = (requestId: string, action: (id: string) => Promise<StaffRequest>) => {
     setPendingActionId(requestId)
@@ -150,6 +206,50 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
       .then(reloadAllPhotos)
       .catch((err) => setShortlistedError(String(err)))
       .finally(() => setPendingPhotoActionId(null))
+  }
+
+  const createAnnouncement = (e: React.FormEvent) => {
+    e.preventDefault()
+    const text = newAnnouncementText.trim()
+    if (!text) return
+    setCreatingAnnouncement(true)
+    api
+      .createAnnouncement(text)
+      .then(() => {
+        setNewAnnouncementText('')
+        reloadAnnouncements()
+      })
+      .catch((err) => setAnnouncementsError(String(err)))
+      .finally(() => setCreatingAnnouncement(false))
+  }
+
+  const startEditingAnnouncement = (a: Announcement) => {
+    setEditingAnnouncementId(a.id)
+    setEditingAnnouncementText(a.text)
+  }
+
+  const saveEditingAnnouncement = (announcementId: string) => {
+    const text = editingAnnouncementText.trim()
+    if (!text) return
+    setPendingAnnouncementActionId(announcementId)
+    api
+      .updateAnnouncement(announcementId, text)
+      .then(() => {
+        setEditingAnnouncementId(null)
+        reloadAnnouncements()
+      })
+      .catch((err) => setAnnouncementsError(String(err)))
+      .finally(() => setPendingAnnouncementActionId(null))
+  }
+
+  const deleteAnnouncement = (announcementId: string) => {
+    if (!window.confirm('Permanently delete this announcement? This cannot be undone.')) return
+    setPendingAnnouncementActionId(announcementId)
+    api
+      .deleteAnnouncement(announcementId)
+      .then(reloadAnnouncements)
+      .catch((err) => setAnnouncementsError(String(err)))
+      .finally(() => setPendingAnnouncementActionId(null))
   }
 
   return (
@@ -202,6 +302,24 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
           onClick={() => setTab('requests')}
         >
           Contact Requests
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'announcements'}
+          className={`staff-page-tab ${tab === 'announcements' ? 'staff-page-tab-active' : ''}`}
+          onClick={() => setTab('announcements')}
+        >
+          Announcements
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'attractions'}
+          className={`staff-page-tab ${tab === 'attractions' ? 'staff-page-tab-active' : ''}`}
+          onClick={() => setTab('attractions')}
+        >
+          Attractions
         </button>
       </div>
 
@@ -358,6 +476,140 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                   </div>
                 </li>
               ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {tab === 'announcements' && (
+        <section className="staff-announcements-section">
+          {announcementsError && (
+            <p className="screen-error">Couldn't load announcements: {announcementsError}</p>
+          )}
+          <form className="staff-announcement-create-form" onSubmit={createAnnouncement}>
+            <label className="staff-announcement-create-label" htmlFor="staff-new-announcement">
+              New Announcement
+            </label>
+            <textarea
+              id="staff-new-announcement"
+              className="staff-announcement-textarea"
+              value={newAnnouncementText}
+              onChange={(e) => setNewAnnouncementText(e.target.value)}
+              rows={3}
+              required
+            />
+            <button
+              type="submit"
+              className="btn btn-primary staff-announcement-post-btn"
+              disabled={creatingAnnouncement || !newAnnouncementText.trim()}
+            >
+              {creatingAnnouncement ? 'Posting…' : 'Post Announcement'}
+            </button>
+          </form>
+
+          <h2 className="staff-photos-subheading">Current Announcements</h2>
+          {announcements === null ? (
+            <p className="staff-photos-loading">Loading announcements…</p>
+          ) : announcements.length === 0 ? (
+            <p className="staff-photos-empty">No announcements yet.</p>
+          ) : (
+            <ul className="staff-announcements-list">
+              {announcements.map((a) => (
+                <li key={a.id} className="staff-announcement-row cap-parchment-card" data-announcement-id={a.id}>
+                  {editingAnnouncementId === a.id ? (
+                    <div className="staff-announcement-edit">
+                      <textarea
+                        className="staff-announcement-textarea"
+                        value={editingAnnouncementText}
+                        onChange={(e) => setEditingAnnouncementText(e.target.value)}
+                        rows={3}
+                        autoFocus
+                      />
+                      <div className="staff-announcement-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={pendingAnnouncementActionId === a.id}
+                          onClick={() => setEditingAnnouncementId(null)}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-approve"
+                          disabled={pendingAnnouncementActionId === a.id || !editingAnnouncementText.trim()}
+                          onClick={() => saveEditingAnnouncement(a.id)}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="staff-announcement-text">{a.text}</span>
+                      <div className="staff-announcement-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          disabled={pendingAnnouncementActionId === a.id}
+                          onClick={() => startEditingAnnouncement(a)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-delete"
+                          disabled={pendingAnnouncementActionId === a.id}
+                          onClick={() => deleteAnnouncement(a.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {tab === 'attractions' && (
+        <section className="staff-attractions-section">
+          <p className="staff-attractions-hint">
+            Closing an attraction only changes how it looks on the Map (grey pin, lock icon, "(Closed)" in the
+            legend) -- it stays fully scannable and completable for Scavenger Hunt and Bingo.
+          </p>
+          {attractionsError && <p className="screen-error">Couldn't load attractions: {attractionsError}</p>}
+          {attractionNodes === null ? (
+            <p className="staff-photos-loading">Loading attractions…</p>
+          ) : (
+            <ul className="staff-attractions-list">
+              {[...attractionNodes]
+                .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
+                .map((node) => (
+                  <li key={node.id} className="staff-attraction-row cap-parchment-card" data-node-id={node.id}>
+                    <div className="staff-attraction-main">
+                      <span className="staff-attraction-name">{node.name}</span>
+                      <span className="staff-attraction-category">{NODE_CATEGORY_LABEL[node.category]}</span>
+                      <span
+                        className={`staff-attraction-status-badge staff-attraction-status-badge-${node.is_open ? 'open' : 'closed'}`}
+                      >
+                        {node.is_open ? 'Open' : 'Closed'}
+                      </span>
+                    </div>
+                    <div className="staff-attraction-actions">
+                      <button
+                        type="button"
+                        className={node.is_open ? 'btn btn-delete' : 'btn btn-approve'}
+                        disabled={pendingAttractionActionId === node.id}
+                        onClick={() => toggleNodeOpen(node)}
+                      >
+                        {node.is_open ? 'Close' : 'Reopen'}
+                      </button>
+                    </div>
+                  </li>
+                ))}
             </ul>
           )}
         </section>

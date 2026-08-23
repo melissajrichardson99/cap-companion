@@ -132,6 +132,17 @@
   font-size: 14px;
 }
 
+.node-detail-closed-info {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border-radius: var(--cap-radius-sm);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid var(--cap-color-contact-red);
+  color: var(--cap-color-contact-red);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .node-detail-status {
   margin: 12px 0 0;
   font-size: 13px;

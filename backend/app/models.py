@@ -102,6 +102,11 @@ class MapNode(BaseModel):
     category: NodeCategory
     description: str
     state: NodeState = NodeState.NOT_VISITED
+    # Staff-managed operational status, independent of `state` above (which
+    # tracks a guest's own visit progress and is wiped by Reset Session).
+    # Drives the Map's grey-pin/lock-icon closed treatment; never affects
+    # Hunt/QR completion.
+    is_open: bool = True
     linked_tiles: list[LinkedTile] = Field(default_factory=list)
     # Percentage position (0-100) on the map background image, not pixel
     # coordinates, so pins stay correctly placed regardless of the final
@@ -186,6 +191,10 @@ class VisitNodeRequest(BaseModel):
 class VisitNodeResponse(BaseModel):
     node: MapNode
     tile_completions: list[TileCompletionResult]
+
+
+class SetNodeOpenStatusRequest(BaseModel):
+    is_open: bool
 
 
 class PuzzleChallenge(BaseModel):
@@ -423,6 +432,21 @@ class PhotoSubmission(BaseModel):
     # Only meaningful once shortlisted -- 0/false on pending_review/rejected rows.
     vote_count: int = 0
     voted_by_me: bool = False
+
+
+class Announcement(BaseModel):
+    id: UUID
+    text: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class CreateAnnouncementRequest(BaseModel):
+    text: str = Field(min_length=1)
+
+
+class UpdateAnnouncementRequest(BaseModel):
+    text: str = Field(min_length=1)
 
 
 class StaffLoginRequest(BaseModel):

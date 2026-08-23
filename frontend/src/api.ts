@@ -24,6 +24,7 @@ export interface MapNode {
   category: NodeCategory
   description: string
   state: NodeState
+  is_open: boolean
   linked_tiles: LinkedTile[]
   x_pct: number | null
   y_pct: number | null
@@ -300,6 +301,13 @@ export interface ResetSessionResult {
   hunt_characters_reset: number
 }
 
+export interface Announcement {
+  id: string
+  text: string
+  created_at: string
+  updated_at: string
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -333,6 +341,11 @@ export const api = {
     request<VisitNodeResponse>(`/map/nodes/${nodeId}/visit`, {
       method: 'POST',
       body: JSON.stringify({ completed_tile_ids: completedTileIds }),
+    }),
+  setNodeOpenStatus: (nodeId: string, isOpen: boolean) =>
+    staffRequest<MapNode>(`/map/nodes/${nodeId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_open: isOpen }),
     }),
   listBingoCards: () => request<BingoCardSummary[]>('/bingo/cards'),
   getBingoCard: (cardId: string) => request<BingoCard>(`/bingo/card/${cardId}`),
@@ -431,4 +444,14 @@ export const api = {
     return res.json() as Promise<PassportSession>
   },
   resetSession: () => request<ResetSessionResult>('/session/reset', { method: 'POST' }),
+  listAnnouncements: () => request<Announcement[]>('/announcements'),
+  createAnnouncement: (text: string) =>
+    staffRequest<Announcement>('/announcements', { method: 'POST', body: JSON.stringify({ text }) }),
+  updateAnnouncement: (announcementId: string, text: string) =>
+    staffRequest<Announcement>(`/announcements/${announcementId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ text }),
+    }),
+  deleteAnnouncement: (announcementId: string) =>
+    staffRequest<void>(`/announcements/${announcementId}`, { method: 'DELETE' }),
 }

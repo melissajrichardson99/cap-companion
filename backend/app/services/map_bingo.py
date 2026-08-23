@@ -49,6 +49,7 @@ def _row_to_map_node(
         category=row["category"],
         description=row["description"],
         state=row["state"],
+        is_open=row["is_open"],
         linked_tiles=linked_tiles,
         x_pct=row["x_pct"],
         y_pct=row["y_pct"],
@@ -337,3 +338,41 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID]) -> VisitNodeRespon
 
     node = _row_to_map_node(updated_node_row, linked_tiles, children)
     return VisitNodeResponse(node=node, tile_completions=tile_completions)
+
+
+def set_node_open_status(node_id: UUID, is_open: bool) -> MapNode:
+    """Staff-managed open/closed toggle for the Staff Page Attractions tab.
+
+    Independent of `state`/visit progress: never blocks or alters Hunt/QR
+    completion, and untouched by Reset Session.
+    """
+    client = get_supabase_client()
+
+    updated_rows = (
+        client.table("map_nodes").update({"is_open": is_open}).eq("id", str(node_id)).execute().data
+    )
+    if not updated_rows:
+        raise NotFoundError(f"Map node {node_id} not found")
+    updated_node_row = updated_rows[0]
+
+    child_rows = (
+        client.table("map_nodes")
+        .select("id,name")
+        .eq("parent_node_id", str(node_id))
+        .order("name")
+        .execute()
+        .data
+    )
+    relevant_node_ids = [str(node_id)] + [c["id"] for c in child_rows]
+
+    tiles = (
+        client.table("bingo_tiles")
+        .select("id,label,completed")
+        .in_("linked_map_node_id", relevant_node_ids)
+        .execute()
+        .data
+    )
+    linked_tiles = [LinkedTile(id=t["id"], label=t["label"], completed=t["completed"]) for t in tiles]
+    children = [ChildNode(id=c["id"], name=c["name"]) for c in child_rows]
+
+    return _row_to_map_node(updated_node_row, linked_tiles, children)

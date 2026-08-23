@@ -1,10 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.errors import NotFoundError
-from app.models import MapNode, VisitNodeRequest, VisitNodeResponse
+from app.models import MapNode, SetNodeOpenStatusRequest, VisitNodeRequest, VisitNodeResponse
 from app.services import map_bingo
+from app.staff_auth import require_staff
 
 router = APIRouter(prefix="/map", tags=["map"])
 
@@ -18,5 +19,13 @@ def list_nodes() -> list[MapNode]:
 def visit_node(node_id: UUID, body: VisitNodeRequest) -> VisitNodeResponse:
     try:
         return map_bingo.visit_node(node_id, body.completed_tile_ids)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.patch("/nodes/{node_id}/status", response_model=MapNode, dependencies=[Depends(require_staff)])
+def set_node_status(node_id: UUID, body: SetNodeOpenStatusRequest) -> MapNode:
+    try:
+        return map_bingo.set_node_open_status(node_id, body.is_open)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

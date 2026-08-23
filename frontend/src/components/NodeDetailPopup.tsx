@@ -143,6 +143,14 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
           </p>
         )}
 
+        {/* Staff-managed operational status (map_nodes.is_open) -- purely
+            informational, additive to whatever else this popup already
+            shows. Does not gate Mark Visited below: closed attractions stay
+            fully scannable/completable. */}
+        {!node.is_open && (
+          <p className="node-detail-closed-info">This attraction is currently closed.</p>
+        )}
+
         {error && <p className="screen-error">{error}</p>}
 
         <div className="node-detail-actions">

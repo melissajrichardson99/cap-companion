@@ -1,0 +1,29 @@
+-- CAP Companion App — migration 019: Attraction open/closed status (Staff-managed)
+--
+-- Backs the new Staff Page "Attractions" tab, letting staff mark any map
+-- node open/closed for the guest Map (grey pin + lock icon + "(Closed)" in
+-- the legend). Deliberately a *separate* column from map_nodes.state, not a
+-- new value on it:
+--   - Both session_reset.py and reset_demo_data.py unconditionally overwrite
+--     every row's `state` back to 'not_visited' on reset. Reusing `state`
+--     for staff-set closed status would mean a guest's Reset Session
+--     silently reopens every attraction staff had closed.
+--   - `state` already has an unused 'closed' enum value wired into
+--     NodeDetailPopup.tsx in a way that *replaces* the "Mark Visited"
+--     button -- but closed attractions must stay fully scannable/completable
+--     per the feature spec, so that stub isn't reusable here either.
+-- is_open is independent of `state` and untouched by either reset script,
+-- both of which only ever write {"state": ...} to map_nodes.
+--
+-- No grant/alter default privileges block needed: this alters an existing
+-- table (map_nodes), already covered by 017_grant_service_role_privileges.sql.
+-- Verify with a real round trip (staff PATCH /map/nodes/{id}/status, then a
+-- plain GET /map/nodes) once this migration has been run against the live
+-- project -- "queries silently return empty/stale, no error" is this
+-- project's most-repeated gotcha, so don't take that assumption on faith.
+--
+-- Run this in the Supabase SQL editor against the live project (per the
+-- project's standing gotcha, seed.sql/schema.sql edits alone never reach
+-- the live DB). Safe to run more than once: the alter is guarded.
+
+alter table map_nodes add column if not exists is_open boolean not null default true;

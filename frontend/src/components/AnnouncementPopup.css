@@ -1,0 +1,136 @@
+/* Own backdrop/z-index (not Modal.css's .modal-backdrop, z-index:100) --
+   sits above ToastStack (150) and MilestoneBanner (200) so a new
+   announcement is never silently missed behind either, but below
+   MinigameOverlay (300) and PhotoLightbox (400) so it never interrupts an
+   in-progress minigame or an open photo -- an undismissed announcement just
+   waits for the next page load instead. */
+.announcement-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 6, 13, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 250;
+  animation: announcement-popup-backdrop-in 0.15s ease-out;
+}
+
+/* Same wood-grain frame recipe as ContactStaffModal/StaffLoginScreen. */
+.announcement-popup-frame {
+  max-width: 420px;
+  width: 100%;
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+  animation: announcement-popup-panel-in 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.1);
+}
+
+.announcement-popup-inner {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--cap-color-parchment);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+  border: 2px solid var(--cap-color-outline);
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-5) var(--cap-space-4);
+  overflow: hidden;
+}
+
+.announcement-popup-inner::before,
+.announcement-popup-inner::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='%233b7801'%3E%3Cpath d='M100 10c40 20 60 60 40 110-20 45-70 60-95 35 10-55 15-115 55-145z'/%3E%3Cpath d='M30 90c30 5 55 30 55 65 0 20-15 30-35 25-15-30-25-65-20-90z'/%3E%3Cpath d='M170 60c-25 10-45 35-42 65 2 18 18 26 35 18 10-30 15-60 7-83z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.announcement-popup-inner::before {
+  width: 70px;
+  height: 70px;
+  bottom: -12px;
+  right: -10px;
+  opacity: 0.11;
+  transform: rotate(205deg);
+}
+
+.announcement-popup-inner::after {
+  width: 46px;
+  height: 46px;
+  bottom: -10px;
+  left: -8px;
+  opacity: 0.09;
+  transform: rotate(140deg);
+}
+
+.announcement-popup-title {
+  display: flex;
+  align-items: center;
+  gap: var(--cap-space-3);
+  font-family: var(--cap-font-display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
+  margin: 0 0 var(--cap-space-3);
+}
+
+.announcement-popup-icon-badge {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.announcement-popup-counter {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cap-color-body-text);
+}
+
+.announcement-popup-text {
+  font-family: var(--cap-font-body);
+  font-size: 15px;
+  color: var(--cap-color-ink);
+  line-height: 1.5;
+  margin: 0 0 var(--cap-space-4);
+  white-space: pre-wrap;
+}
+
+.announcement-popup-dismiss {
+  width: 100%;
+}
+
+@keyframes announcement-popup-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes announcement-popup-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

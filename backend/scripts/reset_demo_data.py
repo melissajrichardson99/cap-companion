@@ -22,6 +22,10 @@ Resets:
     character un-started and locked
   - every staff_requests row deleted, so the Contact Staff specs start with
     an empty staff view each run
+  - every announcements row deleted -- a leftover undismissed announcement
+    from a prior run blocks every guest-facing spec's page.goto('/') behind
+    the popup's full-screen backdrop (see announcements.spec.ts), so this is
+    a safety net even when that file's own afterEach cleanup does its job
   - every coin_awards row deleted, so the Cobb Coins specs start from a
     running total of 0 each run
   - every photo_submissions row (and its photo_votes, via cascade) deleted,
@@ -127,6 +131,16 @@ def reset_demo_data() -> None:
         .data
     )
     print(f"Deleted {len(coin_award_rows)} coin award(s).")
+
+    # Same "no bare filterless delete" PostgREST rule as staff_requests above.
+    announcement_rows = (
+        client.table("announcements")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+        .execute()
+        .data
+    )
+    print(f"Deleted {len(announcement_rows)} announcement(s).")
 
     # Photo rows first (need their storage_path values before they're gone),
     # then the Storage objects, then the rows themselves -- photo_votes cascades

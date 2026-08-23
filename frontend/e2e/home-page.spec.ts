@@ -4,7 +4,6 @@ import { test, expect, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
 import {
   ANIMAL_SHOW_TIMES,
-  ANNOUNCEMENTS,
   PARK_HOURS_TEXT,
   TRACTOR_RIDE_TIMES_EAST,
   TRACTOR_RIDE_TIMES_WEST,
@@ -63,16 +62,15 @@ async function voteForLabel(page: Page, label: string) {
 // -- run this file on its own (`npx playwright test e2e/home-page.spec.ts`)
 // rather than interleaved with specs that create their own photos first.
 
-test('root route lands on Home with schedule, hours, and announcements from config', async ({ page }) => {
+// Announcements are staff-managed and live now (not config) -- covered by
+// announcements.spec.ts, not this file.
+test('root route lands on Home with schedule and hours from config', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
   await expect(page.getByText(PARK_HOURS_TEXT)).toBeVisible()
   await expect(scheduleChips(page, 'Animal Shows')).toHaveText(ANIMAL_SHOW_TIMES)
   await expect(scheduleChips(page, 'Tractor Rides — West')).toHaveText(TRACTOR_RIDE_TIMES_WEST)
   await expect(scheduleChips(page, 'Tractor Rides — East')).toHaveText(TRACTOR_RIDE_TIMES_EAST)
-  for (const announcement of ANNOUNCEMENTS) {
-    await expect(page.getByText(announcement.text)).toBeVisible()
-  }
 })
 
 test('no shortlisted photos yet renders an empty state, not a broken image', async ({ page }) => {
