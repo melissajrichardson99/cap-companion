@@ -1,5 +1,6 @@
 // Typed fetch client for the Phase 1 backend endpoints.
 
+import { getDeviceSessionId } from './deviceSession'
 import { getStaffToken } from './staffAuth'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
@@ -328,6 +329,13 @@ export interface ResetSessionResult {
   collectible_cards_reset: number
 }
 
+// Per-Device Sessions Phase 0 -- see backend/app/routers/device_session.py.
+export interface DeviceSession {
+  id: string
+  created_at: string
+  last_active_at: string
+}
+
 export interface Announcement {
   id: string
   text: string
@@ -337,8 +345,12 @@ export interface Announcement {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Device-Session': getDeviceSessionId(),
+      ...init?.headers,
+    },
   })
   if (!res.ok) {
     const body = await res.text()
@@ -446,7 +458,11 @@ export const api = {
     // Not routed through request(): that helper always sets a JSON
     // Content-Type header, which would stop the browser from adding the
     // multipart boundary this upload needs.
-    const res = await fetch(`${API_BASE_URL}/photos/submit`, { method: 'POST', body })
+    const res = await fetch(`${API_BASE_URL}/photos/submit`, {
+      method: 'POST',
+      headers: { 'X-Device-Session': getDeviceSessionId() },
+      body,
+    })
     if (!res.ok) {
       const responseBody = await res.text()
       throw new Error(`POST /photos/submit -> ${res.status}: ${responseBody}`)
@@ -475,7 +491,11 @@ export const api = {
     if (file) body.append('file', file)
     // Not routed through request(): same multipart-vs-JSON-Content-Type
     // reasoning as submitPhoto above.
-    const res = await fetch(`${API_BASE_URL}/passport/generate`, { method: 'POST', body })
+    const res = await fetch(`${API_BASE_URL}/passport/generate`, {
+      method: 'POST',
+      headers: { 'X-Device-Session': getDeviceSessionId() },
+      body,
+    })
     if (!res.ok) {
       const responseBody = await res.text()
       throw new Error(`POST /passport/generate -> ${res.status}: ${responseBody}`)
@@ -483,6 +503,10 @@ export const api = {
     return res.json() as Promise<PassportSession>
   },
   resetSession: () => request<ResetSessionResult>('/session/reset', { method: 'POST' }),
+  // Per-Device Sessions Phase 0 throwaway verification endpoint -- see
+  // backend/app/routers/device_session.py. Not called from any guest-facing
+  // UI yet; exercised via the console (see main.tsx's window.__capWhoami).
+  whoami: () => request<DeviceSession>('/session/whoami'),
   listAnnouncements: () => request<Announcement[]>('/announcements'),
   createAnnouncement: (text: string) =>
     staffRequest<Announcement>('/announcements', { method: 'POST', body: JSON.stringify({ text }) }),

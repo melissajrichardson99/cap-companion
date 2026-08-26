@@ -10,6 +10,7 @@ from app.routers import (
     bingo,
     coins,
     collectibles,
+    device_session,
     hunt,
     map as map_router,
     passport,
@@ -76,6 +77,7 @@ app.include_router(collectibles.router)
 app.include_router(photos.router)
 app.include_router(passport.router)
 app.include_router(session.router)
+app.include_router(device_session.router)
 app.include_router(announcements.router)
 
 

@@ -573,3 +573,16 @@ class PassportSession(BaseModel):
     photo_url: str | None = None
     generated_at: datetime
     stats: PassportStats
+
+
+class DeviceSession(BaseModel):
+    """Per-Device Sessions Phase 0 -- see app/device_session.py.
+
+    Deliberately excludes device_token from the response: the caller already
+    knows its own token (it's the one it sent), so there's no reason to echo
+    it back.
+    """
+
+    id: UUID
+    created_at: datetime
+    last_active_at: datetime
