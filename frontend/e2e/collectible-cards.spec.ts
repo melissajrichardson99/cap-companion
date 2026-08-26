@@ -47,18 +47,25 @@ async function getBingoTileIds(request: APIRequestContext, cardId: string): Prom
   return card.tiles.map((t) => t.id)
 }
 
-// Earns comfortably more than two standard-tier (100 each) card purchases'
-// worth of coins via existing earn-side endpoints, purely over raw HTTP --
-// completing the whole bingo card (130, see cobb-coins.spec.ts) plus the 4
-// Scavenger Hunt characters that don't require a QR-unlock scan first (60)
-// clears 190 on its own; one Puzzle Timer attempt (+12 at 0 hints) pushes it
-// past 200 with room to spare.
-async function earnPlentyOfCoins(request: APIRequestContext): Promise<void> {
+// Enough for a single standard-tier (100) purchase, via one earn-side
+// endpoint only -- completing the whole bingo card (130, see
+// cobb-coins.spec.ts) over raw HTTP. Kept deliberately cheap (25 sequential
+// calls) for the tests below that also drive real UI afterward and need to
+// fit inside Playwright's global per-test timeout.
+async function earnEnoughForOnePurchase(request: APIRequestContext): Promise<void> {
   const cardId = await getBingoCardId(request)
   const tileIds = await getBingoTileIds(request, cardId)
   for (const tileId of tileIds) {
     await request.post(`${API}/bingo/tiles/${tileId}/complete`)
   }
+}
+
+// Enough for two standard-tier (100 each) purchases -- the bingo card (130)
+// plus the 4 Scavenger Hunt characters that don't require a QR-unlock scan
+// first (60) clears 190 on its own; one Puzzle Timer attempt (+12 at 0
+// hints) pushes it past 200.
+async function earnPlentyOfCoins(request: APIRequestContext): Promise<void> {
+  await earnEnoughForOnePurchase(request)
 
   const charactersRes = await request.get(`${API}/hunt/characters`)
   const characters = (await charactersRes.json()) as { id: string; name: string; challenges: { id: string }[] }[]
@@ -103,6 +110,12 @@ async function listCollectibles(request: APIRequestContext): Promise<Collectible
 
 test.describe('Collectible Cards', () => {
   test('purchasing a card deducts coins and adds it to the gallery', async ({ page, request }) => {
+    // Needs coins for two purchases (one via raw API below, one via the UI
+    // walkthrough further down) -- earnPlentyOfCoins, not the cheaper
+    // single-purchase helper. Setup plus a full UI purchase walkthrough is
+    // also more than the default per-test budget covers on a cold
+    // dev-server compile.
+    test.setTimeout(60_000)
     await resetSessionApi(request)
     await earnPlentyOfCoins(request)
     const totalBefore = await getCoinsTotal(request)
@@ -134,7 +147,7 @@ test.describe('Collectible Cards', () => {
     await expect(dialog.locator('.collectible-card-collected-name')).toHaveText('Alex')
     await dialog.getByRole('button', { name: 'Done' }).click()
 
-    await page.getByRole('button', { name: 'Your Collection (2)' }).click()
+    await page.getByRole('tab', { name: 'Your Collection (2)' }).click()
     await expect(page.locator('.collectible-gallery-item')).toHaveCount(2)
   })
 
@@ -162,6 +175,9 @@ test.describe('Collectible Cards', () => {
   test('buying the same animal twice each rolls its own guest_name, independent of the other purchase', async ({
     request,
   }) => {
+    // earnPlentyOfCoins alone is ~45 sequential setup requests -- right at
+    // the edge of the default per-test budget.
+    test.setTimeout(45_000)
     await resetSessionApi(request)
     await earnPlentyOfCoins(request)
 
@@ -178,8 +194,9 @@ test.describe('Collectible Cards', () => {
   })
 
   test('Reset Session clears the gallery and does not restore prior collectibles', async ({ page, request }) => {
+    test.setTimeout(60_000)
     await resetSessionApi(request)
-    await earnPlentyOfCoins(request)
+    await earnEnoughForOnePurchase(request)
     await purchase(request, 'capybara', 'Jordan')
     expect(await listCollectibles(request)).toHaveLength(1)
 
@@ -189,19 +206,22 @@ test.describe('Collectible Cards', () => {
     const resetConfirmDialog = page.getByRole('dialog', { name: 'Reset Session' })
     await resetConfirmDialog.getByRole('button', { name: 'Reset Session' }).click()
     await expect(resetConfirmDialog).toHaveCount(0)
+    // expectCoinTotal opens the nav menu itself and leaves it open (same as
+    // cobb-coins.spec.ts's equivalent test) -- it's already open here, so
+    // selecting the next tab below must not try to open it again.
     await expectCoinTotal(page, 0)
 
     expect(await listCollectibles(request)).toHaveLength(0)
 
-    await openNavMenu(page)
     await page.getByRole('menuitemradio', { name: 'Collectibles' }).click()
-    await page.getByRole('button', { name: /Your Collection \(0\)/ }).click()
+    await page.getByRole('tab', { name: /Your Collection \(0\)/ }).click()
     await expect(page.getByText("You haven't collected any cards yet")).toBeVisible()
   })
 
   test('the card uses the real app logo and has no arrow element in the bottom banner', async ({ page, request }) => {
+    test.setTimeout(60_000)
     await resetSessionApi(request)
-    await earnPlentyOfCoins(request)
+    await earnEnoughForOnePurchase(request)
 
     await page.goto('/')
     await openNavMenu(page)
