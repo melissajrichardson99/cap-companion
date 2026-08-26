@@ -102,6 +102,16 @@
   color: var(--cap-color-sunset-orange-deep);
 }
 
+/* .collectible-purchase-modal-inner is a flex column with align-items:center,
+   so the plain ref div wrapping the card would otherwise shrink-wrap to
+   content instead of stretching -- and .collectible-card-frame's own
+   width:100% can't resolve a percentage against that indeterminate width, so
+   CSS collapses it to ~0 (the classic circular-percentage rule) instead of
+   the intended card size. An explicit width here breaks that cycle. */
+.collectible-purchase-reveal-card-wrap {
+  width: 100%;
+}
+
 .collectible-purchase-reveal-card {
   max-width: 260px;
 }

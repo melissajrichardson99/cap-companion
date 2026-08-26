@@ -485,6 +485,11 @@
   align-items: center;
   gap: 6px;
   text-align: center;
+  /* Grid items default to min-width:auto, which lets a nowrap descendant's
+     intrinsic width force the whole grid (and .bingo-milestones-card around
+     it) wider than its column share. Without this, the reward pill below
+     pushed the card past its own border. */
+  min-width: 0;
 }
 
 /* Small illustrative dot grid -- deliberately not built from the same
@@ -548,18 +553,31 @@
   font-size: 12px;
   color: var(--cap-color-body-text);
   margin: 0;
+  /* Grows to soak up the row's leftover height (grid items stretch to the
+     tallest card in the row by default) so the reward pill below lands on
+     the same baseline in every card, whether its own description wraps to
+     one line or two. */
+  flex-grow: 1;
 }
 
 /* Same wood-sign pill treatment as .nav-menu-coins/.collectibles-total, for
    consistency with the app's other small reward chips. */
 .bingo-milestone-example-reward {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   font-family: var(--cap-font-display);
   font-weight: 700;
   font-size: 12px;
   padding: 4px 10px;
-  border-radius: var(--cap-radius-pill);
+  border-radius: var(--cap-radius-md);
   border: 2px solid var(--cap-color-outline);
   background: var(--cap-color-wood-sign);
   color: var(--cap-color-on-header);
+  max-width: 100%;
+}
+
+.bingo-milestone-example-reward-line {
   white-space: nowrap;
 }

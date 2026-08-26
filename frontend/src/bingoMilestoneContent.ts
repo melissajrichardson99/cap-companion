@@ -59,6 +59,9 @@ export function bingoMilestoneCoinAmount(type: BingoMilestoneExample['type']): n
   return BINGO_MILESTONE_COIN_AMOUNTS[type]
 }
 
-export function bingoMilestoneRewardText(type: BingoMilestoneExample['type']): string {
-  return `🎮 Bonus Minigame + 🪙 ${bingoMilestoneCoinAmount(type)} Cobb Coins`
+// Split across two lines (minigame, then coins) rather than one long nowrap
+// string -- a single line wide enough for "🎮 Bonus Minigame + 🪙 50 Cobb
+// Coins" forced the grid cell (and the card around it) wider than intended.
+export function bingoMilestoneRewardLines(type: BingoMilestoneExample['type']): [string, string] {
+  return ['🎮 Bonus Minigame', `🪙 +${bingoMilestoneCoinAmount(type)} Cobb Coins`]
 }

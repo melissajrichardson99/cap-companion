@@ -20,9 +20,13 @@
 }
 
 .btn-primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--cap-color-sunset-orange);
+  border-color: var(--cap-color-sunset-orange-deep);
   color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--cap-color-sunset-orange-deep);
 }
 
 .btn-secondary {

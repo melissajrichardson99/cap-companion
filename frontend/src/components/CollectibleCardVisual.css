@@ -60,23 +60,12 @@
   object-fit: cover;
 }
 
-.collectible-card-mountain {
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 25%;
-  height: auto;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
-}
-
 .collectible-card-logo {
   position: absolute;
-  top: 20%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 58%;
-  max-width: 170px;
+  top: 8px;
+  left: 8px;
+  width: 22%;
+  max-width: 56px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 

@@ -84,7 +84,7 @@ export function CollectiblePurchaseModal({ entry, onClose, onPurchase }: Collect
       <Modal onClose={onClose} labelledBy="collectible-purchase-title" className="collectible-purchase-modal-frame">
         <div className="collectible-purchase-modal-inner">
           <p className="collectible-purchase-reveal-eyebrow">You collected a new card!</p>
-          <div ref={cardRef}>
+          <div ref={cardRef} className="collectible-purchase-reveal-card-wrap">
             <CollectibleCardVisual
               animalSlug={card.animal_slug}
               photoIndex={card.photo_index}

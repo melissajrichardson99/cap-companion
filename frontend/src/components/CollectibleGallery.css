@@ -53,6 +53,14 @@
   gap: 8px;
 }
 
+/* Same fix as CollectiblePurchaseModal's reveal-card-wrap: this flex column's
+   align-items:center would otherwise let the plain ref div shrink-wrap,
+   collapsing .collectible-card-frame's width:100% via CSS's circular-
+   percentage rule instead of sizing the card to the grid cell. */
+.collectible-gallery-item-card-wrap {
+  width: 100%;
+}
+
 .collectible-gallery-item-actions {
   display: flex;
   gap: 6px;

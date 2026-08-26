@@ -11,26 +11,6 @@ interface CollectibleCardVisualProps {
   className?: string
 }
 
-// Snow-capped twin-peak silhouette -- the mockup's "mountain motif near the
-// top", separate decorative element from the real logo (which has no
-// mountain of its own -- just the kangaroo/wood-ring badge). Flat-outline
-// sticker style, same stroke/fill recipe as NavIcons.tsx's icon set.
-function MountainMotif({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 100 40" aria-hidden="true">
-      <path
-        d="M2 38 L26 10 L38 24 L50 6 L74 34 L82 20 L98 38 Z"
-        fill="#6e4523"
-        stroke="#14181a"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      <path d="M50 6 L58 16 L50 15 L43 17 Z" fill="#f0dec0" stroke="#14181a" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M26 10 L32 18 L26 17 L21 19 Z" fill="#f0dec0" stroke="#14181a" strokeWidth="2" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 function GlobeIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
@@ -47,7 +27,8 @@ function GlobeIcon({ className }: { className?: string }) {
 // this same component, then rasterize whichever DOM node wraps it via
 // collectibleCardImage.ts's downloadCard/shareCard. Deliberate deviations
 // from the reference mockup (per Melissa): the real app logo instead of the
-// mockup's placeholder, and no arrow icon in the bottom banner.
+// mockup's placeholder, no arrow icon in the bottom banner, and the logo
+// shrunk to a corner badge (no mountain motif) so the photo dominates.
 export function CollectibleCardVisual({ animalSlug, photoIndex, guestName, className }: CollectibleCardVisualProps) {
   const animal = ANIMALS.find((a) => a.slug === animalSlug)
   const animalName = animal?.name ?? animalSlug
@@ -58,7 +39,6 @@ export function CollectibleCardVisual({ animalSlug, photoIndex, guestName, class
       <div className="collectible-card-visual cap-parchment-card">
         <div className="collectible-card-photo-wrap">
           <AnimalImage candidates={imageCandidates(animalSlug, photoIndex)} alt={photoAlt} className="collectible-card-photo" />
-          <MountainMotif className="collectible-card-mountain" />
           <img className="collectible-card-logo" src={logo} alt="Cobb's Adventure Park" />
         </div>
 

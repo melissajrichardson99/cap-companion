@@ -55,7 +55,7 @@ function CollectibleGalleryItem({ card }: CollectibleGalleryItemProps) {
 
   return (
     <div className="collectible-gallery-item">
-      <div ref={cardRef}>
+      <div ref={cardRef} className="collectible-gallery-item-card-wrap">
         <CollectibleCardVisual
           animalSlug={card.animal_slug}
           photoIndex={card.photo_index}
