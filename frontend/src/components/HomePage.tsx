@@ -12,13 +12,18 @@ import {
 } from '../homePageContent'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { fetchCurrentWeather, type CurrentWeather } from '../weather'
-import { CameraIcon, HomeIcon } from './NavIcons'
+import { CameraIcon, ClipboardIcon, GridIcon, HomeIcon, MapPinIcon, PawIcon } from './NavIcons'
 import { PhotoLightbox } from './PhotoLightbox'
 import './HomePage.css'
 
 interface HomePageProps {
   onBrowsePhotos: () => void
   announcements: Announcement[] | null
+  onNavigateMap: () => void
+  onNavigateBingo: () => void
+  onScanQr: () => void
+  onNavigateScoring: () => void
+  onNavigateCollectibles: () => void
 }
 
 // True root route (Plan.md build-priority item 4): a real landing page
@@ -29,7 +34,15 @@ interface HomePageProps {
 // tab). The only other live network call on this page is the weather fetch,
 // and it's designed to fail without blocking anything else from rendering
 // (see the weatherFailed branch below).
-export function HomePage({ onBrowsePhotos, announcements }: HomePageProps) {
+export function HomePage({
+  onBrowsePhotos,
+  announcements,
+  onNavigateMap,
+  onNavigateBingo,
+  onScanQr,
+  onNavigateScoring,
+  onNavigateCollectibles,
+}: HomePageProps) {
   const [weather, setWeather] = useState<CurrentWeather | null>(null)
   const [weatherFailed, setWeatherFailed] = useState(false)
 
@@ -198,6 +211,33 @@ export function HomePage({ onBrowsePhotos, announcements }: HomePageProps) {
           </a>
         </section>
       </div>
+
+      <section className="home-card cap-parchment-card">
+        <h2 className="home-section-title">Quick Links</h2>
+        <div className="home-quicknav-grid">
+          <button type="button" className="home-quicknav-btn" onClick={onNavigateMap}>
+            <MapPinIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Map</span>
+          </button>
+          <button type="button" className="home-quicknav-btn" onClick={onNavigateBingo}>
+            <GridIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Bingo Card</span>
+          </button>
+          <button type="button" className="home-quicknav-btn" onClick={onScanQr}>
+            <CameraIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Scan QR</span>
+          </button>
+          <button type="button" className="home-quicknav-btn" onClick={onNavigateScoring}>
+            <ClipboardIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Scoring Sheet</span>
+          </button>
+          <button type="button" className="home-quicknav-btn" onClick={onNavigateCollectibles}>
+            <PawIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Collectibles</span>
+          </button>
+        </div>
+        <p className="home-quicknav-note">Looking for something else? Check the menu in the top-right corner.</p>
+      </section>
 
       {lightboxOpen && photoOfTheDay && (
         <PhotoLightbox

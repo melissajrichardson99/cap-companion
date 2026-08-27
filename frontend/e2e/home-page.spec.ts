@@ -118,6 +118,36 @@ test('navbar logo returns to Home from another screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
 })
 
+test('Quick Links quick-nav card links to the right destinations', async ({ page }) => {
+  await page.goto('/')
+  const quicknav = page.locator('.home-quicknav-grid')
+  await expect(quicknav.getByRole('button', { name: 'Map' })).toBeVisible()
+  await expect(quicknav.getByRole('button', { name: 'Bingo Card' })).toBeVisible()
+  await expect(quicknav.getByRole('button', { name: 'Scan QR' })).toBeVisible()
+  await expect(quicknav.getByRole('button', { name: 'Scoring Sheet' })).toBeVisible()
+  await expect(quicknav.getByRole('button', { name: 'Collectibles' })).toBeVisible()
+  await expect(page.getByText('Looking for something else? Check the menu in the top-right corner.')).toBeVisible()
+
+  await quicknav.getByRole('button', { name: 'Map' }).click()
+  await expect(page.getByRole('heading', { name: 'Park Map' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Go to home page' }).click()
+  await quicknav.getByRole('button', { name: 'Bingo Card' }).click()
+  await expect(page.getByRole('heading', { name: 'Bingo Card' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Go to home page' }).click()
+  await quicknav.getByRole('button', { name: 'Scoring Sheet' }).click()
+  await expect(page.getByRole('heading', { name: 'Scoring Sheet' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Go to home page' }).click()
+  await quicknav.getByRole('button', { name: 'Collectibles' }).click()
+  await expect(page.getByRole('heading', { name: 'Collectibles' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Go to home page' }).click()
+  await quicknav.getByRole('button', { name: 'Scan QR' }).click()
+  await expect(page.getByText('Scan a Code')).toBeVisible()
+})
+
 test('Photo of the Day renders the actual highest-voted shortlisted photo', async ({ page, context, browser }) => {
   const lowLabel = `E2E Home Low ${Date.now()}`
   const highLabel = `E2E Home High ${Date.now()}`

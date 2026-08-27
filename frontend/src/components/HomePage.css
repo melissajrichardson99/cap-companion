@@ -433,3 +433,61 @@
   box-shadow: var(--cap-shadow-pop);
   transform: translate(-1px, -1px);
 }
+
+/* Quick-access shortcuts (guest feedback: the top-right dropdown menu was
+   easy to miss) -- same icon-grid-button treatment as MapScreen's "Take Me
+   There" card (.map-keyspot-*) so this reads as the same established pattern
+   rather than a new one, just without that card's wood-frame wrapper since
+   no other Home Page section uses one either. */
+.home-quicknav-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--cap-space-3);
+}
+
+.home-quicknav-btn {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cap-space-1);
+  flex: 1 1 140px;
+  max-width: 160px;
+  padding: var(--cap-space-3) var(--cap-space-2);
+  border-radius: var(--cap-radius-md);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.home-quicknav-btn:hover {
+  background: var(--cap-color-sunset-orange-deep);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--cap-shadow-pop);
+}
+
+.home-quicknav-btn-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.home-quicknav-btn-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.home-quicknav-note {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--cap-color-body-text);
+  margin: 0;
+  text-align: center;
+}

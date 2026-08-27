@@ -478,6 +478,23 @@ function App() {
               setShowHome(false)
               setActiveTab('photos')
             }}
+            onNavigateMap={() => {
+              setShowHome(false)
+              setActiveTab('map')
+            }}
+            onNavigateBingo={() => {
+              setShowHome(false)
+              setActiveTab('bingo')
+            }}
+            onScanQr={() => setShowScanEntry(true)}
+            onNavigateScoring={() => {
+              setShowHome(false)
+              setActiveTab('scoring')
+            }}
+            onNavigateCollectibles={() => {
+              setShowHome(false)
+              setActiveTab('collectibles')
+            }}
           />
         )}
         {!showHome && activeTab === 'map' && (
