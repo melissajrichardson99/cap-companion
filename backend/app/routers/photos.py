@@ -2,8 +2,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
+from app.device_session import get_or_create_session
 from app.errors import ConflictError, NotFoundError
-from app.models import CreateVoteRequest, PhotoSubmission
+from app.models import DeviceSession, PhotoSubmission
 from app.services import photos as photos_service
 from app.staff_auth import require_staff
 
@@ -24,8 +25,8 @@ def list_pending() -> list[PhotoSubmission]:
 
 
 @router.get("/gallery", response_model=list[PhotoSubmission])
-def gallery(voter_session_id: str | None = None) -> list[PhotoSubmission]:
-    return photos_service.list_gallery(voter_session_id)
+def gallery(session: DeviceSession = Depends(get_or_create_session)) -> list[PhotoSubmission]:
+    return photos_service.list_gallery(session.id)
 
 
 @router.get("/shortlisted", response_model=list[PhotoSubmission], dependencies=[Depends(require_staff)])
@@ -80,9 +81,9 @@ def delete(submission_id: UUID) -> None:
 
 
 @router.post("/{submission_id}/vote", response_model=PhotoSubmission)
-def cast_vote(submission_id: UUID, body: CreateVoteRequest) -> PhotoSubmission:
+def cast_vote(submission_id: UUID, session: DeviceSession = Depends(get_or_create_session)) -> PhotoSubmission:
     try:
-        return photos_service.vote(submission_id, body.voter_session_id)
+        return photos_service.vote(submission_id, session.id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ConflictError as exc:

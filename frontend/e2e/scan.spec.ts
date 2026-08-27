@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { seedDeviceSession } from './deviceSessionHelper'
 
 // Covers QR/manual-code scanning (migration 009_scan_codes.sql) and the
 // Scavenger Hunt lock/unlock gate built on top of it (migration
@@ -12,17 +13,32 @@ import { test, expect, type Page } from '@playwright/test'
 // simulating someone else's camera app opening it fresh rather than in-app
 // navigation).
 //
+// Per-Device Sessions Phase 6b (migration 030, final phase): Hunt progress
+// (including unlocked_at) is now scoped per device session, not global --
+// see hunt-sessions.spec.ts for the dedicated two-session-isolation and
+// fresh-deep-link-session coverage that change enables. This file's own
+// tests still want one continuous "guest visit" across every test below
+// (several build on an earlier test's unlock, e.g. the case-insensitive
+// re-scan test), so every test explicitly seeds the SAME device-session
+// token (SESSION_TOKEN below) via beforeEach -- without that, Playwright's
+// default fresh-context-per-test would otherwise hand each test its own
+// independent, independently-locked roster. This also means this file no
+// longer shares any Hunt state with scavenger-hunt.spec.ts's own session
+// (each file uses its own SESSION_TOKEN) or needs to run in any particular
+// order relative to it -- unlocking Kangaroo here has no effect on any other
+// file's session.
+//
 // Deliberately never answers/advances a Hunt challenge past Challenge 1
-// here -- only asserts the modal opened on the right character -- so this
-// file doesn't mutate hunt_progress.challenges_completed and can run in any
-// order relative to scavenger-hunt.spec.ts, which assumes every character
-// starts at 0/3. It DOES unlock Kangaroo (via 'brave-otter') as a side
-// effect of scanning, same as any real scan -- that's idempotent and
-// scavenger-hunt.spec.ts's Kangaroo test accounts for it possibly already
-// being unlocked.
+// here -- only asserts the modal opened on the right character.
 //
 // The guest nav is a closed-by-default hamburger dropdown -- "Scan QR"
 // lives inside it, so every test opens it first via "Open menu".
+
+const SESSION_TOKEN = crypto.randomUUID()
+
+test.beforeEach(async ({ page }) => {
+  await seedDeviceSession(page, SESSION_TOKEN)
+})
 
 async function openScanEntry(page: Page): Promise<void> {
   await page.goto('/')

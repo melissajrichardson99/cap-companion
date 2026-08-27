@@ -12,10 +12,13 @@ const CATEGORY_LABEL: Record<MapNode['category'], string> = {
   seasonal: 'Seasonal',
 }
 
-const STATE_LABEL: Record<MapNode['state'], string> = {
+// This pill reflects only the calling session's own visit progress
+// (node.visited) -- staff-managed closed status is shown separately below,
+// via the additive "This attraction is currently closed" paragraph, since
+// the two are independent concepts (see map_nodes.is_open).
+const STATE_LABEL: Record<'not_visited' | 'visited', string> = {
   not_visited: 'Not Visited',
   visited: 'Visited',
-  closed: 'Closed',
 }
 
 interface NodeDetailPopupProps {
@@ -126,7 +129,9 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
             </span>
             {node.name}
           </h2>
-          <span className={`state-pill state-pill-${node.state}`}>{STATE_LABEL[node.state]}</span>
+          <span className={`state-pill state-pill-${node.visited ? 'visited' : 'not_visited'}`}>
+            {STATE_LABEL[node.visited ? 'visited' : 'not_visited']}
+          </span>
         </div>
         <p className="node-detail-category">{CATEGORY_LABEL[node.category]}</p>
         <p className="node-detail-description">{node.description}</p>
@@ -157,7 +162,7 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={step === 'submitting'}>
             Close
           </button>
-          {node.state === 'not_visited' && (
+          {!node.visited && (
             <button
               type="button"
               className="btn btn-primary"
@@ -167,7 +172,6 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
               Mark Visited
             </button>
           )}
-          {node.state === 'closed' && <span className="node-detail-closed-note">Currently closed by park staff.</span>}
         </div>
         {/* Only reachable here when there was nothing to confirm (queue stayed
             empty) -- startMarkVisited went straight to submit(). */}

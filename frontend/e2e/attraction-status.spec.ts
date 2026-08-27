@@ -1,15 +1,17 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { apiStaffLogin, loginAsStaff } from './staffAuthHelper'
+import { seedDeviceSession, withSession } from './deviceSessionHelper'
 
 // Staff-managed open/closed status (map_nodes.is_open) -- purely visual/
-// informational on the guest Map, backed by a column independent of
-// map_nodes.state (which tracks a guest's own visit progress and is wiped
-// by Reset Session; is_open must survive it). Ticket Booth is used for the
-// generic-node assertions below because it's untouched by every other e2e
-// spec and has zero linked bingo tiles, so "Mark Visited" completes in a
-// single click with no tile-confirmation queue in the way. Arcade Pad is
-// used for the child-inheritance test since it's the parent-node case this
-// feature explicitly has to get right.
+// informational on the guest Map, backed by a column independent of a
+// guest's own visit progress (node_visits, Per-Device Sessions Phase 3;
+// per-session and wiped by that session's own Reset Session call -- is_open
+// must survive it regardless). Ticket Booth is used for the generic-node
+// assertions below because it's untouched by every other e2e spec and has
+// zero linked bingo tiles, so "Mark Visited" completes in a single click
+// with no tile-confirmation queue in the way. Arcade Pad is used for the
+// child-inheritance test since it's the parent-node case this feature
+// explicitly has to get right.
 
 const API = 'http://localhost:8000'
 
@@ -19,8 +21,19 @@ async function openMapTab(page: Page): Promise<void> {
   await page.getByRole('menuitemradio', { name: 'Map' }).click()
 }
 
-async function getMapNodes(request: APIRequestContext): Promise<{ id: string; name: string; state: string; is_open: boolean }[]> {
-  const res = await request.get(`${API}/map/nodes`)
+interface MapNodeRow {
+  id: string
+  name: string
+  visited: boolean
+  is_open: boolean
+}
+
+// GET /map/nodes requires a device session header (Phase 3) -- `token` only
+// needs to resolve *a* session for the two tests below that just read the
+// global is_open field; the one test that also asserts on `visited` passes
+// the same token page's own session is seeded with (see seedDeviceSession).
+async function getMapNodes(request: APIRequestContext, token: string): Promise<MapNodeRow[]> {
+  const res = await request.get(`${API}/map/nodes`, withSession(token))
   return res.json()
 }
 
@@ -38,7 +51,7 @@ test.describe('Attraction open/closed status', () => {
   // pattern as announcements.spec.ts's afterEach.
   test.afterEach(async ({ request }) => {
     const token = await apiStaffLogin(request)
-    const rows = await getMapNodes(request)
+    const rows = await getMapNodes(request, crypto.randomUUID())
     const targets = rows.filter((r) => r.name === 'Ticket Booth' || r.name === 'Arcade Pad')
     await Promise.all(targets.map((r) => setNodeOpen(request, token, r.id, true)))
   })
@@ -89,10 +102,16 @@ test.describe('Attraction open/closed status', () => {
     page,
     request,
   }) => {
-    const token = await apiStaffLogin(request)
-    const rows = await getMapNodes(request)
+    const staffToken = await apiStaffLogin(request)
+    // A device session explicitly seeded into `page` and reused for the raw
+    // getMapNodes calls below, so they observe the same session's visited
+    // status `page`'s own UI actions write (Per-Device Sessions Phase 3).
+    const deviceToken = crypto.randomUUID()
+    await seedDeviceSession(page, deviceToken)
+
+    const rows = await getMapNodes(request, deviceToken)
     const nodeId = rows.find((r) => r.name === 'Ticket Booth')!.id
-    await setNodeOpen(request, token, nodeId, false)
+    await setNodeOpen(request, staffToken, nodeId, false)
 
     await openMapTab(page)
     await page.locator('.map-pin[aria-label^="Ticket Booth"]').click()
@@ -108,9 +127,9 @@ test.describe('Attraction open/closed status', () => {
     await dialog.getByRole('button', { name: 'Mark Visited' }).click()
     await expect(dialog).toHaveCount(0)
 
-    let updatedRows = await getMapNodes(request)
+    let updatedRows = await getMapNodes(request, deviceToken)
     let ticketBooth = updatedRows.find((r) => r.name === 'Ticket Booth')!
-    expect(ticketBooth.state).toBe('visited')
+    expect(ticketBooth.visited).toBe(true)
     expect(ticketBooth.is_open).toBe(false)
 
     // Reset Session (NavMenu -> Reset Session -> confirm), same flow as
@@ -121,10 +140,10 @@ test.describe('Attraction open/closed status', () => {
     await resetConfirmDialog.getByRole('button', { name: 'Reset Session' }).click()
     await expect(resetConfirmDialog).toHaveCount(0)
 
-    updatedRows = await getMapNodes(request)
+    updatedRows = await getMapNodes(request, deviceToken)
     ticketBooth = updatedRows.find((r) => r.name === 'Ticket Booth')!
-    // Reset Session clears visit progress as normal...
-    expect(ticketBooth.state).toBe('not_visited')
+    // Reset Session clears this session's own visit progress as normal...
+    expect(ticketBooth.visited).toBe(false)
     // ...but does not touch staff-set closed status.
     expect(ticketBooth.is_open).toBe(false)
   })
@@ -134,7 +153,7 @@ test.describe('Attraction open/closed status', () => {
     request,
   }) => {
     const token = await apiStaffLogin(request)
-    const rows = await getMapNodes(request)
+    const rows = await getMapNodes(request, crypto.randomUUID())
     const nodeId = rows.find((r) => r.name === 'Arcade Pad')!.id
     await setNodeOpen(request, token, nodeId, false)
 

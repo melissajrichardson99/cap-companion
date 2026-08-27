@@ -134,7 +134,7 @@ test('Photo of the Day renders the actual highest-voted shortlisted photo', asyn
   await voteForLabel(page, highLabel)
   await voteForLabel(page, lowLabel)
 
-  // Voter B: a second, independent voter_session_id (separate browser
+  // Voter B: a second, independent device session (separate browser
   // context -> separate localStorage) casting a second vote for highLabel
   // only, so it ends up strictly ahead (2 votes vs. 1).
   const voterBContext = await browser.newContext()

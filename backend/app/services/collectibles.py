@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import random
 from datetime import datetime
+from uuid import UUID
 
 from app.errors import ConflictError, NotFoundError
 from app.models import CollectibleCard, CollectibleCatalogEntry, CollectibleTier
@@ -70,18 +71,25 @@ def _row_to_card(row: dict) -> CollectibleCard:
     )
 
 
-def list_cards() -> list[CollectibleCard]:
+def list_cards(session_id: UUID) -> list[CollectibleCard]:
     client = get_supabase_client()
-    rows = client.table("collectible_redemptions").select("*").order("created_at", desc=True).execute().data
+    rows = (
+        client.table("collectible_redemptions")
+        .select("*")
+        .eq("session_id", str(session_id))
+        .order("created_at", desc=True)
+        .execute()
+        .data
+    )
     return [_row_to_card(r) for r in rows]
 
 
-def purchase(animal_slug: str, guest_name: str) -> CollectibleCard:
+def purchase(animal_slug: str, guest_name: str, session_id: UUID) -> CollectibleCard:
     if animal_slug not in ANIMAL_SLUGS:
         raise NotFoundError(f"Unknown animal '{animal_slug}'")
 
     price = price_for(animal_slug)
-    if coins_service.get_total() < price:
+    if coins_service.get_total(session_id) < price:
         raise ConflictError(f"Not enough Cobb Coins -- this card costs {price}")
 
     client = get_supabase_client()
@@ -94,6 +102,7 @@ def purchase(animal_slug: str, guest_name: str) -> CollectibleCard:
                 "photo_index": random.randint(1, PHOTO_POOL_SIZE),
                 "guest_name": guest_name,
                 "coins_spent": price,
+                "session_id": str(session_id),
             }
         )
         .execute()

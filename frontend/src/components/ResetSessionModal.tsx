@@ -10,12 +10,13 @@ interface ResetSessionModalProps {
 }
 
 // Narrower, guest-facing counterpart to backend/scripts/reset_demo_data.py
-// (dev-only, clears far more). This clears Bingo tiles, Map visited state,
-// Scavenger Hunt progress, the Cobb Coins balance, and every purchased
-// Collectible Card -- all tied to this shared kiosk session, not persistent
-// identity -- while photos/puzzle times are untouched -- so it's safe to
-// expose in the nav dropdown, but it's still destructive and irreversible,
-// hence the confirm step.
+// (dev-only, clears far more). This clears Bingo tiles and Scavenger Hunt
+// progress (global), this device's Map visited status (Per-Device Sessions
+// Phase 3), the Cobb Coins balance, every purchased Collectible Card, this
+// device's Puzzle Timer attempts, and this device's Scoring Sheet sessions
+// -- while photos are untouched -- so it's safe to expose in the nav
+// dropdown, but it's still destructive and irreversible, hence the confirm
+// step.
 export function ResetSessionModal({ onClose, onReset }: ResetSessionModalProps) {
   const [resetting, setResetting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,8 +44,9 @@ export function ResetSessionModal({ onClose, onReset }: ResetSessionModalProps) 
           Reset Session
         </h2>
         <p className="reset-session-body">
-          This clears every Bingo tile, Map visit, and Scavenger Hunt challenge back to not-started, resets Cobb
-          Coins to 0, and clears your Collectible Cards gallery. Photos and puzzle times are not affected.
+          This clears every Bingo tile and Scavenger Hunt challenge back to not-started, resets your Map visit
+          progress and Cobb Coins to 0, clears your Collectible Cards gallery, and clears your Puzzle Timer attempts
+          and Scoring Sheet sessions. Photos are not affected.
         </p>
         <p className="reset-session-warning">Are you sure? This can&rsquo;t be undone.</p>
         {error && <p className="screen-error">Couldn&rsquo;t reset: {error}</p>}

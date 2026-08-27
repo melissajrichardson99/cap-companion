@@ -1,0 +1,64 @@
+-- CAP Companion App — migration 027: Per-Device Sessions Phase 4
+-- (Family Passport)
+--
+-- Scopes passport_sessions to device_sessions (migration 023), attributing
+-- each generated passport to the device that generated it. This is a schema
+-- change only for *ownership attribution* at write time -- there is no
+-- GET /passport read endpoint to scope (app/routers/passport.py only ever
+-- exposes POST /passport/generate, whose response is returned once and never
+-- re-fetched by id), so unlike Phases 1-3 there's no existence-leak or
+-- cross-session-read concern being closed here.
+--
+-- _compute_stats (app/services/passport.py) also gets two read-scoping
+-- fixes this phase, no schema involved: its score_sheet_sessions and
+-- puzzle_attempts queries were still reading globally despite both tables
+-- already being device_session_id/session_id-scoped since migration 025 --
+-- see that function's updated comment.
+--
+-- Deliberately NOT added to session_reset.py's per-session deletes, unlike
+-- every other table scoped in Phases 1-3: a passport is a one-time
+-- end-of-visit keepsake (schema.sql's comment on passport_sessions.stats --
+-- "a passport is a one-time end-of-visit keepsake whose numbers must not
+-- drift"), the same deliberate exception Reset Session already carves out
+-- for Favorite Photo ("this still leaves staff requests, photos, and
+-- passports untouched" -- session_reset.py's module docstring, unchanged by
+-- this migration). Scoping this table to a session is about attribution,
+-- not about making it resettable.
+--
+-- This is safe specifically because Reset Session does not rotate the
+-- device token -- confirmed by reading both sides: frontend/src/
+-- deviceSession.ts's getDeviceSessionId() mints the token once and never
+-- removes it from localStorage (no code path calls
+-- localStorage.removeItem on it, unlike staffAuth.ts's own token), and
+-- POST /session/reset resolves that same token to the same
+-- device_sessions.id via get_or_create_session, clearing only other
+-- tables' rows under it. So a family that generates a Passport, keeps
+-- playing, hits Reset Session, and generates a second Passport does so
+-- under the *same* session_id as their first one. There's no unique
+-- constraint on passport_sessions.session_id and generate_passport does a
+-- plain insert (not an upsert), so this was already supported before this
+-- migration existed (see family-passport.spec.ts's pre-existing "generating
+-- a second passport in the same session shows the prompt again" test) --
+-- confirmed live post-migration too: generate, reset, generate again under
+-- one token succeeds with a new row id, and the pre-reset row is left
+-- untouched. Covered by family-passport.spec.ts's "still works after Reset
+-- Session" test.
+--
+-- Clean cutover, not a backfill: same reasoning as migrations 024/025/026 --
+-- this is a POC with no real guest data worth preserving.
+--
+-- No grant/alter-default-privileges block needed, same reasoning as
+-- migrations 024/025: ALTER TABLE ADD COLUMN on a table already granted
+-- service_role privileges (passport_sessions via migration 017) is a
+-- table-level grant, not column-level. Verify with a live round-trip anyway
+-- per this project's standing "queries silently return empty/stale, no
+-- error" gotcha.
+--
+-- Run this in the Supabase SQL editor against the live project.
+-- Safe to run more than once: the delete is idempotent (no-op once empty)
+-- and the column add is guarded.
+
+delete from passport_sessions;
+
+alter table passport_sessions
+    add column if not exists session_id uuid not null references device_sessions(id);

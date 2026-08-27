@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { test, expect, type Page, type Response } from '@playwright/test'
+import { test, expect, type APIRequestContext, type Page, type Response } from '@playwright/test'
+import { seedDeviceSession, withSession } from './deviceSessionHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -13,13 +14,28 @@ const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
 // dev Supabase project via the backend, same as the other e2e specs -- no
 // mocking.
 //
-// Named to sort between contact-staff and favorite-photo, so in a full
-// suite run only cobb-coins.spec.ts's 1 puzzle attempt + 1 bingo tile have
-// landed before this file runs. The stats assertions below use before/after
-// deltas (not absolute counts) specifically so this file's own checks are
-// correct whether run standalone (clean DB) or as part of the full suite
-// (some cumulative state already present) -- see PassportStats's snapshot
-// design in app/services/passport.py.
+// Every stat this rollup reads (Coins, Puzzle Timer, Bingo, and now
+// Scavenger Hunt as of Phase 6b) is scoped to device_session_id, so this
+// file's own fresh random tokens never see any other spec file's state
+// regardless of run order -- unlike before Phase 6b, when Hunt's still-global
+// progress meant a fresh token here could still observe another file's Hunt
+// completions. The stats assertions below still use before/after deltas
+// (not absolute counts) rather than relying on that isolation alone -- see
+// PassportStats's snapshot design in app/services/passport.py.
+//
+// Per-Device Sessions Phase 4 (migration 027): passport_sessions is now
+// scoped to the calling device (attribution only -- see that migration's
+// header for why it's deliberately NOT wired into Reset Session), and
+// _compute_stats' Scoring Sheet / Puzzle Timer reads are now correctly
+// scoped to device_session_id too (Coins already was, since Phase 1; Bingo
+// joined them in Phase 6a; Scavenger Hunt joined them in Phase 6b, migration
+// 030, the final phase). Every UI-driven test below explicitly seeds a
+// device-session token first, same deviceSessionHelper.ts pattern
+// established for Coins/Collectibles/Puzzle Timer/Scoring Sheet, so a test
+// needing raw API calls in the same session as its own `page` can do so via
+// withSession(token).
+
+const API = 'http://localhost:8000'
 
 interface PassportStats {
   scavenger_hunt_characters_completed: number
@@ -51,6 +67,38 @@ async function openMenu(page: Page) {
   await page.getByRole('button', { name: 'Open menu' }).click()
 }
 
+// Seeds a device-session token before first navigation (must happen before
+// page.goto -- see deviceSessionHelper.ts) and returns it, so a test that
+// also needs raw API calls (e.g. the isolation test below) can attach the
+// same token via withSession().
+async function openApp(page: Page, token: string = crypto.randomUUID()): Promise<string> {
+  await seedDeviceSession(page, token)
+  await page.goto('/')
+  return token
+}
+
+// Raw-HTTP counterpart to generatePassport() below, for the isolation test
+// -- no review-prompt popup or card rendering to drive through, just the
+// stats snapshot the endpoint returns.
+async function generatePassportRaw(
+  request: APIRequestContext,
+  token: string,
+  familyLabel: string,
+): Promise<PassportSession> {
+  const res = await request.post(`${API}/passport/generate`, {
+    ...withSession(token),
+    multipart: { family_label: familyLabel },
+  })
+  expect(res.ok()).toBe(true)
+  return res.json()
+}
+
+async function getCoinsTotal(request: APIRequestContext, token: string): Promise<number> {
+  const res = await request.get(`${API}/coins/summary`, withSession(token))
+  const body = (await res.json()) as { total: number }
+  return body.total
+}
+
 async function generatePassport(page: Page, familyLabel: string, photoPath?: string): Promise<PassportSession> {
   await openMenu(page)
   await page.getByRole('button', { name: 'Generate Passport' }).click()
@@ -78,7 +126,7 @@ async function generatePassport(page: Page, familyLabel: string, photoPath?: str
 
 test.describe('Family Passport', () => {
   test('generates without a photo -- the card renders with no photo element', async ({ page }) => {
-    await page.goto('/')
+    await openApp(page)
     const session = await generatePassport(page, `No Photo Family ${Date.now()}`)
 
     expect(session.photo_url).toBeNull()
@@ -91,7 +139,7 @@ test.describe('Family Passport', () => {
   })
 
   test('generates with a group photo -- the card displays it', async ({ page }) => {
-    await page.goto('/')
+    await openApp(page)
     const session = await generatePassport(page, `Photo Family ${Date.now()}`, FIXTURE_PHOTO)
 
     expect(session.photo_url).not.toBeNull()
@@ -102,7 +150,7 @@ test.describe('Family Passport', () => {
   test('stats reflect real completions across bingo, puzzles, and scoring sheet, and the title follows the strongest category', async ({
     page,
   }) => {
-    await page.goto('/')
+    await openApp(page)
 
     // Baseline: whatever's already true of the shared demo data before this
     // test's own actions below (0 in a standalone run, or a little
@@ -193,7 +241,7 @@ test.describe('Family Passport', () => {
 
   test.describe('review-prompt popup', () => {
     test('appears immediately after generation, before the passport card', async ({ page }) => {
-      await page.goto('/')
+      await openApp(page)
       await openMenu(page)
       await page.getByRole('button', { name: 'Generate Passport' }).click()
       const dialog = passportDialog(page)
@@ -214,7 +262,7 @@ test.describe('Family Passport', () => {
       page,
       context,
     }) => {
-      await page.goto('/')
+      await openApp(page)
       await openMenu(page)
       await page.getByRole('button', { name: 'Generate Passport' }).click()
       const dialog = passportDialog(page)
@@ -250,7 +298,7 @@ test.describe('Family Passport', () => {
     })
 
     test('generating a second passport in the same session shows the prompt again, not just once', async ({ page }) => {
-      await page.goto('/')
+      await openApp(page)
       await generatePassport(page, `Repeat Family One ${Date.now()}`)
       await passportDialog(page).getByRole('button', { name: 'Close' }).click()
       await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -268,5 +316,105 @@ test.describe('Family Passport', () => {
 
       await expect(dialog.getByRole('heading', { name: 'Leave a Review, Get a Treat!' })).toBeVisible()
     })
+  })
+
+  test('two device sessions generating a passport see completely independent per-session stats (Coins, Puzzle Timer, Bingo, and now Scavenger Hunt)', async ({
+    request,
+  }) => {
+    // Passport's stats snapshot (app/services/passport.py's _compute_stats)
+    // is now fully per-session: Coins, Puzzle Timer (Phases 1/2), Bingo
+    // (Phase 6a), and Scavenger Hunt (Phase 6b, migration 030 -- the final
+    // phase) all read scoped to device_session_id. This covers all four at
+    // once, raw HTTP throughout -- no need to drive the UI end to end, same
+    // reasoning as map-visited-sessions.spec.ts's own isolation tests.
+    const tokenA = crypto.randomUUID()
+    const tokenB = crypto.randomUUID()
+
+    // Session B generates a baseline passport untouched -- session A's
+    // actions below must not move any of B's numbers.
+    const baselineB = await generatePassportRaw(request, tokenB, `Isolation Baseline B ${Date.now()}`)
+    expect(await getCoinsTotal(request, tokenB)).toBe(0)
+    expect(baselineB.stats.scavenger_hunt_characters_completed).toBe(0)
+
+    // Session A records a Puzzle Timer attempt (Phase 2, per-session) --
+    // this earns A coins and bumps A's own puzzle_challenges_completed,
+    // neither of which session B did anything to cause.
+    const puzzlesRes = await request.get(`${API}/puzzles`)
+    const puzzles = (await puzzlesRes.json()) as { challenges: { id: string }[] }[]
+    const challengeId = puzzles[0].challenges[0].id
+    const attemptRes = await request.post(`${API}/puzzles/challenges/${challengeId}/attempts`, {
+      ...withSession(tokenA),
+      data: { elapsed_seconds: 10, hints_used: 0 },
+    })
+    expect(attemptRes.ok()).toBe(true)
+
+    // Session A also completes one Bingo tile (Phase 6a, per-session) --
+    // bumps A's own bingo_tiles_completed only, session B's shared-layout
+    // view of the same card is untouched.
+    const cardsRes = await request.get(`${API}/bingo/cards`)
+    const cardId = ((await cardsRes.json()) as { id: string }[])[0].id
+    const cardRes = await request.get(`${API}/bingo/card/${cardId}`, withSession(tokenA))
+    const tileId = ((await cardRes.json()) as { tiles: { id: string }[] }).tiles[0].id
+    const tileRes = await request.post(`${API}/bingo/tiles/${tileId}/complete`, withSession(tokenA))
+    expect(tileRes.ok()).toBe(true)
+
+    // Session A also fully completes one Scavenger Hunt character (Phase
+    // 6b, per-session) -- bumps A's own scavenger_hunt_characters_completed
+    // only. Session B never touches Hunt at all, so its shared-roster view
+    // of the same character stays uncompleted.
+    const charactersRes = await request.get(`${API}/hunt/characters`, withSession(tokenA))
+    const character = (
+      (await charactersRes.json()) as { id: string; challenges: { id: string; order_index: number }[] }[]
+    )[0]
+    for (const challenge of character.challenges.slice().sort((a, b) => a.order_index - b.order_index)) {
+      const res = await request.post(`${API}/hunt/challenges/${challenge.id}/complete`, withSession(tokenA))
+      expect(res.ok()).toBe(true)
+    }
+
+    const passportA = await generatePassportRaw(request, tokenA, `Isolation Session A ${Date.now()}`)
+    const passportB = await generatePassportRaw(request, tokenB, `Isolation Session B ${Date.now()}`)
+
+    // Per-session stats: A's own puzzle attempt/coins/bingo tile/hunt
+    // character show up only on A's passport, never on B's -- B's numbers
+    // are unchanged from its baseline.
+    expect(passportA.stats.puzzle_challenges_completed).toBeGreaterThan(baselineB.stats.puzzle_challenges_completed)
+    expect(passportA.stats.bingo_tiles_completed).toBeGreaterThan(baselineB.stats.bingo_tiles_completed)
+    expect(passportA.stats.scavenger_hunt_characters_completed).toBeGreaterThan(
+      baselineB.stats.scavenger_hunt_characters_completed,
+    )
+    expect(passportA.stats.total_cobb_coins).toBeGreaterThan(0)
+    expect(await getCoinsTotal(request, tokenB)).toBe(0)
+    expect(passportB.stats.puzzle_challenges_completed).toBe(baselineB.stats.puzzle_challenges_completed)
+    expect(passportB.stats.bingo_tiles_completed).toBe(baselineB.stats.bingo_tiles_completed)
+    expect(passportB.stats.scavenger_hunt_characters_completed).toBe(
+      baselineB.stats.scavenger_hunt_characters_completed,
+    )
+    expect(passportB.stats.total_cobb_coins).toBe(0)
+  })
+
+  test('generating a second passport under the same device session still works after Reset Session', async ({
+    request,
+  }) => {
+    // Reset Session (session_reset.py) does NOT rotate the device token --
+    // getDeviceSessionId() (frontend/src/deviceSession.ts) mints it once and
+    // never removes it from localStorage, and POST /session/reset resolves
+    // the same device_sessions.id via get_or_create_session, only clearing
+    // *other* tables' rows under it. So passport_sessions.session_id being
+    // deliberately left out of Reset Session's deletes (migration 027)
+    // means the same session_id can end up owning more than one passport
+    // row over a visit: this confirms that's actually fine -- there's no
+    // unique constraint on session_id (multiple passports per session
+    // already works today without Reset Session in between, per the
+    // "generating a second passport ... shows the prompt again" test above)
+    // -- and specifically exercises it with a Reset Session in between.
+    const token = crypto.randomUUID()
+
+    const before = await generatePassportRaw(request, token, `Reset Regression Before ${Date.now()}`)
+
+    const resetRes = await request.post(`${API}/session/reset`, withSession(token))
+    expect(resetRes.ok()).toBe(true)
+
+    const after = await generatePassportRaw(request, token, `Reset Regression After ${Date.now()}`)
+    expect(after.id).not.toBe(before.id)
   })
 })

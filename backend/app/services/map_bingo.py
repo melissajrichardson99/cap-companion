@@ -9,7 +9,6 @@ milestone math and the random draw stay pure and independently testable.
 from __future__ import annotations
 
 import random
-from datetime import datetime, timezone
 from uuid import UUID
 
 from app.errors import NotFoundError
@@ -41,14 +40,17 @@ _last_played_minigame_id: UUID | None = None
 
 
 def _row_to_map_node(
-    row: dict, linked_tiles: list[LinkedTile], children: list[ChildNode] | None = None
+    row: dict,
+    linked_tiles: list[LinkedTile],
+    children: list[ChildNode] | None = None,
+    visited: bool = False,
 ) -> MapNode:
     return MapNode(
         id=row["id"],
         name=row["name"],
         category=row["category"],
         description=row["description"],
-        state=row["state"],
+        visited=visited,
         is_open=row["is_open"],
         linked_tiles=linked_tiles,
         x_pct=row["x_pct"],
@@ -58,7 +60,10 @@ def _row_to_map_node(
     )
 
 
-def _row_to_bingo_tile(row: dict) -> BingoTile:
+def _row_to_bingo_tile(row: dict, completed_at: str | None) -> BingoTile:
+    # completed_at is looked up separately (session_tile_completions, Per-
+    # Device Sessions Phase 6a) rather than read off `row` -- bingo_tiles
+    # itself carries only the shared layout now, not per-guest completion.
     return BingoTile(
         id=row["id"],
         card_id=row["card_id"],
@@ -66,23 +71,49 @@ def _row_to_bingo_tile(row: dict) -> BingoTile:
         col=row["col_index"],
         label=row["label"],
         linked_map_node_id=row["linked_map_node_id"],
-        completed=row["completed"],
-        completed_at=row["completed_at"],
+        completed=completed_at is not None,
+        completed_at=completed_at,
     )
 
 
-def _milestones_from_card_row(row: dict) -> MilestonesAchieved:
-    return MilestonesAchieved(
-        lines=row["milestone_lines"] or [],
-        x=row["milestone_x"],
-        blackout=row["milestone_blackout"],
+def _session_tile_completions(
+    client, session_id: UUID, tile_ids: list[str] | None = None
+) -> dict[str, str]:
+    """tile_id -> completed_at for the given session (Per-Device Sessions Phase 6a).
+
+    Single source of truth for "has this session completed this tile" --
+    every read site (card view, map-node linked-tile status, milestone
+    detection) goes through this instead of a stored bingo_tiles.completed
+    column, which no longer exists.
+    """
+    query = (
+        client.table("session_tile_completions")
+        .select("tile_id,completed_at")
+        .eq("session_id", str(session_id))
     )
+    if tile_ids is not None:
+        query = query.in_("tile_id", tile_ids)
+    rows = query.execute().data
+    return {r["tile_id"]: r["completed_at"] for r in rows}
 
 
-def list_map_nodes() -> list[MapNode]:
+def list_map_nodes(session_id: UUID) -> list[MapNode]:
+    """List every map node, with `visited` resolved per the calling session.
+
+    session_id is the resolved device session (Per-Device Sessions Phase 3)
+    -- visited-status is looked up in node_visits scoped to this session, not
+    globally, so two guests viewing the same node see their own independent
+    progress.
+    """
     client = get_supabase_client()
     nodes = client.table("map_nodes").select("*").execute().data
-    all_tiles = client.table("bingo_tiles").select("id,label,completed,linked_map_node_id").execute().data
+    all_tiles = client.table("bingo_tiles").select("id,label,linked_map_node_id").execute().data
+    visited_rows = client.table("node_visits").select("node_id").eq("session_id", str(session_id)).execute().data
+    visited_node_ids = {r["node_id"] for r in visited_rows}
+    # Per-Device Sessions Phase 6a: a tile's completed status for this popup
+    # flow is this session's own session_tile_completions row, not a global
+    # bingo_tiles.completed column (which no longer exists).
+    completed_tile_ids = set(_session_tile_completions(client, session_id))
 
     tiles_by_node: dict[str, list[LinkedTile]] = {}
     for t in all_tiles:
@@ -90,7 +121,7 @@ def list_map_nodes() -> list[MapNode]:
         if node_id is None:
             continue
         tiles_by_node.setdefault(node_id, []).append(
-            LinkedTile(id=t["id"], label=t["label"], completed=t["completed"])
+            LinkedTile(id=t["id"], label=t["label"], completed=t["id"] in completed_tile_ids)
         )
 
     children_by_parent: dict[str, list[dict]] = {}
@@ -112,7 +143,7 @@ def list_map_nodes() -> list[MapNode]:
         for child in child_rows:
             linked_tiles.extend(tiles_by_node.get(child["id"], []))
         children = [ChildNode(id=c["id"], name=c["name"]) for c in child_rows]
-        result.append(_row_to_map_node(n, linked_tiles, children))
+        result.append(_row_to_map_node(n, linked_tiles, children, visited=n["id"] in visited_node_ids))
 
     return result
 
@@ -123,7 +154,14 @@ def list_bingo_cards() -> list[BingoCardSummary]:
     return [BingoCardSummary(id=r["id"], owner_label=r["owner_label"]) for r in rows]
 
 
-def get_bingo_card(card_id: UUID) -> BingoCard:
+def get_bingo_card(card_id: UUID, session_id: UUID) -> BingoCard:
+    """The shared card layout with this session's own completion/milestone status.
+
+    session_id (Per-Device Sessions Phase 6a) resolves both the per-tile
+    `completed` flags and milestones_achieved from session_tile_completions
+    -- two families viewing the same card see their own independent progress
+    on it, same as MapNode.visited since Phase 3.
+    """
     client = get_supabase_client()
     card_rows = client.table("bingo_cards").select("*").eq("id", str(card_id)).execute().data
     if not card_rows:
@@ -139,12 +177,17 @@ def get_bingo_card(card_id: UUID) -> BingoCard:
         .execute()
         .data
     )
+    completions = _session_tile_completions(client, session_id, [r["id"] for r in tile_rows])
+    completed_indices = {
+        r["row_index"] * 5 + r["col_index"] for r in tile_rows if r["id"] in completions
+    }
+    lines, x, blackout = milestone_service.achieved_milestones(completed_indices)
 
     return BingoCard(
         id=card_row["id"],
         owner_label=card_row["owner_label"],
-        tiles=[_row_to_bingo_tile(r) for r in tile_rows],
-        milestones_achieved=_milestones_from_card_row(card_row),
+        tiles=[_row_to_bingo_tile(r, completions.get(r["id"])) for r in tile_rows],
+        milestones_achieved=MilestonesAchieved(lines=sorted(lines), x=x, blackout=blackout),
     )
 
 
@@ -169,13 +212,20 @@ def list_minigames() -> list[Minigame]:
     return _minigame_pool()
 
 
-def complete_tile(tile_id: UUID) -> TileCompletionResult:
-    """Mark one bingo tile completed and run everything it triggers (4.1 + 4.2).
+def complete_tile(tile_id: UUID, session_id: UUID) -> TileCompletionResult:
+    """Mark one bingo tile completed *for this session* and run everything it
+    triggers (4.1 + 4.2, now per-device -- Per-Device Sessions Phase 6a).
 
     Shared by POST /bingo/tiles/{id}/complete and the map-node visit flow so
-    both paths run identical milestone-detection and minigame-draw logic —
+    both paths run identical milestone-detection and minigame-draw logic --
     the map is just a second entry point into the same tile completion, not
     a separate implementation of it.
+
+    session_id now scopes the completion write itself (session_tile_
+    completions), not just the coin-award attribution Phase 1 originally
+    added it for -- two families completing tiles on the same shared layout
+    get fully independent completion/milestone state and bonus-minigame
+    triggers, each computed from that session's own completed-tile set only.
     """
     global _last_played_minigame_id
     client = get_supabase_client()
@@ -185,62 +235,64 @@ def complete_tile(tile_id: UUID) -> TileCompletionResult:
         raise NotFoundError(f"Bingo tile {tile_id} not found")
     tile_row = tile_rows[0]
 
-    if tile_row["completed"]:
-        # Already complete: re-completing must not re-fire milestones or re-draw
-        # minigames. Symmetric with 4.1's rule that minigame outcome never
-        # feeds back into completion state — completion is a one-way trigger.
-        tile = _row_to_bingo_tile(tile_row)
-        card = get_bingo_card(tile.card_id)
-        return TileCompletionResult(
-            tile=tile,
-            milestones=[],
-            minigames_drawn=[],
-            card_milestones_achieved=card.milestones_achieved,
-        )
-
-    now = datetime.now(timezone.utc).isoformat()
-    updated_tile_row = (
-        client.table("bingo_tiles")
-        .update({"completed": True, "completed_at": now})
-        .eq("id", str(tile_id))
-        .execute()
-        .data[0]
-    )
-    tile = _row_to_bingo_tile(updated_tile_row)
-
-    card_rows = client.table("bingo_cards").select("*").eq("id", str(tile.card_id)).execute().data
-    card_row = card_rows[0]
-
     all_tiles = (
         client.table("bingo_tiles")
-        .select("id,row_index,col_index,completed")
-        .eq("card_id", str(tile.card_id))
+        .select("id,row_index,col_index")
+        .eq("card_id", tile_row["card_id"])
         .execute()
         .data
     )
     index_to_tile_id = {r["row_index"] * 5 + r["col_index"]: r["id"] for r in all_tiles}
-    completed_indices = {
-        r["row_index"] * 5 + r["col_index"] for r in all_tiles if r["completed"]
+    prior_completions = _session_tile_completions(client, session_id, [r["id"] for r in all_tiles])
+    prior_indices = {
+        r["row_index"] * 5 + r["col_index"] for r in all_tiles if r["id"] in prior_completions
     }
 
-    achieved_lines = set(card_row["milestone_lines"] or [])
+    if str(tile_id) in prior_completions:
+        # Already complete for this session: re-completing must not re-fire
+        # milestones or re-draw minigames. Symmetric with 4.1's rule that
+        # minigame outcome never feeds back into completion state --
+        # completion is a one-way trigger.
+        tile = _row_to_bingo_tile(tile_row, prior_completions[str(tile_id)])
+        lines, x, blackout = milestone_service.achieved_milestones(prior_indices)
+        return TileCompletionResult(
+            tile=tile,
+            milestones=[],
+            minigames_drawn=[],
+            card_milestones_achieved=MilestonesAchieved(lines=sorted(lines), x=x, blackout=blackout),
+        )
+
+    # achieved_* reflects this session's own state *before* this completion --
+    # exactly what detect_new_milestones needs to tell "already achieved"
+    # apart from "newly achieved by this tile".
+    achieved_lines, achieved_x, achieved_blackout = milestone_service.achieved_milestones(prior_indices)
+
+    completion_row = (
+        client.table("session_tile_completions")
+        .insert({"session_id": str(session_id), "tile_id": str(tile_id)})
+        .execute()
+        .data[0]
+    )
+    tile = _row_to_bingo_tile(tile_row, completion_row["completed_at"])
+    completed_indices = prior_indices | {tile.index}
+
     hits = milestone_service.detect_new_milestones(
         completed_indices,
         achieved_lines=achieved_lines,
-        achieved_x=card_row["milestone_x"],
-        achieved_blackout=card_row["milestone_blackout"],
+        achieved_x=achieved_x,
+        achieved_blackout=achieved_blackout,
     )
 
     # Only the single highest-priority hit is ever reported to the frontend
-    # for animation -- achieved-lines/x/blackout bookkeeping below still
-    # covers every hit in `hits`, regardless of which one (if any) is shown.
-    # Bingo coins are derived from this same display_hit (not from `hits`),
-    # so a completion that satisfies multiple tiers at once pays only the
+    # for animation -- the bonus-minigame draw below still triggers off
+    # `hits` in full, regardless of which one (if any) is shown. Bingo coins
+    # are derived from this same display_hit (not from `hits`), so a
+    # completion that satisfies multiple tiers at once pays only the
     # highest tier -- always in agreement with what the banner shows.
     display_hit = milestone_service.select_display_milestone(hits)
     coins_awarded = coins_service.bingo_milestone_amount(display_hit.type) if display_hit else 0
     if display_hit:
-        coins_service.award_coins(CoinSourceType.BINGO_MILESTONE, tile.id, coins_awarded)
+        coins_service.award_coins(CoinSourceType.BINGO_MILESTONE, tile.id, coins_awarded, session_id)
     milestone_events = (
         [
             MilestoneEvent(
@@ -254,23 +306,7 @@ def complete_tile(tile_id: UUID) -> TileCompletionResult:
         else []
     )
 
-    if hits:
-        new_achieved_lines = achieved_lines | {h.line_index for h in hits if h.line_index is not None}
-        new_x = card_row["milestone_x"] or any(h.type == "x" for h in hits)
-        new_blackout = card_row["milestone_blackout"] or any(h.type == "blackout" for h in hits)
-        card_row = (
-            client.table("bingo_cards")
-            .update(
-                {
-                    "milestone_lines": sorted(new_achieved_lines),
-                    "milestone_x": new_x,
-                    "milestone_blackout": new_blackout,
-                }
-            )
-            .eq("id", str(tile.card_id))
-            .execute()
-            .data[0]
-        )
+    new_lines, new_x, new_blackout = milestone_service.achieved_milestones(completed_indices)
 
     pool = _minigame_pool()
     rng = random.Random()
@@ -287,44 +323,66 @@ def complete_tile(tile_id: UUID) -> TileCompletionResult:
         tile=tile,
         milestones=milestone_events,
         minigames_drawn=drawn,
-        card_milestones_achieved=_milestones_from_card_row(card_row),
+        card_milestones_achieved=MilestonesAchieved(lines=sorted(new_lines), x=new_x, blackout=new_blackout),
         coins_awarded=coins_awarded,
     )
 
 
-def _check_map_exploration_bonus(client, node_id: UUID) -> int:
-    """Award the one-time 50-coin Map Exploration bonus once every
-    currently-open top-level node has been visited.
+def _check_map_exploration_bonus(client, node_id: UUID, session_id: UUID) -> int:
+    """Award the one-time 50-coin Map Exploration bonus once the calling
+    session has visited every currently-open top-level node.
 
     Scoped to parent_node_id IS NULL: children (the Arcade Pad/Ground Games
-    sub-nodes) render no pin/card of their own in MapScreen.tsx and their
-    `state` never leaves 'not_visited' through any code path, so including
-    them here would make the bonus permanently unreachable by default.
-    Closed nodes (is_open false) don't count, and the `top_level_open` guard
-    below avoids vacuously awarding when every top-level node is closed.
-    Idempotent: guarded by whether a map_exploration award already exists,
-    which Reset Session clears along with the rest of coin_awards.
+    sub-nodes) render no pin/card of their own in MapScreen.tsx and are never
+    visited directly through any code path, so including them here would
+    make the bonus permanently unreachable by default. Closed nodes
+    (is_open false) don't count, and the `top_level_open_ids` guard below
+    avoids vacuously awarding when every top-level node is closed.
+
+    Per-Device Sessions Phase 3: both halves of this check -- the
+    completeness condition (node_visits) and the already-awarded guard
+    (coin_awards) -- are now scoped to session_id, closing the bounded gap
+    Phase 1 documented (a session that had visited nothing could collect
+    this bonus if another concurrent session had already finished exploring
+    the map, since the completeness condition was still global then). A
+    session that has visited nothing itself can no longer receive this
+    bonus no matter what any other session has done.
     """
-    all_nodes = client.table("map_nodes").select("id,is_open,state,parent_node_id").execute().data
-    top_level_open = [n for n in all_nodes if n["is_open"] and n["parent_node_id"] is None]
-    if not top_level_open or not all(n["state"] == "visited" for n in top_level_open):
+    all_nodes = client.table("map_nodes").select("id,is_open,parent_node_id").execute().data
+    top_level_open_ids = {n["id"] for n in all_nodes if n["is_open"] and n["parent_node_id"] is None}
+    if not top_level_open_ids:
+        return 0
+
+    visited_rows = (
+        client.table("node_visits")
+        .select("node_id")
+        .eq("session_id", str(session_id))
+        .in_("node_id", list(top_level_open_ids))
+        .execute()
+        .data
+    )
+    visited_node_ids = {r["node_id"] for r in visited_rows}
+    if not top_level_open_ids <= visited_node_ids:
         return 0
 
     already_awarded = (
         client.table("coin_awards")
         .select("id")
         .eq("source_type", CoinSourceType.MAP_EXPLORATION.value)
+        .eq("session_id", str(session_id))
         .execute()
         .data
     )
     if already_awarded:
         return 0
 
-    coins_service.award_coins(CoinSourceType.MAP_EXPLORATION, node_id, coins_service.MAP_EXPLORATION_AMOUNT)
+    coins_service.award_coins(
+        CoinSourceType.MAP_EXPLORATION, node_id, coins_service.MAP_EXPLORATION_AMOUNT, session_id
+    )
     return coins_service.MAP_EXPLORATION_AMOUNT
 
 
-def visit_node(node_id: UUID, completed_tile_ids: list[UUID]) -> VisitNodeResponse:
+def visit_node(node_id: UUID, completed_tile_ids: list[UUID], session_id: UUID) -> VisitNodeResponse:
     """Mark a node visited, completing any confirmed linked tiles first (4.3).
 
     completed_tile_ids are the tiles the guest answered "Yes" to on the
@@ -333,12 +391,18 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID]) -> VisitNodeRespon
     linked tile, so none get silently skipped. Each confirmed tile is run
     through complete_tile (triggering 4.1/4.2) before the node itself flips
     to visited; answering "No" for a tile simply means its id is omitted.
+
+    session_id attributes any coin awards (tile milestones, the Map
+    Exploration bonus) to the calling device, and (Per-Device Sessions
+    Phase 3) is also the session whose visited-status actually gets written
+    -- node visit state is per-device now, not global.
     """
     client = get_supabase_client()
 
     node_rows = client.table("map_nodes").select("*").eq("id", str(node_id)).execute().data
     if not node_rows:
         raise NotFoundError(f"Map node {node_id} not found")
+    node_row = node_rows[0]
 
     child_rows = (
         client.table("map_nodes")
@@ -358,34 +422,55 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID]) -> VisitNodeRespon
     linked_ids = {r["id"] for r in linked_tile_rows}
 
     tile_completions = [
-        complete_tile(tile_id) for tile_id in completed_tile_ids if str(tile_id) in linked_ids
+        complete_tile(tile_id, session_id) for tile_id in completed_tile_ids if str(tile_id) in linked_ids
     ]
 
-    updated_node_row = (
-        client.table("map_nodes").update({"state": "visited"}).eq("id", str(node_id)).execute().data[0]
-    )
+    # Upsert, not insert: re-visiting an already-visited node must not violate
+    # node_visits' (session_id, node_id) unique constraint -- it's a no-op
+    # write (visited_at is left at its original value on conflict) that
+    # still lets the rest of this call (tile completions, the exploration
+    # bonus check) run normally. default_to_null=False, same reasoning as
+    # app/device_session.py's own upsert: postgrest-py otherwise sends
+    # `Prefer: missing=null`, which would null out id/visited_at on insert
+    # instead of letting their column defaults (gen_random_uuid(), now())
+    # apply.
+    client.table("node_visits").upsert(
+        {"session_id": str(session_id), "node_id": str(node_id)},
+        on_conflict="session_id,node_id",
+        ignore_duplicates=True,
+        default_to_null=False,
+    ).execute()
 
-    map_exploration_bonus = _check_map_exploration_bonus(client, node_id)
+    map_exploration_bonus = _check_map_exploration_bonus(client, node_id, session_id)
 
     tiles = (
         client.table("bingo_tiles")
-        .select("id,label,completed")
+        .select("id,label")
         .in_("linked_map_node_id", relevant_node_ids)
         .execute()
         .data
     )
-    linked_tiles = [LinkedTile(id=t["id"], label=t["label"], completed=t["completed"]) for t in tiles]
+    # Per-Device Sessions Phase 6a: completed status for this response is
+    # this session's own session_tile_completions, not a global column.
+    session_completions = _session_tile_completions(client, session_id, [t["id"] for t in tiles])
+    linked_tiles = [LinkedTile(id=t["id"], label=t["label"], completed=t["id"] in session_completions) for t in tiles]
     children = [ChildNode(id=c["id"], name=c["name"]) for c in child_rows]
 
-    node = _row_to_map_node(updated_node_row, linked_tiles, children)
+    node = _row_to_map_node(node_row, linked_tiles, children, visited=True)
     return VisitNodeResponse(node=node, tile_completions=tile_completions, coins_awarded=map_exploration_bonus)
 
 
 def set_node_open_status(node_id: UUID, is_open: bool) -> MapNode:
     """Staff-managed open/closed toggle for the Staff Page Attractions tab.
 
-    Independent of `state`/visit progress: never blocks or alters Hunt/QR
-    completion, and untouched by Reset Session.
+    Independent of visit progress: never blocks or alters Hunt/QR completion,
+    and untouched by Reset Session. Staff actions carry no device session, so
+    the returned MapNode.visited is always the default False -- callers of
+    this endpoint (the Staff Page) only ever read is_open off its response.
+    linked_tiles.completed is likewise always False here for the same reason
+    (Per-Device Sessions Phase 6a: completed status is per-session, and staff
+    actions carry no session to resolve it from) -- the Staff Page never
+    reads that field off this endpoint's response either.
     """
     client = get_supabase_client()
 
@@ -408,12 +493,12 @@ def set_node_open_status(node_id: UUID, is_open: bool) -> MapNode:
 
     tiles = (
         client.table("bingo_tiles")
-        .select("id,label,completed")
+        .select("id,label")
         .in_("linked_map_node_id", relevant_node_ids)
         .execute()
         .data
     )
-    linked_tiles = [LinkedTile(id=t["id"], label=t["label"], completed=t["completed"]) for t in tiles]
+    linked_tiles = [LinkedTile(id=t["id"], label=t["label"], completed=False) for t in tiles]
     children = [ChildNode(id=c["id"], name=c["name"]) for c in child_rows]
 
     return _row_to_map_node(updated_node_row, linked_tiles, children)

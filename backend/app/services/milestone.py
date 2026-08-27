@@ -79,6 +79,22 @@ def detect_new_milestones(
     return hits
 
 
+def achieved_milestones(completed_indices: set[int]) -> tuple[set[int], bool, bool]:
+    """Which lines/X/blackout are already fully satisfied by a completed-tile set.
+
+    Computed live from the tile-completion data itself (Per-Device Sessions
+    Phase 6a) rather than cached as separate stored flags -- completed_indices
+    is the single source of truth per session, so there's nothing here that
+    can drift out of sync with it. Callers pass the result straight into
+    detect_new_milestones's achieved_lines/achieved_x/achieved_blackout, or
+    use it directly to describe a card's current MilestonesAchieved.
+    """
+    achieved_lines = {i for i, line in enumerate(LINES) if line <= completed_indices}
+    achieved_x = X_SHAPE <= completed_indices
+    achieved_blackout = BLACKOUT <= completed_indices
+    return achieved_lines, achieved_x, achieved_blackout
+
+
 def select_display_milestone(hits: list[MilestoneHit]) -> MilestoneHit | None:
     """Collapse one completion's simultaneous milestone hits into the single
     animation to actually show, per the priority system replacing the old

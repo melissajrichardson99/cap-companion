@@ -149,12 +149,6 @@
   color: var(--cap-color-body-text);
 }
 
-.node-detail-closed-note {
-  font-size: 13px;
-  color: var(--cap-color-contact-red);
-  align-self: center;
-}
-
 .node-detail-actions {
   display: flex;
   gap: 10px;
@@ -227,11 +221,5 @@
 .state-pill-visited {
   color: #fff;
   background: var(--cap-color-adventure-green);
-  border-color: var(--cap-color-outline);
-}
-
-.state-pill-closed {
-  color: #fff;
-  background: var(--cap-color-contact-red);
   border-color: var(--cap-color-outline);
 }

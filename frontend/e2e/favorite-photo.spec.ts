@@ -1,31 +1,43 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
+import { seedDeviceSession, withSession } from './deviceSessionHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
+const API = 'http://localhost:8000'
+
+// Covers Favorite Photo (Plan.md 2.14, migration 012_favorite_photo.sql),
+// now on the unified per-device session (Per-Device Sessions Phase 5,
+// migration 028) instead of the retired voterSession.ts. Seeds an explicit
+// device session token before first navigation (deviceSessionHelper.ts's
+// seedDeviceSession), mirroring puzzle-timer.spec.ts/collectible-cards.spec.ts,
+// so a test that also needs raw API calls in the same session can do so via
+// withSession.
 
 // The Favorite Photo tab lives inside the guest nav's dropdown panel, which
 // starts closed on every fresh page load -- open it before selecting a tab.
-async function openFavoritePhoto(page: Page) {
+async function openFavoritePhoto(page: Page, token: string = crypto.randomUUID()): Promise<string> {
+  await seedDeviceSession(page, token)
+  await page.goto('/')
   await page.getByRole('button', { name: 'Open menu' }).click()
-  // The tab list uses role="menuitemradio" (NavMenu.tsx), not the button
-  // tag's implicit "button" role.
   await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
+  return token
 }
 
-// Covers Favorite Photo (Plan.md 2.14, migration 012_favorite_photo.sql):
-// guest submission -> staff shortlist -> public gallery -> vote -> a second
-// vote attempt from the same voter_session_id is rejected. The vote button
-// disables itself client-side after voting, so a duplicate vote is only
-// really exercised by hitting the API directly (bypassing the disabled
-// button), which is what the last step below does.
-test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', async ({ page, context }) => {
-  const guestLabel = `E2E Guest ${Date.now()}`
-
-  await page.goto('/')
-  await openFavoritePhoto(page)
+// Submits a photo under `token`'s session, then opens/logs into a fresh
+// staff page and approves it into the shortlist. Staff must log in AFTER
+// the guest submission, not before -- the Photo Queue is fetched once on
+// login and never polls, so logging in first would see a stale, pre-
+// submission empty queue and never find the row to approve.
+async function submitAndShortlist(
+  page: Page,
+  context: BrowserContext,
+  guestLabel: string,
+  token?: string,
+): Promise<{ token: string; staffPage: Page }> {
+  const usedToken = await openFavoritePhoto(page, token)
   await page.locator('.photo-submit-form input[type="file"]').setInputFiles(FIXTURE_PHOTO)
   await page.getByPlaceholder('Your name (optional)').fill(guestLabel)
   await page.getByRole('button', { name: 'Submit Photo' }).click()
@@ -37,13 +49,32 @@ test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', 
   // Remove test does.
   staffPage.on('dialog', (dialog) => dialog.accept())
   await loginAsStaff(staffPage)
+
   const staffRow = staffPage.locator('.staff-photo-row', { hasText: guestLabel })
   await expect(staffRow).toBeVisible()
   await staffRow.getByRole('button', { name: 'Approve' }).click()
   await expect(staffPage.locator('.staff-photo-row', { hasText: guestLabel })).toHaveCount(0)
+  return { token: usedToken, staffPage }
+}
+
+async function removeFromShortlist(staffPage: Page, guestLabel: string): Promise<void> {
+  await staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel }).getByRole('button', { name: 'Remove' }).click()
+  await expect(staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel })).toHaveCount(0)
+}
+
+async function findSubmissionId(request: APIRequestContext, token: string, guestLabel: string): Promise<string> {
+  const res = await request.get(`${API}/photos/gallery`, withSession(token))
+  const gallery: { id: string; guest_label: string | null }[] = await res.json()
+  return gallery.find((p) => p.guest_label === guestLabel)!.id
+}
+
+test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', async ({ page, context, request }) => {
+  const guestLabel = `E2E Guest ${Date.now()}`
+
+  const { token, staffPage } = await submitAndShortlist(page, context, guestLabel)
 
   await page.goto('/')
-  await openFavoritePhoto(page)
+  await openFavoritePhoto(page, token)
   const galleryCard = page.locator('.photo-card', { hasText: guestLabel })
   await expect(galleryCard).toBeVisible()
   const voteButton = galleryCard.getByRole('button', { name: 'Vote (0)' })
@@ -54,67 +85,88 @@ test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', 
   // Confirm the vote persisted server-side (not just local component state)
   // by reloading fresh and checking voted_by_me still comes back true.
   await page.goto('/')
-  await openFavoritePhoto(page)
+  await openFavoritePhoto(page, token)
   await expect(
     page.locator('.photo-card', { hasText: guestLabel }).getByRole('button', { name: '✓ Voted (1)' }),
   ).toBeDisabled()
 
-  const duplicateVoteStatus = await page.evaluate(async (label) => {
-    const voterSessionId = localStorage.getItem('cap-voter-session-id')
-    const galleryRes = await fetch(`http://localhost:8000/photos/gallery?voter_session_id=${voterSessionId}`)
-    const gallery: { id: string; guest_label: string | null }[] = await galleryRes.json()
-    const submission = gallery.find((p) => p.guest_label === label)
-    const voteRes = await fetch(`http://localhost:8000/photos/${submission!.id}/vote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ voter_session_id: voterSessionId }),
-    })
-    return voteRes.status
-  }, guestLabel)
-  expect(duplicateVoteStatus).toBe(409)
+  const submissionId = await findSubmissionId(request, token, guestLabel)
+  const duplicateVoteRes = await request.post(`${API}/photos/${submissionId}/vote`, withSession(token))
+  expect(duplicateVoteRes.status()).toBe(409)
 
   // Clean up the shortlisted photo this test created -- this DB persists
   // across spec files (only reset once, up front, by global-setup.ts), so
   // leaving it shortlisted would make home-page.spec.ts's "no shortlisted
   // photos yet" test see a stale photo depending on run order.
-  await staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel }).getByRole('button', { name: 'Remove' }).click()
-  await expect(staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel })).toHaveCount(0)
+  await removeFromShortlist(staffPage, guestLabel)
 })
 
-// Reset Session (voterSession.ts) previously left this device's vote-dedup
-// marker untouched by original design -- that's the gap this covers: the
-// marker must now be cleared so a fresh session can vote again, while the
-// vote already cast (and its tally) stays exactly as-is server-side, same
-// as Reset Session leaving Hunt/Coin history from other visits alone.
-test('Reset Session clears the local vote-dedup marker so the guest can vote again, without touching the already-cast vote or its tally', async ({
+test('two device sessions each cast their own vote independently, and the aggregate tally reflects both', async ({
+  page,
+  context,
+  request,
+}) => {
+  const guestLabel = `E2E Guest TwoSessions ${Date.now()}`
+
+  const { token: tokenA, staffPage } = await submitAndShortlist(page, context, guestLabel)
+  const tokenB = crypto.randomUUID()
+
+  const submissionId = await findSubmissionId(request, tokenA, guestLabel)
+
+  const voteA = await request.post(`${API}/photos/${submissionId}/vote`, withSession(tokenA))
+  expect(voteA.ok()).toBe(true)
+
+  // Session B has never voted -- the count is global (already reflects A's
+  // vote), but B's own voted_by_me must still be false, since dedup is
+  // scoped per session, not shared.
+  const galleryForB = await request.get(`${API}/photos/gallery`, withSession(tokenB))
+  const bView = (await galleryForB.json()).find((p: { id: string }) => p.id === submissionId)
+  expect(bView.voted_by_me).toBe(false)
+  expect(bView.vote_count).toBe(1)
+
+  const voteB = await request.post(`${API}/photos/${submissionId}/vote`, withSession(tokenB))
+  expect(voteB.ok()).toBe(true)
+
+  // Neither session blocked the other, and the aggregate tally sums both --
+  // scoped to session_id for dedup, not scoped for the count itself.
+  const galleryForA = await request.get(`${API}/photos/gallery`, withSession(tokenA))
+  const aView = (await galleryForA.json()).find((p: { id: string }) => p.id === submissionId)
+  expect(aView.vote_count).toBe(2)
+  expect(aView.voted_by_me).toBe(true)
+
+  const galleryForBAfter = await request.get(`${API}/photos/gallery`, withSession(tokenB))
+  const bViewAfter = (await galleryForBAfter.json()).find((p: { id: string }) => p.id === submissionId)
+  expect(bViewAfter.vote_count).toBe(2)
+  expect(bViewAfter.voted_by_me).toBe(true)
+
+  await removeFromShortlist(staffPage, guestLabel)
+})
+
+// Per-Device Sessions Phase 5: the old voterSession.ts let a guest vote
+// again after Reset Session by minting a brand-new local token, silently
+// leaving the prior vote (and its count) in the tally forever -- the same
+// physical device's tally went 1 -> 2 across a reset-then-revote cycle. The
+// unified device session token deliberately does NOT rotate on Reset
+// Session (Phase 4's confirmed finding), so "vote again" now works because
+// POST /session/reset itself deletes this session's own photo_votes row --
+// the tally correctly nets back to 1, not 2.
+test('Reset Session deletes this session\'s own vote so it can vote again, under the SAME session token, without double-counting the tally', async ({
   page,
   context,
 }) => {
   const guestLabel = `E2E Guest ResetVote ${Date.now()}`
 
-  await page.goto('/')
-  await openFavoritePhoto(page)
-  await page.locator('.photo-submit-form input[type="file"]').setInputFiles(FIXTURE_PHOTO)
-  await page.getByPlaceholder('Your name (optional)').fill(guestLabel)
-  await page.getByRole('button', { name: 'Submit Photo' }).click()
-  await expect(page.getByText('Thanks! Your photo is in for staff review.')).toBeVisible()
-
-  const staffPage = await context.newPage()
-  staffPage.on('dialog', (dialog) => dialog.accept())
-  await loginAsStaff(staffPage)
-  const staffRow = staffPage.locator('.staff-photo-row', { hasText: guestLabel })
-  await expect(staffRow).toBeVisible()
-  await staffRow.getByRole('button', { name: 'Approve' }).click()
-  await expect(staffPage.locator('.staff-photo-row', { hasText: guestLabel })).toHaveCount(0)
+  const { token, staffPage } = await submitAndShortlist(page, context, guestLabel)
 
   await page.goto('/')
-  await openFavoritePhoto(page)
+  await openFavoritePhoto(page, token)
   const galleryCard = page.locator('.photo-card', { hasText: guestLabel })
   await expect(galleryCard).toBeVisible()
   await galleryCard.getByRole('button', { name: 'Vote (0)' }).click()
   await expect(galleryCard.getByRole('button', { name: '✓ Voted (1)' })).toBeDisabled()
 
-  const originalVoterSessionId = await page.evaluate(() => localStorage.getItem('cap-voter-session-id'))
+  const tokenBeforeReset = await page.evaluate(() => localStorage.getItem('cap-device-session-id'))
+  expect(tokenBeforeReset).toBe(token)
 
   await page.getByRole('button', { name: 'Open menu' }).click()
   await page.getByRole('button', { name: 'Reset Session' }).click()
@@ -122,20 +174,21 @@ test('Reset Session clears the local vote-dedup marker so the guest can vote aga
   await resetConfirmDialog.getByRole('button', { name: 'Reset Session' }).click()
   await expect(resetConfirmDialog).toHaveCount(0)
 
-  // The prior vote's tally is untouched (still 1) -- only this device's own
-  // "have I voted" marker was cleared, so the button re-enables.
-  const voteButtonAfterReset = galleryCard.getByRole('button', { name: 'Vote (1)' })
+  // The vote itself was deleted server-side (not left stale like the old
+  // mechanism) -- the tally drops back to 0, not still 1.
+  const voteButtonAfterReset = galleryCard.getByRole('button', { name: 'Vote (0)' })
   await expect(voteButtonAfterReset).toBeEnabled()
 
-  // Reset Session's own reload of the gallery (App.tsx's handleResetSession)
-  // already mints a fresh id via getVoterSessionId() to fetch voted_by_me
-  // with, so the old id is gone by now, not merely absent-until-next-vote.
-  const voterSessionIdAfterReset = await page.evaluate(() => localStorage.getItem('cap-voter-session-id'))
-  expect(voterSessionIdAfterReset).not.toBe(originalVoterSessionId)
+  // The device session token is unchanged by Reset Session -- unlike
+  // voterSession.ts's old fresh-id-per-reset behavior, this is the SAME
+  // token as before, confirming the revote below happens under one
+  // continuous session_id rather than a new one.
+  const tokenAfterReset = await page.evaluate(() => localStorage.getItem('cap-device-session-id'))
+  expect(tokenAfterReset).toBe(token)
 
   await voteButtonAfterReset.click()
-  await expect(galleryCard.getByRole('button', { name: '✓ Voted (2)' })).toBeDisabled()
+  // Nets back to 1, not 2 -- confirms the old double-count gap is closed.
+  await expect(galleryCard.getByRole('button', { name: '✓ Voted (1)' })).toBeDisabled()
 
-  await staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel }).getByRole('button', { name: 'Remove' }).click()
-  await expect(staffPage.locator('.staff-shortlisted-row', { hasText: guestLabel })).toHaveCount(0)
+  await removeFromShortlist(staffPage, guestLabel)
 })

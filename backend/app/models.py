@@ -17,12 +17,6 @@ class NodeCategory(StrEnum):
     SEASONAL = "seasonal"
 
 
-class NodeState(StrEnum):
-    NOT_VISITED = "not_visited"
-    VISITED = "visited"
-    CLOSED = "closed"
-
-
 class EngineGroup(StrEnum):
     REACTION_TIMING = "reaction_timing"
     GRID_DRAG = "grid_drag"
@@ -101,8 +95,11 @@ class MapNode(BaseModel):
     name: str
     category: NodeCategory
     description: str
-    state: NodeState = NodeState.NOT_VISITED
-    # Staff-managed operational status, independent of `state` above (which
+    # Per-Device Sessions Phase 3: the calling session's own visit progress
+    # (node_visits, resolved via the request's X-Device-Session header),
+    # not a global flag. Replaces the old global `state` column.
+    visited: bool = False
+    # Staff-managed operational status, independent of `visited` above (which
     # tracks a guest's own visit progress and is wiped by Reset Session).
     # Drives the Map's grey-pin/lock-icon closed treatment; never affects
     # Hunt/QR completion.
@@ -132,6 +129,10 @@ class BingoTile(BaseModel):
     col: int = Field(ge=0, le=4)
     label: str
     linked_map_node_id: UUID | None = None
+    # The calling device's own completion status (Per-Device Sessions Phase
+    # 6a, session_tile_completions), resolved server-side from the
+    # X-Device-Session header -- not global. row/col/label/linked_map_node_id
+    # above are the shared layout, still the same for every guest.
     completed: bool = False
     completed_at: datetime | None = None
 
@@ -150,6 +151,9 @@ class BingoCard(BaseModel):
     id: UUID
     owner_label: str
     tiles: list[BingoTile]
+    # Computed live per calling device from session_tile_completions (Per-
+    # Device Sessions Phase 6a) -- not a stored flag, so two families never
+    # see each other's milestone progress on this same shared card.
     milestones_achieved: MilestonesAchieved
 
 
@@ -519,10 +523,6 @@ class StaffLoginResponse(BaseModel):
     token: str
 
 
-class CreateVoteRequest(BaseModel):
-    voter_session_id: str = Field(min_length=1)
-
-
 class PassportStats(BaseModel):
     """Snapshot of cross-feature progress at the moment a passport was generated.
 
@@ -549,12 +549,16 @@ class ResetSessionResult(BaseModel):
     """Result of the guest-facing "Reset Session" action (nav dropdown).
 
     Narrower than backend/scripts/reset_demo_data.py's dev-only reset: this
-    clears Bingo tile completion/milestones, Map node visited state,
-    Scavenger Hunt challenge progress, the entire Cobb Coins earn ledger, and
-    every purchased Collectible Card -- puzzle attempts, photos, and
-    passports are left untouched (note that puzzle/scoring-sheet
-    *completion* state itself isn't reset, only the coins tied to it, since
-    coin_awards is cleared wholesale regardless of source_type).
+    clears this device's Bingo tile completion/milestones (Phase 6a), this
+    device's Map node visited status (Phase 3), this device's Scavenger Hunt
+    found/unlocked and challenge-completion progress (Phase 6b, the final
+    phase of the Per-Device Sessions migration), the entire Cobb Coins earn
+    ledger, every purchased Collectible Card, this device's Puzzle Timer
+    attempts, this device's Scoring Sheet sessions, and this device's
+    Favorite Photo vote(s) (Phase 5) -- photo submissions/gallery and
+    passports are left untouched. Every field here is now genuinely scoped
+    to the calling device only -- see app/services/session_reset.py's
+    docstring for the full per-table picture.
     """
 
     bingo_tiles_reset: int = Field(ge=0)
@@ -562,6 +566,9 @@ class ResetSessionResult(BaseModel):
     hunt_characters_reset: int = Field(ge=0)
     coins_reset: int = Field(ge=0)
     collectible_cards_reset: int = Field(ge=0)
+    puzzle_attempts_reset: int = Field(ge=0)
+    scoring_sessions_reset: int = Field(ge=0)
+    photo_votes_reset: int = Field(ge=0)
 
 
 class PassportSession(BaseModel):

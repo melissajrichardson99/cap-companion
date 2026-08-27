@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.device_session import get_or_create_session
 from app.errors import NotFoundError
-from app.models import BingoCard, BingoCardSummary, Minigame, TileCompletionResult
+from app.models import BingoCard, BingoCardSummary, DeviceSession, Minigame, TileCompletionResult
 from app.services import map_bingo
 
 router = APIRouter(prefix="/bingo", tags=["bingo"])
@@ -23,16 +24,16 @@ def list_minigames() -> list[Minigame]:
 
 
 @router.get("/card/{card_id}", response_model=BingoCard)
-def get_card(card_id: UUID) -> BingoCard:
+def get_card(card_id: UUID, session: DeviceSession = Depends(get_or_create_session)) -> BingoCard:
     try:
-        return map_bingo.get_bingo_card(card_id)
+        return map_bingo.get_bingo_card(card_id, session.id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/tiles/{tile_id}/complete", response_model=TileCompletionResult)
-def complete_tile(tile_id: UUID) -> TileCompletionResult:
+def complete_tile(tile_id: UUID, session: DeviceSession = Depends(get_or_create_session)) -> TileCompletionResult:
     try:
-        return map_bingo.complete_tile(tile_id)
+        return map_bingo.complete_tile(tile_id, session.id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

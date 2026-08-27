@@ -5,6 +5,7 @@ from app.services.milestone import (
     DIAGONAL_B,
     X_SHAPE,
     MilestoneHit,
+    achieved_milestones,
     detect_new_milestones,
     select_display_milestone,
 )
@@ -203,6 +204,40 @@ def test_select_display_milestone_blackout_beats_everything_simultaneously():
     assert display is not None
     assert display.type == "blackout"
     assert set(display.tile_indices) == set(range(25))
+
+
+# achieved_milestones: the live-computed replacement (Per-Device Sessions
+# Phase 6a) for what used to be bingo_cards' stored milestone_lines/
+# milestone_x/milestone_blackout columns -- feeds detect_new_milestones'
+# achieved_lines/achieved_x/achieved_blackout args from a completed-tile set
+# directly, with no separate cached flags to keep in sync.
+
+
+def test_achieved_milestones_empty_set_has_nothing_achieved():
+    lines, x, blackout = achieved_milestones(set())
+    assert lines == set()
+    assert x is False
+    assert blackout is False
+
+
+def test_achieved_milestones_reports_every_fully_covered_line():
+    row_0 = {0, 1, 2, 3, 4}
+    col_0 = {0, 5, 10, 15, 20}
+    lines, x, blackout = achieved_milestones(row_0 | col_0)
+    assert lines == {0, 5}
+    assert x is False
+    assert blackout is False
+
+
+def test_achieved_milestones_x_and_blackout():
+    lines, x, blackout = achieved_milestones(set(X_SHAPE))
+    assert x is True
+    assert blackout is False
+
+    lines, x, blackout = achieved_milestones(set(range(25)))
+    assert len(lines) == 10
+    assert x is True
+    assert blackout is True
 
 
 def test_select_display_milestone_never_reports_more_than_one_hit():

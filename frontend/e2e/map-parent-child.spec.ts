@@ -6,8 +6,12 @@ import { test, expect, type Page } from '@playwright/test'
 // popup should list them and the "did you complete X here?" sequence should
 // walk their linked bingo tiles.
 //
-// Assumes `python backend/scripts/reset_demo_data.py` has been run first so
-// the Demo Family card/map nodes start from a known (all-incomplete) state.
+// No explicit device-session seeding needed here (unlike the
+// deviceSessionHelper.ts-driven specs) -- `page`'s own auto-minted random
+// token (frontend/src/deviceSession.ts) naturally starts with every Bingo
+// tile open and every node unvisited, since both are per-session state now
+// (Bingo: Phase 6a; Map visited-status: Phase 3) that a brand-new token has
+// never touched.
 //
 // Home Page is the true root route now, and the guest nav is a closed-by-
 // default hamburger dropdown -- every test below opens it first via "Open
@@ -64,8 +68,16 @@ test.describe('Arcade Pad parent/child interconnectivity', () => {
     await page.getByRole('button', { name: 'No' }).click()
 
     // Popup closes after the last answer; Arcade Pad's pin now shows visited
-    // state plus a badge for the 2 children tiles still uncompleted.
-    await expect(page.locator('.map-pin.map-pin-visited[aria-label^="Arcade Pad"]')).toBeVisible()
+    // state plus a badge for the 2 children tiles still uncompleted. The 2
+    // confirmed tile completions each run several sequential round trips
+    // against the real dev Supabase project (session_tile_completions
+    // read/write, milestone bookkeeping, minigame draw -- Per-Device
+    // Sessions Phase 6a), so the POST this popup fires on its last answer
+    // can comfortably take longer than the default 5s expect timeout before
+    // reloadNodes() even starts -- an extended timeout here, not a
+    // fixed-length wait, so this stays robust to real network variance
+    // either direction.
+    await expect(page.locator('.map-pin.map-pin-visited[aria-label^="Arcade Pad"]')).toBeVisible({ timeout: 15_000 })
     await expect(page.locator('.map-pin[aria-label^="Arcade Pad"] .map-pin-tile-badge')).toHaveText('2')
 
     // Each of the 2 confirmed tile completions draws a minigame overlay, and

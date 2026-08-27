@@ -553,9 +553,10 @@ from hunt_characters c,
 where c.name = 'Sloth'
 on conflict (character_id, order_index) do nothing;
 
-insert into hunt_progress (character_id)
-select c.id from hunt_characters c
-on conflict (character_id) do nothing;
+-- hunt_progress is NOT pre-seeded (Per-Device Sessions Phase 6b, migration
+-- 030) -- it's now one row per (session, character) pair, created lazily the
+-- first time a given session unlocks or completes a challenge for that
+-- character, same as session_tile_completions (migration 029).
 
 -- ---------------------------------------------------------------------------
 -- encyclopedia_entries / scannable_codes (QR scanning).

@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { apiStaffLogin } from './staffAuthHelper'
+import { seedDeviceSession, withSession } from './deviceSessionHelper'
 
 // Covers Cobb Coins' earn side (migration 021_cobb_coins_earn_side.sql):
 // Puzzle Timer (unchanged), Bingo milestone tiers (10/25/50, replacing the
@@ -11,14 +12,27 @@ import { apiStaffLogin } from './staffAuthHelper'
 // ledger (including the new one-time-bonus "already awarded" guards, which
 // are derived from ledger existence rather than a separate flag).
 //
-// Every test resets the shared kiosk session itself via a raw POST to
-// /session/reset before driving anything, so -- unlike the old version of
-// this file -- there's no dependency on running first alphabetically or on
-// any other spec's incidental state. Bulk/precise tier math is exercised via
-// raw HTTP against the same endpoints the UI calls (bingo_tiles are always
-// returned row_index/col_index-ordered, i.e. row-major, so tiles[i] is grid
-// index i); a couple of scenarios also drive the real UI end to end
-// specifically to prove the banner/toast actually render.
+// Per-Device Sessions Phase 1: Coins are now scoped to a device session
+// (X-Device-Session header), not a single shared kiosk session. Every test
+// below mints its own random token, seeds it into `page`'s localStorage
+// before first navigation (seedDeviceSession), and passes it to every raw
+// API helper (withSession) so `page`'s own frontend-driven fetches and the
+// test's raw HTTP calls stay looking at the same session's ledger. Bingo
+// completion is per-session too now (Phase 6a) -- a fresh random token
+// naturally starts with every tile open, no reset needed for that half.
+// Hunt's own progress table is per-session too now (Phase 6b, the final
+// phase) -- a fresh random token naturally starts with every character
+// locked/uncompleted, same as Bingo. resetSessionApi is still called between
+// tests anyway, to correctly scope the coin-ledger (and Map visited-status,
+// Phase 3) halves of what it clears. GET /map/nodes also requires a session
+// header now (Phase 3), even where a test only reads the global is_open/
+// parent_node_id fields off it -- see getMapNodes below. GET /bingo/card/:id
+// and GET /hunt/characters likewise require a session header now (Phases 6a
+// and 6b) -- getBingoTileIds/getHuntCharacters below take a token for
+// exactly that, even in tests that only care about the shared tile ids/
+// challenge content, not this session's own completion status on them. A
+// dedicated test at the bottom proves two independent tokens truly get
+// independent Coins totals.
 
 const API = 'http://localhost:8000'
 
@@ -31,8 +45,8 @@ async function expectCoinTotal(page: Page, total: number): Promise<void> {
   await expect(page.locator('.nav-menu-coins')).toHaveText(`🪙 ${total} Cobb Coins`)
 }
 
-async function resetSessionApi(request: APIRequestContext): Promise<void> {
-  const res = await request.post(`${API}/session/reset`)
+async function resetSessionApi(request: APIRequestContext, token: string): Promise<void> {
+  const res = await request.post(`${API}/session/reset`, withSession(token))
   expect(res.ok()).toBe(true)
 }
 
@@ -42,29 +56,39 @@ async function getBingoCardId(request: APIRequestContext): Promise<string> {
   return cards[0].id
 }
 
-async function getBingoTileIds(request: APIRequestContext, cardId: string): Promise<string[]> {
-  const res = await request.get(`${API}/bingo/card/${cardId}`)
+async function getBingoTileIds(request: APIRequestContext, cardId: string, token: string): Promise<string[]> {
+  const res = await request.get(`${API}/bingo/card/${cardId}`, withSession(token))
   const card = (await res.json()) as { tiles: { id: string }[] }
   return card.tiles.map((t) => t.id)
 }
 
-async function apiCompleteTile(request: APIRequestContext, tileId: string): Promise<any> {
-  const res = await request.post(`${API}/bingo/tiles/${tileId}/complete`)
+async function apiCompleteTile(request: APIRequestContext, tileId: string, token: string): Promise<any> {
+  const res = await request.post(`${API}/bingo/tiles/${tileId}/complete`, withSession(token))
   return res.json()
 }
 
-async function getHuntCharacters(request: APIRequestContext): Promise<any[]> {
-  const res = await request.get(`${API}/hunt/characters`)
+// Per-Device Sessions Phase 6b: GET /hunt/characters now requires a device
+// session header too, like every other Hunt endpoint -- the token here scopes
+// the returned found/completed status, though this call site only cares
+// about the shared (global) challenges list per character.
+async function getHuntCharacters(request: APIRequestContext, token: string): Promise<any[]> {
+  const res = await request.get(`${API}/hunt/characters`, withSession(token))
   return res.json()
 }
 
-async function apiCompleteCharacter(request: APIRequestContext, character: any): Promise<any> {
+async function apiCompleteCharacter(request: APIRequestContext, character: any, token: string): Promise<any> {
   let last: any
   for (const challenge of character.challenges) {
-    const res = await request.post(`${API}/hunt/challenges/${challenge.id}/complete`)
+    const res = await request.post(`${API}/hunt/challenges/${challenge.id}/complete`, withSession(token))
     last = await res.json()
   }
   return last
+}
+
+async function getCoinsTotal(request: APIRequestContext, token: string): Promise<number> {
+  const res = await request.get(`${API}/coins/summary`, withSession(token))
+  const body = (await res.json()) as { total: number }
+  return body.total
 }
 
 interface MapNodeRow {
@@ -74,8 +98,12 @@ interface MapNodeRow {
   parent_node_id: string | null
 }
 
-async function getMapNodes(request: APIRequestContext): Promise<MapNodeRow[]> {
-  const res = await request.get(`${API}/map/nodes`)
+// Per-Device Sessions Phase 3: GET /map/nodes now requires a device session
+// header like every other map endpoint. The token passed here only ever
+// needs to resolve *a* session -- these call sites only read is_open/
+// parent_node_id/name, which stay global, not this-session visited status.
+async function getMapNodes(request: APIRequestContext, token: string): Promise<MapNodeRow[]> {
+  const res = await request.get(`${API}/map/nodes`, withSession(token))
   return res.json()
 }
 
@@ -85,6 +113,19 @@ async function setNodeOpen(request: APIRequestContext, token: string, nodeId: st
     data: { is_open: isOpen },
   })
   expect(res.ok()).toBe(true)
+}
+
+async function visitNode(
+  request: APIRequestContext,
+  token: string,
+  nodeId: string,
+  completedTileIds: string[] = [],
+): Promise<any> {
+  const res = await request.post(`${API}/map/nodes/${nodeId}/visit`, {
+    ...withSession(token),
+    data: { completed_tile_ids: completedTileIds },
+  })
+  return res.json()
 }
 
 async function dismissMinigameOverlay(page: Page): Promise<void> {
@@ -111,10 +152,11 @@ test.describe('Cobb Coins', () => {
   // Belt-and-suspenders cleanup for the Map Exploration tests below, same
   // pattern as attraction-status.spec.ts's own afterEach -- reopens any
   // top-level node this file's tests left closed, regardless of which test
-  // closed it or whether it failed partway through.
+  // closed it or whether it failed partway through. map_nodes.is_open stays
+  // global/staff-only this phase, so no device token is involved here.
   test.afterEach(async ({ request }) => {
     const token = await apiStaffLogin(request)
-    const rows = await getMapNodes(request)
+    const rows = await getMapNodes(request, crypto.randomUUID())
     const closedTopLevel = rows.filter((r) => r.parent_node_id === null && !r.is_open)
     await Promise.all(closedTopLevel.map((r) => setNodeOpen(request, token, r.id, true)))
   })
@@ -123,7 +165,15 @@ test.describe('Cobb Coins', () => {
     page,
     request,
   }) => {
-    await resetSessionApi(request)
+    // Puzzle Timer + 5 Bingo tile completions through the real UI -- each
+    // tile completion is now several sequential round trips against the
+    // real dev Supabase project (session_tile_completions read/write, Per-
+    // Device Sessions Phase 6a), so this needs more than the default 30s
+    // per-test budget.
+    test.setTimeout(90_000)
+    const token = crypto.randomUUID()
+    await resetSessionApi(request, token)
+    await seedDeviceSession(page, token)
     await page.goto('/')
     await expectCoinTotal(page, 0)
 
@@ -170,34 +220,39 @@ test.describe('Cobb Coins', () => {
   test('a completion that closes the X shape without closing any row/col along the way pays the X/double-bingo tier (25) cleanly', async ({
     request,
   }) => {
-    await resetSessionApi(request)
+    const token = crypto.randomUUID()
+    await resetSessionApi(request, token)
     const cardId = await getBingoCardId(request)
-    const tileIds = await getBingoTileIds(request, cardId)
+    const tileIds = await getBingoTileIds(request, cardId, token)
     const X_SHAPE = [0, 4, 6, 8, 12, 16, 18, 20, 24]
 
     let last: any
     for (const i of X_SHAPE) {
-      last = await apiCompleteTile(request, tileIds[i])
+      last = await apiCompleteTile(request, tileIds[i], token)
     }
     expect(last.milestones).toHaveLength(1)
     expect(last.milestones[0].type).toBe('x')
     expect(last.coins_awarded).toBe(25)
 
-    const summary = await (await request.get(`${API}/coins/summary`)).json()
-    expect(summary.total).toBe(25)
+    expect(await getCoinsTotal(request, token)).toBe(25)
   })
 
   test('filling the whole card pays each new line (10) as it closes; the final tile, which closes a line + the X shape + blackout at once, pays only blackout (50) -- not the sum of every simultaneous tier', async ({
     request,
   }) => {
-    await resetSessionApi(request)
+    // 25 sequential tile completions against the real dev Supabase project
+    // -- same "more than the default 30s budget" reasoning as the test
+    // above, just via raw HTTP instead of the UI.
+    test.setTimeout(60_000)
+    const token = crypto.randomUUID()
+    await resetSessionApi(request, token)
     const cardId = await getBingoCardId(request)
-    const tileIds = await getBingoTileIds(request, cardId)
+    const tileIds = await getBingoTileIds(request, cardId, token)
 
     let runningTotal = 0
     let last: any
     for (let i = 0; i < 25; i++) {
-      last = await apiCompleteTile(request, tileIds[i])
+      last = await apiCompleteTile(request, tileIds[i], token)
       runningTotal += last.coins_awarded
     }
 
@@ -209,25 +264,25 @@ test.describe('Cobb Coins', () => {
     // Rows 0-3 + cols 0-3 (8 lines) x 10, plus blackout's 50 = 130.
     expect(runningTotal).toBe(130)
 
-    const summary = await (await request.get(`${API}/coins/summary`)).json()
-    expect(summary.total).toBe(130)
+    expect(await getCoinsTotal(request, token)).toBe(130)
   })
 
   test('Scavenger Hunt: 15 coins per character found, +25 once for the 5th/last character, and the coin toast appears', async ({
     page,
     request,
   }) => {
-    await resetSessionApi(request)
-    const characters = await getHuntCharacters(request)
+    const token = crypto.randomUUID()
+    await resetSessionApi(request, token)
+    await seedDeviceSession(page, token)
+    const characters = await getHuntCharacters(request, token)
     const others = characters.filter((c) => c.name !== 'Pig')
     expect(others).toHaveLength(4)
 
     for (const character of others) {
-      const result = await apiCompleteCharacter(request, character)
+      const result = await apiCompleteCharacter(request, character, token)
       expect(result.coins_awarded).toBe(15)
     }
-    let summary = await (await request.get(`${API}/coins/summary`)).json()
-    expect(summary.total).toBe(60)
+    expect(await getCoinsTotal(request, token)).toBe(60)
 
     // Pig, the 5th and last character, completed via the real UI so the
     // "+40 Cobb Coins" (15 + the one-time 25 bonus) toast is exercised end
@@ -267,16 +322,18 @@ test.describe('Cobb Coins', () => {
     page,
     request,
   }) => {
-    await resetSessionApi(request)
-    const token = await apiStaffLogin(request)
-    const rows = await getMapNodes(request)
+    const token = crypto.randomUUID()
+    await resetSessionApi(request, token)
+    await seedDeviceSession(page, token)
+    const staffToken = await apiStaffLogin(request)
+    const rows = await getMapNodes(request, token)
     const topLevel = rows.filter((r) => r.parent_node_id === null)
     // Ticket Booth has zero linked bingo tiles, so "Mark Visited" completes
     // in a single click with no tile-confirmation popups in the way (same
     // reasoning attraction-status.spec.ts documents).
     const ticketBooth = topLevel.find((r) => r.name === 'Ticket Booth')!
     const others = topLevel.filter((r) => r.id !== ticketBooth.id)
-    await Promise.all(others.map((r) => setNodeOpen(request, token, r.id, false)))
+    await Promise.all(others.map((r) => setNodeOpen(request, staffToken, r.id, false)))
 
     await page.goto('/')
     await openNavMenu(page)
@@ -292,42 +349,41 @@ test.describe('Cobb Coins', () => {
     // Re-visiting (the completeness condition still holds) must not
     // re-award -- the existence-check guard in _check_map_exploration_bonus
     // blocks it.
-    const res = await request.post(`${API}/map/nodes/${ticketBooth.id}/visit`, { data: { completed_tile_ids: [] } })
-    const json = await res.json()
+    const json = await visitNode(request, token, ticketBooth.id)
     expect(json.coins_awarded).toBe(0)
 
-    const summary = await (await request.get(`${API}/coins/summary`)).json()
-    expect(summary.total).toBe(50)
+    expect(await getCoinsTotal(request, token)).toBe(50)
   })
 
   test('minigames never award coins -- a bare tile completion (no milestone) earns 0 regardless of the minigame it draws', async ({
     request,
   }) => {
-    await resetSessionApi(request)
+    const token = crypto.randomUUID()
+    await resetSessionApi(request, token)
     const cardId = await getBingoCardId(request)
-    const tileIds = await getBingoTileIds(request, cardId)
+    const tileIds = await getBingoTileIds(request, cardId, token)
 
-    const json = await apiCompleteTile(request, tileIds[10])
+    const json = await apiCompleteTile(request, tileIds[10], token)
     expect(json.milestones).toHaveLength(0)
     expect(json.coins_awarded).toBe(0)
     expect(json.minigames_drawn.length).toBeGreaterThan(0) // a minigame is still drawn...
 
-    const summary = await (await request.get(`${API}/coins/summary`)).json()
-    expect(summary.total).toBe(0) // ...but it never awards anything.
+    expect(await getCoinsTotal(request, token)).toBe(0) // ...but it never awards anything.
   })
 
   test('Reset Session zeroes the coin ledger and clears one-time-bonus eligibility, not just the visible total', async ({
     page,
     request,
   }) => {
-    await resetSessionApi(request)
+    const token = crypto.randomUUID()
+    await resetSessionApi(request, token)
+    await seedDeviceSession(page, token)
     const cardId = await getBingoCardId(request)
-    const tileIds = await getBingoTileIds(request, cardId)
+    const tileIds = await getBingoTileIds(request, cardId, token)
     for (let i = 0; i < 5; i++) {
-      await apiCompleteTile(request, tileIds[i])
+      await apiCompleteTile(request, tileIds[i], token)
     }
-    let summary = await (await request.get(`${API}/coins/summary`)).json()
-    expect(summary.total).toBe(10)
+    expect(await getCoinsTotal(request, token)).toBe(10)
 
     await page.goto('/')
     await page.getByRole('button', { name: 'Open menu' }).click()
@@ -337,22 +393,91 @@ test.describe('Cobb Coins', () => {
     await expect(resetConfirmDialog).toHaveCount(0)
     await expectCoinTotal(page, 0)
 
-    summary = await (await request.get(`${API}/coins/summary`)).json()
-    expect(summary.total).toBe(0)
+    expect(await getCoinsTotal(request, token)).toBe(0)
 
     // Re-earn the Map Exploration bonus from scratch -- this proves the
-    // ledger wipe actually cleared the "already awarded" guard (there's no
-    // separate tracking flag; existence in coin_awards IS the guard), not
+    // ledger wipe actually cleared this session's "already awarded" guard
+    // (there's no separate tracking flag; existence in coin_awards IS the
+    // guard, scoped to session_id per Per-Device Sessions Phase 1), not
     // just that the visible total happened to read 0.
-    const token = await apiStaffLogin(request)
-    const rows = await getMapNodes(request)
+    const staffToken = await apiStaffLogin(request)
+    const rows = await getMapNodes(request, token)
     const topLevel = rows.filter((r) => r.parent_node_id === null)
     const ticketBooth = topLevel.find((r) => r.name === 'Ticket Booth')!
     const others = topLevel.filter((r) => r.id !== ticketBooth.id)
-    await Promise.all(others.map((r) => setNodeOpen(request, token, r.id, false)))
+    await Promise.all(others.map((r) => setNodeOpen(request, staffToken, r.id, false)))
 
-    const res = await request.post(`${API}/map/nodes/${ticketBooth.id}/visit`, { data: { completed_tile_ids: [] } })
-    const json = await res.json()
+    const json = await visitNode(request, token, ticketBooth.id)
     expect(json.coins_awarded).toBe(50)
+  })
+
+  test('two independent device sessions (two browser contexts) have completely independent Coins balances', async ({
+    browser,
+    request,
+  }) => {
+    // Two real, separate browser contexts -- each mints its own random
+    // device-session token the normal way (deviceSession.ts's
+    // getDeviceSessionId(), on first localStorage read), simulating two
+    // different guests' own phones rather than one shared kiosk session.
+    // No manual token seeding needed here, unlike the single-session tests
+    // above -- that's the point of using two contexts for this one.
+    const contextA = await browser.newContext()
+    const contextB = await browser.newContext()
+    const pageA = await contextA.newPage()
+    const pageB = await contextB.newPage()
+
+    let tokenA: string | null = null
+    let tokenB: string | null = null
+
+    try {
+      await pageA.goto('/')
+      await pageB.goto('/')
+
+      tokenA = await pageA.evaluate(() => localStorage.getItem('cap-device-session-id'))
+      tokenB = await pageB.evaluate(() => localStorage.getItem('cap-device-session-id'))
+      expect(tokenA).toBeTruthy()
+      expect(tokenB).toBeTruthy()
+      expect(tokenA).not.toBe(tokenB)
+
+      await resetSessionApi(request, tokenA!)
+      await resetSessionApi(request, tokenB!)
+
+      // Session A completes a whole bingo line (+10) via raw HTTP under its
+      // own token; session B never touches the ledger at all.
+      const cardId = await getBingoCardId(request)
+      const tileIds = await getBingoTileIds(request, cardId, tokenA!)
+      for (let i = 0; i < 5; i++) {
+        await apiCompleteTile(request, tileIds[i], tokenA!)
+      }
+
+      expect(await getCoinsTotal(request, tokenA!)).toBe(10)
+      expect(await getCoinsTotal(request, tokenB!)).toBe(0)
+
+      // The raw completions above bypassed pageA's own UI entirely, so its
+      // already-mounted React state still reflects whatever it fetched on
+      // its initial goto -- a reload is needed to see the raw calls' effect
+      // reflected in the nav-menu pill (same reasoning as any other
+      // out-of-band DB mutation the frontend doesn't poll for on its own).
+      await pageA.reload()
+      await pageB.reload()
+      await expectCoinTotal(pageA, 10)
+      await expectCoinTotal(pageB, 0)
+
+      // Resetting A must not touch B's (already-zero) balance -- asserted
+      // by re-checking B is still exactly 0, not just "still not 10".
+      await resetSessionApi(request, tokenA!)
+      expect(await getCoinsTotal(request, tokenA!)).toBe(0)
+      expect(await getCoinsTotal(request, tokenB!)).toBe(0)
+    } finally {
+      // Guaranteed cleanup regardless of where an assertion above fails --
+      // Bingo completion is per-session (Phase 6a) so tokenA's tiles can't
+      // leak into another spec file's own random token, but the coin ledger
+      // this test earned into is still worth tidying up on the same
+      // belt-and-suspenders principle.
+      if (tokenA) await resetSessionApi(request, tokenA).catch(() => {})
+      if (tokenB) await resetSessionApi(request, tokenB).catch(() => {})
+      await contextA.close()
+      await contextB.close()
+    }
   })
 })

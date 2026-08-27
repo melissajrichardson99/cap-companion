@@ -25,7 +25,6 @@ import { ScoringScreen } from './components/ScoringScreen'
 import { StaffPage } from './components/StaffPage'
 import { ToastStack, type ToastItem } from './components/ToastStack'
 import { clearDismissedAnnouncements } from './dismissedAnnouncements'
-import { clearVoterSession, getVoterSessionId } from './voterSession'
 import './components/shared.css'
 import './App.css'
 
@@ -221,7 +220,7 @@ function App() {
   const reloadPhotoGallery = () => {
     setPhotoGalleryError(null)
     api
-      .listPhotoGallery(getVoterSessionId())
+      .listPhotoGallery()
       .then(setPhotoGallery)
       .catch((err) => setPhotoGalleryError(String(err)))
   }
@@ -338,12 +337,11 @@ function App() {
     // rows reset above, just stored client-side (dismissedAnnouncements.ts).
     clearDismissedAnnouncements()
     setAnnouncementResetSignal((n) => n + 1)
-    // Same "next guest" boundary for Favorite Photo's per-device vote-dedup
-    // marker (voterSession.ts) -- purely local, doesn't touch already-cast
-    // votes/tallies server-side. Reload the gallery so voted_by_me reflects
-    // the fresh id getVoterSessionId() mints on next use, instead of staying
-    // stuck true from the just-cleared one until the next unrelated reload.
-    clearVoterSession()
+    // Favorite Photo's own vote (Per-Device Sessions Phase 5) is now
+    // cleared server-side by POST /session/reset itself, scoped to this
+    // session_id -- reload the gallery so voted_by_me flips back to false
+    // for this session instead of staying stuck true until the next
+    // unrelated reload.
     reloadPhotoGallery()
   }
 

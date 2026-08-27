@@ -5,7 +5,11 @@ import { getStaffToken } from './staffAuth'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
-export type NodeState = 'not_visited' | 'visited' | 'closed'
+// Derived display state for a node's pin/card visuals -- not an API field.
+// MapNode itself only carries `visited` (per-session, Per-Device Sessions
+// Phase 3) and `is_open` (global, staff-managed); see deriveNodeDisplayState
+// below for how the two combine into this.
+export type NodeDisplayState = 'not_visited' | 'visited' | 'closed'
 export type NodeCategory = 'attraction' | 'animal' | 'service' | 'food' | 'seasonal'
 
 export interface LinkedTile {
@@ -24,13 +28,24 @@ export interface MapNode {
   name: string
   category: NodeCategory
   description: string
-  state: NodeState
+  // The calling device's own visit progress (Per-Device Sessions Phase 3),
+  // resolved server-side from the X-Device-Session header -- not global.
+  visited: boolean
   is_open: boolean
   linked_tiles: LinkedTile[]
   x_pct: number | null
   y_pct: number | null
   parent_node_id: string | null
   children: ChildNode[]
+}
+
+// Combines visited (per-session) and is_open (global, staff-managed) into
+// the single display state MapScreen.tsx/NodeDetailPopup.tsx render --
+// is_open wins outright (a closed attraction shows as closed regardless of
+// this session's own visit progress).
+export function deriveNodeDisplayState(node: Pick<MapNode, 'visited' | 'is_open'>): NodeDisplayState {
+  if (!node.is_open) return 'closed'
+  return node.visited ? 'visited' : 'not_visited'
 }
 
 export interface BingoTile {
@@ -327,6 +342,9 @@ export interface ResetSessionResult {
   hunt_characters_reset: number
   coins_reset: number
   collectible_cards_reset: number
+  puzzle_attempts_reset: number
+  scoring_sessions_reset: number
+  photo_votes_reset: number
 }
 
 // Per-Device Sessions Phase 0 -- see backend/app/routers/device_session.py.
@@ -477,13 +495,8 @@ export const api = {
   rejectPhoto: (submissionId: string) =>
     staffRequest<PhotoSubmission>(`/photos/${submissionId}/reject`, { method: 'POST' }),
   deletePhoto: (submissionId: string) => staffRequest<void>(`/photos/${submissionId}`, { method: 'DELETE' }),
-  listPhotoGallery: (voterSessionId: string) =>
-    request<PhotoSubmission[]>(`/photos/gallery?voter_session_id=${encodeURIComponent(voterSessionId)}`),
-  votePhoto: (submissionId: string, voterSessionId: string) =>
-    request<PhotoSubmission>(`/photos/${submissionId}/vote`, {
-      method: 'POST',
-      body: JSON.stringify({ voter_session_id: voterSessionId }),
-    }),
+  listPhotoGallery: () => request<PhotoSubmission[]>('/photos/gallery'),
+  votePhoto: (submissionId: string) => request<PhotoSubmission>(`/photos/${submissionId}/vote`, { method: 'POST' }),
   getPhotoOfTheDay: () => request<PhotoSubmission | null>('/photos/of-the-day'),
   generatePassport: async (familyLabel: string, file: File | null) => {
     const body = new FormData()

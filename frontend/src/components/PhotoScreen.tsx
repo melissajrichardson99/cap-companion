@@ -1,7 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { api, type PhotoSubmission } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
-import { getVoterSessionId } from '../voterSession'
 import { CameraIcon } from './NavIcons'
 import { PhotoLightbox } from './PhotoLightbox'
 import './PhotoScreen.css'
@@ -49,7 +48,7 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
     setVotingId(submissionId)
     setVoteError(null)
     api
-      .votePhoto(submissionId, getVoterSessionId())
+      .votePhoto(submissionId)
       .then(onReload)
       .catch((err) => setVoteError(String(err)))
       .finally(() => setVotingId(null))

@@ -7,19 +7,29 @@ trigger. Run from anywhere with the backend venv active:
     python backend/scripts/reset_demo_data.py
 
 Resets:
-  - every bingo_tiles row on the "Demo Family" card: completed = false,
-    completed_at = null
-  - that card's milestone_lines/milestone_x/milestone_blackout back to none
-  - every map_nodes row (all cards share the same map): state = 'not_visited'
+  - every session_tile_completions row deleted (Per-Device Sessions Phase
+    6a, migration 029) -- completed/completed_at and the milestone_lines/
+    milestone_x/milestone_blackout columns no longer exist on bingo_tiles/
+    bingo_cards; completion + milestone status is now computed live per
+    device session from session_tile_completions, so a blanket delete resets
+    every session's Bingo progress at once, same "dev-only, no per-session
+    scoping" reasoning as the rest of this script
+  - every node_visits row deleted, so every device session's Map visited
+    status starts fresh (Per-Device Sessions Phase 3 -- map_nodes no longer
+    has a `state` column to reset in place)
   - every puzzle_attempts row deleted, so the Puzzle Timer specs start from
     a clean slate (no prior attempts) each run
   - Math Maze's "Standard" challenge pinned to staff_time_seconds = 2, so the
     e2e specs have a deterministic value to compare elapsed time against
     (real staff times otherwise get set directly in the DB by park staff --
     there's no in-app UI for it in this POC)
-  - every hunt_progress row: challenges_completed = [], completed_at = null,
-    unlocked_at = null, so the Scavenger Hunt specs start with every
-    character un-started and locked
+  - every hunt_progress row deleted across every device session (Per-Device
+    Sessions Phase 6b, migration 030) -- rows are no longer pre-seeded one
+    per character; each is created lazily the first time a session unlocks
+    or completes a challenge for a character, so a blanket delete is the
+    equivalent reset (every session's Hunt progress goes back to no rows at
+    all, i.e. every character un-started and locked), same "dev-only, no
+    per-session scoping" reasoning as session_tile_completions above
   - every staff_requests row deleted, so the Contact Staff specs start with
     an empty staff view each run
   - every announcements row deleted -- a leftover undismissed announcement
@@ -57,32 +67,32 @@ def reset_demo_data() -> None:
     card_rows = client.table("bingo_cards").select("id").eq("owner_label", DEMO_CARD_OWNER_LABEL).execute().data
     if not card_rows:
         raise RuntimeError(f'No bingo card found with owner_label "{DEMO_CARD_OWNER_LABEL}"')
-    card_id = card_rows[0]["id"]
 
-    tile_rows = (
-        client.table("bingo_tiles")
-        .update({"completed": False, "completed_at": None})
-        .eq("card_id", card_id)
-        .execute()
-        .data
-    )
-    print(f"Reset {len(tile_rows)} bingo tile(s) on the '{DEMO_CARD_OWNER_LABEL}' card.")
-
-    client.table("bingo_cards").update(
-        {"milestone_lines": [], "milestone_x": False, "milestone_blackout": False}
-    ).eq("id", card_id).execute()
-    print(f"Cleared milestone state on the '{DEMO_CARD_OWNER_LABEL}' card.")
-
-    # PostgREST rejects an UPDATE with no WHERE clause at all; `id <> the nil
-    # UUID` is a standard no-op filter that matches every real row.
-    node_rows = (
-        client.table("map_nodes")
-        .update({"state": "not_visited"})
+    # Blanket delete across every device session, not scoped to this card's
+    # tiles -- session_tile_completions holds every session's Bingo
+    # completion/milestone progress (Per-Device Sessions Phase 6a, migration
+    # 029), and this dev-only script has no single "current session" to
+    # scope to. Same "no bare filterless delete" PostgREST rule as the other
+    # blanket wipes below.
+    completion_rows = (
+        client.table("session_tile_completions")
+        .delete()
         .neq("id", "00000000-0000-0000-0000-000000000000")
         .execute()
         .data
     )
-    print(f"Reset {len(node_rows)} map node(s) to not_visited.")
+    print(f"Deleted {len(completion_rows)} bingo tile completion(s) across all device sessions.")
+
+    # Same "no bare filterless delete" PostgREST rule as the other blanket
+    # wipes in this script.
+    node_visit_rows = (
+        client.table("node_visits")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+        .execute()
+        .data
+    )
+    print(f"Deleted {len(node_visit_rows)} map node visit(s).")
 
     # Same "no bare delete" PostgREST rule as the map_nodes update above.
     attempt_rows = (
@@ -102,15 +112,19 @@ def reset_demo_data() -> None:
     ).eq("label", "Standard").execute()
     print('Pinned Math Maze "Standard" staff_time_seconds to 2.')
 
-    # Same "no bare filterless update" PostgREST rule as map_nodes above.
+    # Blanket delete across every device session, not scoped to any one
+    # session -- same reasoning as session_tile_completions above. Rows are
+    # no longer pre-seeded (migration 030), so deleting them all is the
+    # equivalent of resetting every session's Hunt progress to fully
+    # un-started and locked.
     progress_rows = (
         client.table("hunt_progress")
-        .update({"challenges_completed": [], "completed_at": None, "unlocked_at": None})
+        .delete()
         .neq("id", "00000000-0000-0000-0000-000000000000")
         .execute()
         .data
     )
-    print(f"Reset {len(progress_rows)} hunt progress row(s).")
+    print(f"Deleted {len(progress_rows)} hunt progress row(s) across all device sessions.")
 
     # Same "no bare filterless delete" PostgREST rule as puzzle_attempts above.
     staff_request_rows = (

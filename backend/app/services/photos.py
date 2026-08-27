@@ -29,7 +29,7 @@ def _photo_url(storage_path: str) -> str:
     return client.storage.from_(BUCKET).get_public_url(storage_path)
 
 
-def _row_to_submission(row: dict, voter_session_id: str | None = None) -> PhotoSubmission:
+def _row_to_submission(row: dict, session_id: UUID | None = None) -> PhotoSubmission:
     votes = row.get("photo_votes") or []
     return PhotoSubmission(
         id=row["id"],
@@ -38,8 +38,7 @@ def _row_to_submission(row: dict, voter_session_id: str | None = None) -> PhotoS
         submitted_at=_parse_timestamptz(row["submitted_at"]),
         status=row["status"],
         vote_count=len(votes),
-        voted_by_me=voter_session_id is not None
-        and any(v["voter_session_id"] == voter_session_id for v in votes),
+        voted_by_me=session_id is not None and any(v["session_id"] == str(session_id) for v in votes),
     )
 
 
@@ -142,32 +141,37 @@ def delete_all_shortlisted() -> int:
     return len(rows)
 
 
-def list_gallery(voter_session_id: str | None) -> list[PhotoSubmission]:
+def list_gallery(session_id: UUID | None) -> list[PhotoSubmission]:
     client = get_supabase_client()
     rows = (
         client.table("photo_submissions")
-        .select("*,photo_votes(voter_session_id)")
+        .select("*,photo_votes(session_id)")
         .eq("status", PhotoStatus.SHORTLISTED.value)
         .order("submitted_at")
         .execute()
         .data
     )
-    return [_row_to_submission(r, voter_session_id) for r in rows]
+    return [_row_to_submission(r, session_id) for r in rows]
 
 
 def get_photo_of_the_day() -> PhotoSubmission | None:
-    # Highest-voted shortlisted photo. list_gallery already orders by
-    # submitted_at ascending, and max()'s "first item wins ties" behavior
-    # means a tie between two photos (including an all-zero-vote shortlist)
-    # resolves to whichever was submitted first -- a deterministic, if
-    # arbitrary, tiebreak rather than one that changes on every request.
+    # Highest-voted shortlisted photo, aggregated across every session's
+    # votes -- list_gallery(None) here means "no session context", not "no
+    # votes counted"; vote_count always sums every photo_votes row
+    # regardless of whose session cast it (Per-Device Sessions Phase 5). It
+    # only affects voted_by_me, which is irrelevant for this global result.
+    # list_gallery already orders by submitted_at ascending, and max()'s
+    # "first item wins ties" behavior means a tie between two photos
+    # (including an all-zero-vote shortlist) resolves to whichever was
+    # submitted first -- a deterministic, if arbitrary, tiebreak rather than
+    # one that changes on every request.
     photos = list_gallery(None)
     if not photos:
         return None
     return max(photos, key=lambda p: p.vote_count)
 
 
-def vote(submission_id: UUID, voter_session_id: str) -> PhotoSubmission:
+def vote(submission_id: UUID, session_id: UUID) -> PhotoSubmission:
     row = _get_row(submission_id)
     if PhotoStatus(row["status"]) != PhotoStatus.SHORTLISTED:
         raise ConflictError(f"Photo submission {submission_id} is not shortlisted for voting")
@@ -177,25 +181,23 @@ def vote(submission_id: UUID, voter_session_id: str) -> PhotoSubmission:
         client.table("photo_votes")
         .select("id")
         .eq("submission_id", str(submission_id))
-        .eq("voter_session_id", voter_session_id)
+        .eq("session_id", str(session_id))
         .execute()
         .data
     )
     if existing:
-        raise ConflictError(f"Voter {voter_session_id} already voted on photo submission {submission_id}")
+        raise ConflictError(f"Session {session_id} already voted on photo submission {submission_id}")
 
-    # The unique(submission_id, voter_session_id) constraint (migration 012)
-    # is the real enforcement against a duplicate vote; the check above just
+    # The unique(submission_id, session_id) constraint (migration 028) is
+    # the real enforcement against a duplicate vote; the check above just
     # gives a friendlier error ahead of it.
-    client.table("photo_votes").insert(
-        {"submission_id": str(submission_id), "voter_session_id": voter_session_id}
-    ).execute()
+    client.table("photo_votes").insert({"submission_id": str(submission_id), "session_id": str(session_id)}).execute()
 
     updated_row = (
         client.table("photo_submissions")
-        .select("*,photo_votes(voter_session_id)")
+        .select("*,photo_votes(session_id)")
         .eq("id", str(submission_id))
         .execute()
         .data[0]
     )
-    return _row_to_submission(updated_row, voter_session_id)
+    return _row_to_submission(updated_row, session_id)

@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
+import { seedDeviceSession } from './deviceSessionHelper'
 
 // Covers the Scavenger Hunt: the 5-character select screen, the lock/unlock
 // gate (migration 014_hunt_unlock.sql -- characters start locked and are
@@ -10,17 +11,35 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 // marked found, and the redesign's per-character accent theming + fully
 // anonymous locked state + overall progress indicator. Hits the real dev
 // Supabase project via the backend, same as the other e2e specs -- no
-// mocking. Tests are ordered top-to-bottom and each uses its own character,
-// since hunt_progress (including unlocked_at) is cumulative per character
-// across tests in this file (only reset once by global setup, same as every
-// other spec). Kangaroo/Pig/Capybara are already unlocked by the time this
-// file runs, since scan.spec.ts (which runs first, alphabetically) also
-// scans their codes -- Sloth is the one character no other spec ever
-// touches, so it's used below to assert the locked state deterministically.
+// mocking.
+//
+// Per-Device Sessions Phase 6b (migration 030, final phase): hunt_progress is
+// now one row per (session, character) pair, not one global row per
+// character -- see hunt-sessions.spec.ts for coverage of what that actually
+// changes (two-session isolation, coin-bonus attribution, the QR deep-link
+// session-establishment path). This file's own tests still want one
+// continuous "guest visit" spanning every test below (tests are ordered
+// top-to-bottom and each uses its own character, since progress accumulates
+// per character across tests in this file), so every test explicitly seeds
+// the SAME device-session token (SESSION_TOKEN below) via beforeEach --
+// without that, Playwright's default fresh-context-per-test would otherwise
+// hand each test its own independent (and independently-locked) 5-character
+// roster, same as any other two unrelated guests. Kangaroo/Pig/Capybara
+// being already unlocked by the time some tests below run is purely this
+// file's own earlier tests acting within that one shared session -- no
+// dependency on scan.spec.ts or any other file anymore, since a different
+// spec file's session token can never see or affect this one's Hunt
+// progress.
 //
 // The guest nav is a closed-by-default hamburger dropdown -- every
 // tab/action click below opens it first via "Open menu", and tab buttons
 // use the menuitemradio role (not button) per NavMenu.tsx's aria roles.
+
+const SESSION_TOKEN = crypto.randomUUID()
+
+test.beforeEach(async ({ page }) => {
+  await seedDeviceSession(page, SESSION_TOKEN)
+})
 
 const CHARACTER_CODES: Record<string, string> = {
   Kangaroo: 'brave-otter',
@@ -98,8 +117,10 @@ test.describe('Scavenger Hunt', () => {
 
     await expect(page.locator('.hunt-character-card')).toHaveCount(5)
 
-    // Sloth is never scanned by any other spec, so it's a reliable
-    // always-locked control for the locked-state UI.
+    // Sloth is never scanned by any other test in this file's shared
+    // session, so it's a reliable always-locked control for the locked-state
+    // UI (and, being per-session now, no other spec file's session could
+    // affect it either way).
     const sloth = characterCard(page, 'Sloth')
     await expect(sloth).toHaveClass(/hunt-character-locked/)
     await expect(sloth).toContainText('???')

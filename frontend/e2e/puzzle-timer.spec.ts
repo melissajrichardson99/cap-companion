@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
+import { seedDeviceSession, withSession } from './deviceSessionHelper'
 
 // Covers the Puzzle Solving Timer (Plan.md 2.3): the description-only start
 // screen, start/stop timer per challenge, the 3-tap progressive hint button,
@@ -12,11 +13,28 @@ import { test, expect, type Page } from '@playwright/test'
 // The guest nav is a closed-by-default hamburger dropdown -- every test
 // opens it first via "Open menu", then picks Puzzles via its menuitemradio
 // role (not the implicit button role), per NavMenu.tsx.
+//
+// Per-Device Sessions Phase 2 (migration 025): puzzle_attempts is now scoped
+// to a device session, same deviceSessionHelper.ts pattern established for
+// Coins/Collectibles in Phase 1. openPuzzlesTab mints and seeds an explicit
+// token for every test (rather than relying on the frontend's own implicit
+// crypto.randomUUID() mint) and returns it, so a test that needs to make raw
+// API calls in the same session as its own `page` can do so via withSession.
 
-async function openPuzzlesTab(page: Page): Promise<void> {
+const API = 'http://localhost:8000'
+
+async function openPuzzlesTab(page: Page, token: string = crypto.randomUUID()): Promise<string> {
+  await seedDeviceSession(page, token)
   await page.goto('/')
   await page.getByRole('button', { name: 'Open menu' }).click()
   await page.getByRole('menuitemradio', { name: 'Puzzles' }).click()
+  return token
+}
+
+async function getCoinsTotal(request: APIRequestContext, token: string): Promise<number> {
+  const res = await request.get(`${API}/coins/summary`, withSession(token))
+  const body = (await res.json()) as { total: number }
+  return body.total
 }
 
 test.describe('Puzzle Solving Timer', () => {
@@ -197,5 +215,42 @@ test.describe('Puzzle Solving Timer', () => {
 
     await dialog.getByRole('button', { name: 'Start', exact: true }).click()
     await expect(dialog.getByRole('heading', { name: 'Hints' })).toHaveCount(0)
+  })
+
+  test('two independent device sessions have completely independent Puzzle Timer attempts', async ({ request }) => {
+    // puzzle_attempts has no read-back-by-session endpoint (no leaderboard,
+    // per the module docstring), so the coin ledger -- itself tagged with
+    // the same session_id at the same insert -- is the observable proxy for
+    // "did this device's attempt get recorded," same reasoning
+    // collectible-cards.spec.ts's isolation test uses for its own ledger.
+    const tokenA = crypto.randomUUID()
+    const tokenB = crypto.randomUUID()
+
+    const puzzlesRes = await request.get(`${API}/puzzles`)
+    const puzzles = (await puzzlesRes.json()) as { challenges: { id: string }[] }[]
+    const challengeId = puzzles[0].challenges[0].id
+
+    expect(await getCoinsTotal(request, tokenA)).toBe(0)
+    expect(await getCoinsTotal(request, tokenB)).toBe(0)
+
+    const attemptRes = await request.post(`${API}/puzzles/challenges/${challengeId}/attempts`, {
+      ...withSession(tokenA),
+      data: { elapsed_seconds: 10, hints_used: 0 },
+    })
+    expect(attemptRes.ok()).toBe(true)
+
+    const totalA = await getCoinsTotal(request, tokenA)
+    expect(totalA).toBeGreaterThan(0)
+    // Session B's ledger is untouched by A's attempt.
+    expect(await getCoinsTotal(request, tokenB)).toBe(0)
+
+    // Session B recording its own attempt doesn't affect A's already-earned total.
+    const attemptResB = await request.post(`${API}/puzzles/challenges/${challengeId}/attempts`, {
+      ...withSession(tokenB),
+      data: { elapsed_seconds: 10, hints_used: 0 },
+    })
+    expect(attemptResB.ok()).toBe(true)
+    expect(await getCoinsTotal(request, tokenB)).toBeGreaterThan(0)
+    expect(await getCoinsTotal(request, tokenA)).toBe(totalA)
   })
 })

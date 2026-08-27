@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
-import type { MapNode, VisitNodeResponse } from '../api'
+import { deriveNodeDisplayState, type MapNode, type NodeDisplayState, type VisitNodeResponse } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { KEY_SPOT_CATEGORIES } from '../keySpotCategories'
 import { NodeDetailPopup } from './NodeDetailPopup'
@@ -192,7 +192,7 @@ const CATEGORY_LABEL: Record<MapNode['category'], string> = {
 // 'seasonal' (no dedicated legend key on the physical map either).
 const LEGEND_CATEGORIES: MapNode['category'][] = ['attraction', 'animal', 'service', 'food']
 
-const STATE_ICON: Record<MapNode['state'], string> = {
+const STATE_ICON: Record<NodeDisplayState, string> = {
   not_visited: '',
   visited: '✓',
   closed: '\u{1F512}',
@@ -245,18 +245,8 @@ const LEGEND_NUMBER: Record<string, number> = {
   'Private Event Animal Space': 7,
 }
 
-// Staff-managed is_open drives the same grey/lock visual treatment as
-// state === 'closed', but is a separate field (see map_nodes.is_open):
-// state tracks guest visit progress and is wiped by Reset Session, while
-// is_open is operational status that must survive it. This derives a
-// display-only state so all the existing state-keyed visuals (pin color,
-// icon, legend swatch) apply without touching node.state itself.
-function displayState(node: MapNode): MapNode['state'] {
-  return node.is_open ? node.state : 'closed'
-}
-
 function pinShapeContent(node: MapNode): string {
-  const state = displayState(node)
+  const state = deriveNodeDisplayState(node)
   if (state !== 'not_visited') return STATE_ICON[state]
   const number = LEGEND_NUMBER[node.name]
   return number != null ? String(number) : ''
@@ -607,7 +597,7 @@ export function MapScreen({
               <img src="/park-map.png" alt="Cobb's Adventure Park map" className="map-image" />
               {positioned.map((node) => {
                 const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
-                const pinState = displayState(node)
+                const pinState = deriveNodeDisplayState(node)
                 const stateNote = pinState !== 'not_visited' ? `, ${pinState.replace('_', ' ')}` : ''
                 const nudge = nudges.get(node.id)
                 const pinStyle = {
@@ -654,7 +644,7 @@ export function MapScreen({
           <div className="node-grid">
             {unplaced.map((node) => {
               const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
-              const cardState = displayState(node)
+              const cardState = deriveNodeDisplayState(node)
               return (
                 <button
                   type="button"

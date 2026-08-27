@@ -57,7 +57,12 @@ def list_puzzles() -> list[Puzzle]:
     ]
 
 
-def record_attempt(challenge_id: UUID, elapsed_seconds: int, hints_used: int) -> PuzzleAttempt:
+def record_attempt(challenge_id: UUID, elapsed_seconds: int, hints_used: int, session_id: UUID) -> PuzzleAttempt:
+    """session_id (Per-Device Sessions Phase 2, migration 025) scopes the
+    puzzle_attempts row itself to the calling device, not just the coin
+    award it triggers below. There's no attempt-history read to scope
+    alongside it -- per the module docstring, this POC has no leaderboard/
+    per-device stats screen that lists past attempts back to a guest."""
     client = get_supabase_client()
 
     challenge_rows = client.table("puzzle_challenges").select("id").eq("id", str(challenge_id)).execute().data
@@ -66,12 +71,19 @@ def record_attempt(challenge_id: UUID, elapsed_seconds: int, hints_used: int) ->
 
     row = (
         client.table("puzzle_attempts")
-        .insert({"challenge_id": str(challenge_id), "elapsed_seconds": elapsed_seconds, "hints_used": hints_used})
+        .insert(
+            {
+                "challenge_id": str(challenge_id),
+                "elapsed_seconds": elapsed_seconds,
+                "hints_used": hints_used,
+                "session_id": str(session_id),
+            }
+        )
         .execute()
         .data[0]
     )
     coins_service.award_coins(
-        CoinSourceType.PUZZLE_TIMER, UUID(row["id"]), coins_service.puzzle_timer_amount(hints_used)
+        CoinSourceType.PUZZLE_TIMER, UUID(row["id"]), coins_service.puzzle_timer_amount(hints_used), session_id
     )
     return PuzzleAttempt(
         id=row["id"],

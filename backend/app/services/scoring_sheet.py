@@ -3,6 +3,22 @@
 Win-condition math is pure and lives in app.services.scoring; this module's
 job is just DB I/O plus wiring that pure result onto the session row -- same
 split as milestone.py (pure) / map_bingo.py (orchestration).
+
+Per-Device Sessions Phase 2 (migration 025) scopes score_sheet_sessions to
+device_session_id -- not just the coin award device_session_id already
+threaded through since Phase 1, but ownership of the session row itself:
+_get_session_row now filters on it, so a session_id that exists but belongs
+to a different device 404s exactly like one that doesn't exist at all (no
+existence leak). score_entries has no column of its own -- every entries
+read/write reaches those rows only via a session_row already fetched scoped
+to the caller, so entries are scoped for free (see migration 025's header).
+
+first_to_bonus_round (see the comment on the auto-lock check below) was
+checked during this phase's design: it's purely about which player *within
+one score_sheet_session* reaches the threshold first -- there's no
+cross-session/cross-family competitive condition here (unlike the Map
+Exploration bonus's global guard) -- so scoping this table per-device needed
+no special-case, same as everything else in this phase.
 """
 
 from __future__ import annotations
@@ -64,8 +80,15 @@ def _get_game_row(client, game_id: UUID | str) -> dict:
     return rows[0]
 
 
-def _get_session_row(client, session_id: UUID) -> dict:
-    rows = client.table("score_sheet_sessions").select("*").eq("id", str(session_id)).execute().data
+def _get_session_row(client, session_id: UUID, device_session_id: UUID) -> dict:
+    rows = (
+        client.table("score_sheet_sessions")
+        .select("*")
+        .eq("id", str(session_id))
+        .eq("device_session_id", str(device_session_id))
+        .execute()
+        .data
+    )
     if not rows:
         raise NotFoundError(f"Score sheet session {session_id} not found")
     return rows[0]
@@ -123,7 +146,14 @@ def _round_complete_entries(entries: list[ScoreEntry], players: list[str]) -> li
     return entries[:complete_count]
 
 
-def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
+def _session_from_row(client, session_row: dict, device_session_id: UUID) -> ScoreSheetSession:
+    """device_session_id (Per-Device Sessions Phase 1) attributes the win
+    coin award below to the calling device -- named distinctly from this
+    file's own pre-existing `session_id` (a score-sheet session, an
+    unrelated concept) to avoid shadowing it. Threaded through even on the
+    read-only path (get_session) because first_to_bonus_round games are
+    deliberately excluded from the auto-lock below, so a GET here isn't
+    guaranteed to be free of the award side effect."""
     entries = _entries_for_session(client, session_row["id"])
     players: list[str] = session_row["players"]
 
@@ -190,7 +220,10 @@ def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
             .data[0]
         )
         coins_service.award_coins(
-            CoinSourceType.SCORING_SHEET_WIN, UUID(session_row["id"]), coins_service.SCORING_SHEET_WIN_AMOUNT
+            CoinSourceType.SCORING_SHEET_WIN,
+            UUID(session_row["id"]),
+            coins_service.SCORING_SHEET_WIN_AMOUNT,
+            device_session_id,
         )
 
     # None once locked (including just now, if the block above auto-locked
@@ -220,21 +253,26 @@ def _session_from_row(client, session_row: dict) -> ScoreSheetSession:
     )
 
 
-def create_session(game_id: UUID, players: list[str]) -> ScoreSheetSession:
+def create_session(game_id: UUID, players: list[str], device_session_id: UUID) -> ScoreSheetSession:
     client = get_supabase_client()
     _get_game_row(client, game_id)  # 404s if the game doesn't exist
 
-    row = client.table("score_sheet_sessions").insert({"game_id": str(game_id), "players": players}).execute().data[0]
-    return _session_from_row(client, row)
+    row = (
+        client.table("score_sheet_sessions")
+        .insert({"game_id": str(game_id), "players": players, "device_session_id": str(device_session_id)})
+        .execute()
+        .data[0]
+    )
+    return _session_from_row(client, row, device_session_id)
 
 
-def get_session(session_id: UUID) -> ScoreSheetSession:
+def get_session(session_id: UUID, device_session_id: UUID) -> ScoreSheetSession:
     client = get_supabase_client()
-    session_row = _get_session_row(client, session_id)
-    return _session_from_row(client, session_row)
+    session_row = _get_session_row(client, session_id, device_session_id)
+    return _session_from_row(client, session_row, device_session_id)
 
 
-def finish_session(session_id: UUID) -> ScoreSheetSession:
+def finish_session(session_id: UUID, device_session_id: UUID) -> ScoreSheetSession:
     """Manually conclude a first_to_bonus_round session (Horse Hoops).
 
     A staff member taps this once they're confident physical play is over --
@@ -242,12 +280,12 @@ def finish_session(session_id: UUID) -> ScoreSheetSession:
     auto-locked the instant the pure win check says "won".
     """
     client = get_supabase_client()
-    session_row = _get_session_row(client, session_id)
+    session_row = _get_session_row(client, session_id, device_session_id)
 
     if session_row["completed_at"]:
         raise ConflictError("This session has already finished.")
 
-    session = _session_from_row(client, session_row)
+    session = _session_from_row(client, session_row, device_session_id)
     if session.status != scoring_service.STATUS_WON:
         raise ConflictError("Can't finish this session yet -- there's no clear winner.")
 
@@ -255,14 +293,16 @@ def finish_session(session_id: UUID) -> ScoreSheetSession:
     client.table("score_sheet_sessions").update({"completed_at": now, "winner": session.winner}).eq(
         "id", str(session_id)
     ).execute()
-    coins_service.award_coins(CoinSourceType.SCORING_SHEET_WIN, session_id, coins_service.SCORING_SHEET_WIN_AMOUNT)
+    coins_service.award_coins(
+        CoinSourceType.SCORING_SHEET_WIN, session_id, coins_service.SCORING_SHEET_WIN_AMOUNT, device_session_id
+    )
 
-    return get_session(session_id)
+    return get_session(session_id, device_session_id)
 
 
-def record_entry(session_id: UUID, player_name: str, score_event_id: UUID) -> ScoreSheetSession:
+def record_entry(session_id: UUID, player_name: str, score_event_id: UUID, device_session_id: UUID) -> ScoreSheetSession:
     client = get_supabase_client()
-    session_row = _get_session_row(client, session_id)
+    session_row = _get_session_row(client, session_id, device_session_id)
 
     if session_row["completed_at"]:
         raise ConflictError("This session has already finished -- start a new session to keep playing.")
@@ -296,4 +336,4 @@ def record_entry(session_id: UUID, player_name: str, score_event_id: UUID) -> Sc
         }
     ).execute()
 
-    return _session_from_row(client, session_row)
+    return _session_from_row(client, session_row, device_session_id)
