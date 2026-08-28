@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api, type Announcement, type PhotoSubmission } from '../api'
 import {
   ANIMAL_SHOW_TIMES,
@@ -17,13 +18,11 @@ import { PhotoLightbox } from './PhotoLightbox'
 import './HomePage.css'
 
 interface HomePageProps {
-  onBrowsePhotos: () => void
   announcements: Announcement[] | null
-  onNavigateMap: () => void
-  onNavigateBingo: () => void
+  // Scan QR opens a shared modal (lifted in App.tsx/GuestShell, not a route)
+  // rather than navigating, same as NavMenu's own Scan QR action -- every
+  // other Quick Links button below navigates directly via useNavigate.
   onScanQr: () => void
-  onNavigateScoring: () => void
-  onNavigateCollectibles: () => void
 }
 
 // True root route (Plan.md build-priority item 4): a real landing page
@@ -34,15 +33,8 @@ interface HomePageProps {
 // tab). The only other live network call on this page is the weather fetch,
 // and it's designed to fail without blocking anything else from rendering
 // (see the weatherFailed branch below).
-export function HomePage({
-  onBrowsePhotos,
-  announcements,
-  onNavigateMap,
-  onNavigateBingo,
-  onScanQr,
-  onNavigateScoring,
-  onNavigateCollectibles,
-}: HomePageProps) {
+export function HomePage({ announcements, onScanQr }: HomePageProps) {
+  const navigate = useNavigate()
   const [weather, setWeather] = useState<CurrentWeather | null>(null)
   const [weatherFailed, setWeatherFailed] = useState(false)
 
@@ -180,7 +172,7 @@ export function HomePage({
           <CameraIcon className="home-photo-cta-icon" />
           <h2 className="home-section-title">Vote For Your Favorites</h2>
           <p className="home-cta-text">Love this photo? Vote for your favorites when you visit!</p>
-          <button type="button" className="btn home-photo-cta-btn" onClick={onBrowsePhotos}>
+          <button type="button" className="btn home-photo-cta-btn" onClick={() => navigate('/photos')}>
             Browse &amp; Vote
           </button>
         </section>
@@ -215,11 +207,11 @@ export function HomePage({
       <section className="home-card cap-parchment-card">
         <h2 className="home-section-title">Quick Links</h2>
         <div className="home-quicknav-grid">
-          <button type="button" className="home-quicknav-btn" onClick={onNavigateMap}>
+          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/map')}>
             <MapPinIcon className="home-quicknav-btn-icon" />
             <span className="home-quicknav-btn-label">Map</span>
           </button>
-          <button type="button" className="home-quicknav-btn" onClick={onNavigateBingo}>
+          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/bingo')}>
             <GridIcon className="home-quicknav-btn-icon" />
             <span className="home-quicknav-btn-label">Bingo Card</span>
           </button>
@@ -227,11 +219,11 @@ export function HomePage({
             <CameraIcon className="home-quicknav-btn-icon" />
             <span className="home-quicknav-btn-label">Scan QR</span>
           </button>
-          <button type="button" className="home-quicknav-btn" onClick={onNavigateScoring}>
+          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/scoring')}>
             <ClipboardIcon className="home-quicknav-btn-icon" />
             <span className="home-quicknav-btn-label">Scoring Sheet</span>
           </button>
-          <button type="button" className="home-quicknav-btn" onClick={onNavigateCollectibles}>
+          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/collectibles')}>
             <PawIcon className="home-quicknav-btn-icon" />
             <span className="home-quicknav-btn-label">Collectibles</span>
           </button>

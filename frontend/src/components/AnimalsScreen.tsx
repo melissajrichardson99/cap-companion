@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import { ANIMALS } from '../animalContent'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { AnimalCardsScreen } from './AnimalCardsScreen'
@@ -9,87 +10,97 @@ import './AnimalsScreen.css'
 
 interface AnimalsScreenProps {
   onScanQr: () => void
-  // Set by App.tsx when a /animals/:slug QR deep link lands here, so this
-  // screen opens straight on that animal's detail view instead of the list.
-  initialSlug?: string | null
-  onInitialSlugHandled?: () => void
 }
 
-type View = 'list' | 'detail' | 'cards' | 'invalid'
-
 // "Our Animals" (rebranded Encyclopedia, Plan.md 2.5/5): a 3-screen flow
-// (list -> detail -> information cards) all owned by this one component's
-// local view state, same "no router" convention as the rest of the app
-// (App.tsx's only real URL route is /scan/:code, plus /animals/:slug for QR
-// signage -- see initialSlug below). Keying the detail/cards children on
-// animal.slug (below) forces a fresh mount -- and therefore fresh internal
-// state (active tab, card index) -- whenever the selected animal changes,
-// instead of manually resetting that state here.
-export function AnimalsScreen({ onScanQr, initialSlug, onInitialSlugHandled }: AnimalsScreenProps) {
-  // ANIMALS is a static in-memory constant (see animalContent.ts), so
-  // resolving initialSlug against it here is inherently live -- there's no
-  // separate fetched/cached copy this could go stale against (unlike the
-  // Hunt /scan/:code flow's ScanScreen, which has to re-look-up its scanned
-  // character in the shared hunt-characters list for exactly that reason).
-  const initialAnimal = initialSlug ? ANIMALS.find((a) => a.slug === initialSlug) ?? null : null
-  const [view, setView] = useState<View>(initialSlug ? (initialAnimal ? 'detail' : 'invalid') : 'list')
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(initialAnimal?.slug ?? null)
-  const [search, setSearch] = useState('')
+// (list -> detail -> information cards). React Router pilot: each screen is
+// now a real nested route under /animals (mounted by App.tsx's GuestShell at
+// "animals/*"), so browsing list->detail->cards updates the URL and Back/
+// Forward/hard-reload all work -- previously this was local view state on a
+// single persistent component, with no URL reflection past the initial
+// /animals/:slug deep link. Keying the detail/cards routes on animal.slug
+// (via React Router's own remount-on-param-change) still gives each a fresh
+// mount -- and therefore fresh internal state (About/Photos tab, card
+// index) -- whenever the selected animal changes.
+export function AnimalsScreen({ onScanQr }: AnimalsScreenProps) {
+  return (
+    <Routes>
+      <Route index element={<AnimalsListView onScanQr={onScanQr} />} />
+      <Route path=":slug" element={<AnimalDetailRoute />} />
+      <Route path=":slug/cards" element={<AnimalCardsRoute />} />
+    </Routes>
+  )
+}
 
-  // Pre-existing NavMenu quirk (not new to this screen): selecting a tab from
-  // the dropdown leaves #app-root (overflow:hidden, App.css) scrolled ~48px
-  // right -- invisible on every other screen since none has interactive UI
-  // flush against the content column's left edge, but it clips this screen's
-  // back button/tabs. Scoped to this screen rather than touching NavMenu's
-  // shared close/transition logic.
+// Pre-existing NavMenu quirk (not new to this screen): selecting a tab from
+// the dropdown leaves #app-root (overflow:hidden, App.css) scrolled ~48px
+// right -- invisible on every other screen since none has interactive UI
+// flush against the content column's left edge, but it clips this screen's
+// back button/tabs. Each of the three routes below mounts independently
+// (real nested routes now, not shared view state), so each needs its own
+// copy of this reset rather than the one shared effect the old single-
+// component version used.
+function useResetHorizontalScroll() {
   useEffect(() => {
     document.getElementById('app-root')?.scrollTo({ left: 0 })
   }, [])
+}
 
-  // The view/selectedSlug initializers above already resolved initialSlug on
-  // mount; this just tells App.tsx to forget the pending slug so navigating
-  // away and back to the Our Animals tab later returns to the list instead
-  // of re-landing on this animal every time (App.tsx never clears it itself
-  // since AnimalsScreen unmounts/remounts on tab switches).
-  useEffect(() => {
-    if (initialSlug) onInitialSlugHandled?.()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+function AnimalNotFound({ slug, onBrowse }: { slug: string; onBrowse: () => void }) {
+  return (
+    <div className="animals-screen">
+      <h1 className="cap-sign-board">
+        <BinocularsIcon className="cap-sign-board-icon" />
+        Our Animals
+      </h1>
+      <p className="animals-empty">
+        We couldn't find that animal{slug ? ` ("${slug}")` : ''}. It may have moved or the sign's QR code is out of
+        date.
+      </p>
+      <button type="button" className="btn btn-primary" onClick={onBrowse}>
+        Browse Our Animals
+      </button>
+    </div>
+  )
+}
 
-  const selectedAnimal = ANIMALS.find((a) => a.slug === selectedSlug) ?? null
+function AnimalDetailRoute() {
+  useResetHorizontalScroll()
+  const { slug = '' } = useParams<{ slug: string }>()
+  const navigate = useNavigate()
+  const animal = ANIMALS.find((a) => a.slug === slug) ?? null
 
-  if (view === 'invalid') {
-    return (
-      <div className="animals-screen">
-        <h1 className="cap-sign-board">
-          <BinocularsIcon className="cap-sign-board-icon" />
-          Our Animals
-        </h1>
-        <p className="animals-empty">
-          We couldn't find that animal{initialSlug ? ` ("${initialSlug}")` : ''}. It may have moved or the sign's QR
-          code is out of date.
-        </p>
-        <button type="button" className="btn btn-primary" onClick={() => setView('list')}>
-          Browse Our Animals
-        </button>
-      </div>
-    )
+  if (!animal) {
+    return <AnimalNotFound slug={slug} onBrowse={() => navigate('/animals')} />
   }
 
-  if (view === 'detail' && selectedAnimal) {
-    return (
-      <AnimalDetailScreen
-        key={selectedAnimal.slug}
-        animal={selectedAnimal}
-        onBack={() => setView('list')}
-        onViewCards={() => setView('cards')}
-      />
-    )
+  return (
+    <AnimalDetailScreen
+      key={animal.slug}
+      animal={animal}
+      onBack={() => navigate('/animals')}
+      onViewCards={() => navigate(`/animals/${animal.slug}/cards`)}
+    />
+  )
+}
+
+function AnimalCardsRoute() {
+  useResetHorizontalScroll()
+  const { slug = '' } = useParams<{ slug: string }>()
+  const navigate = useNavigate()
+  const animal = ANIMALS.find((a) => a.slug === slug) ?? null
+
+  if (!animal) {
+    return <AnimalNotFound slug={slug} onBrowse={() => navigate('/animals')} />
   }
 
-  if (view === 'cards' && selectedAnimal) {
-    return <AnimalCardsScreen key={selectedAnimal.slug} animal={selectedAnimal} onBack={() => setView('detail')} />
-  }
+  return <AnimalCardsScreen key={animal.slug} animal={animal} onBack={() => navigate(`/animals/${animal.slug}`)} />
+}
+
+function AnimalsListView({ onScanQr }: { onScanQr: () => void }) {
+  useResetHorizontalScroll()
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
 
   const filtered = ANIMALS.filter((a) => a.name.toLowerCase().includes(search.trim().toLowerCase()))
 
@@ -122,10 +133,7 @@ export function AnimalsScreen({ onScanQr, initialSlug, onInitialSlugHandled }: A
               type="button"
               key={animal.slug}
               className="animal-card cap-parchment-card"
-              onClick={() => {
-                setSelectedSlug(animal.slug)
-                setView('detail')
-              }}
+              onClick={() => navigate(`/animals/${animal.slug}`)}
             >
               <span className="animal-card-photo">
                 <AnimalImage candidates={animal.photoCandidates} alt="" className="animal-card-photo-img" />

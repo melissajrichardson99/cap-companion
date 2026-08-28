@@ -43,7 +43,10 @@ test.beforeEach(async ({ page }) => {
 async function openScanEntry(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('button', { name: 'Scan QR' }).click()
+  // Scoped to the nav panel -- Home's Quick Links section (HomePage.tsx) has
+  // its own "Scan QR" quicknav button with the same accessible name, so an
+  // unscoped getByRole here is ambiguous whenever Home is the landing screen.
+  await page.locator('#nav-menu-panel').getByRole('button', { name: 'Scan QR' }).click()
 }
 
 // A fresh (never-before-unlocked) scan now lands on the "character found"
@@ -183,7 +186,7 @@ test.describe('QR / manual code scanning', () => {
     await expect(page.getByText(/couldn't find a code matching/i)).toBeVisible()
     await page.getByRole('button', { name: 'Back to the app' }).click()
     await page.getByRole('button', { name: 'Open menu' }).click()
-    await expect(page.getByRole('button', { name: 'Scan QR' })).toBeVisible()
+    await expect(page.locator('#nav-menu-panel').getByRole('button', { name: 'Scan QR' })).toBeVisible()
   })
 
   test('/scan/:code works as a direct deep link, not just in-app navigation', async ({ page }) => {
@@ -197,7 +200,7 @@ test.describe('QR / manual code scanning', () => {
     await page.getByRole('button', { name: 'Back to the app' }).click()
     await expect(page).toHaveURL('/')
     await page.getByRole('button', { name: 'Open menu' }).click()
-    await expect(page.getByRole('button', { name: 'Scan QR' })).toBeVisible()
+    await expect(page.locator('#nav-menu-panel').getByRole('button', { name: 'Scan QR' })).toBeVisible()
   })
 
   test('/scan/:code deep link for a hunt_character unlocks it directly, same as camera app -> app', async ({

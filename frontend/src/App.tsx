@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { Dispatch, ReactNode, SetStateAction } from 'react'
+import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, type Announcement, type BingoCard, type CoinsSummary, type CollectibleCard, type CollectibleCatalogEntry, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { AnimalsScreen } from './components/AnimalsScreen'
 import { AnnouncementPopup } from './components/AnnouncementPopup'
@@ -28,78 +29,34 @@ import { clearDismissedAnnouncements } from './dismissedAnnouncements'
 import './components/shared.css'
 import './App.css'
 
-type Tab = 'map' | 'bingo' | 'puzzles' | 'scoring' | 'hunt' | 'animals' | 'collectibles' | 'photos' | 'foodtrucks' | 'faq'
-
-// Direct QR signage links (e.g. /animals/capybara at an enclosure) -- a
-// separate URL scheme from Hunt's /scan/:code (see App.tsx comment below),
-// so the same animal name used by both features never collides on one path.
-const ANIMAL_DEEP_LINK_RE = /^\/animals\/([^/]+)$/
-
-const TABS: { key: Tab; label: string; icon: ReactNode }[] = [
-  { key: 'map', label: 'Map', icon: <MapPinIcon /> },
-  { key: 'bingo', label: 'Bingo Card', icon: <GridIcon /> },
-  { key: 'puzzles', label: 'Puzzles', icon: <PuzzlePieceIcon /> },
-  { key: 'scoring', label: 'Scoring Sheet', icon: <ClipboardIcon /> },
-  { key: 'hunt', label: 'Scavenger Hunt', icon: <SearchIcon /> },
-  { key: 'animals', label: 'Our Animals', icon: <BinocularsIcon /> },
-  { key: 'collectibles', label: 'Collectibles', icon: <PawIcon /> },
-  { key: 'photos', label: 'Favorite Photo', icon: <CameraIcon /> },
-  { key: 'foodtrucks', label: 'Food Truck Menus', icon: <TruckIcon /> },
-  { key: 'faq', label: 'FAQ', icon: <QuestionMarkIcon /> },
+// Every guest-facing screen (Home included) is a real router-driven route --
+// see GuestShell below, ScanRoute for /scan/:code, and AnimalsScreen.tsx for
+// the nested /animals routing. `key` doubles as the route path (relative to
+// GuestShell's mount point) and the value NavMenu compares against the
+// current location to highlight the active tab.
+const TABS: { key: string; label: string; icon: ReactNode }[] = [
+  { key: '/map', label: 'Map', icon: <MapPinIcon /> },
+  { key: '/bingo', label: 'Bingo Card', icon: <GridIcon /> },
+  { key: '/puzzles', label: 'Puzzles', icon: <PuzzlePieceIcon /> },
+  { key: '/scoring', label: 'Scoring Sheet', icon: <ClipboardIcon /> },
+  { key: '/hunt', label: 'Scavenger Hunt', icon: <SearchIcon /> },
+  { key: '/animals', label: 'Our Animals', icon: <BinocularsIcon /> },
+  { key: '/collectibles', label: 'Collectibles', icon: <PawIcon /> },
+  { key: '/photos', label: 'Favorite Photo', icon: <CameraIcon /> },
+  { key: '/food-trucks', label: 'Food Truck Menus', icon: <TruckIcon /> },
+  { key: '/faq', label: 'FAQ', icon: <QuestionMarkIcon /> },
 ]
 
 function App() {
-  // A hard /animals/:slug deep link (QR signage) should land straight on
-  // that animal's detail screen, past Home, with the Our Animals tab
-  // already active -- computed once from the URL at mount, same idea as
-  // pendingMapKeySpot below.
-  const initialAnimalSlug = window.location.pathname.match(ANIMAL_DEEP_LINK_RE)?.[1] ?? null
-  const [activeTab, setActiveTab] = useState<Tab>(initialAnimalSlug ? 'animals' : 'map')
-  // True root route (Plan.md build-priority item 4): guests land on Home
-  // first, same as `path`/`activeTab` below this is state layered on the
-  // single '/' route rather than its own URL -- consistent with the rest of
-  // this hand-rolled router, which never gave individual tabs their own
-  // paths either. Picking a tab (NavMenu) leaves Home; the navbar logo
-  // (BrandLogo) always returns to it.
-  const [showHome, setShowHome] = useState(!initialAnimalSlug)
+  // App itself renders inside main.tsx's <BrowserRouter>, so it can call
+  // useNavigate() directly -- used below by applyBaseFollowup to jump to
+  // /bingo for a milestone banner regardless of which route triggered it.
+  const navigate = useNavigate()
 
-  // Hand-rolled routing (no router lib elsewhere in this app): the only real
-  // URL route is /scan/:code, which must work as a hard deep link (someone
-  // else's camera app opening a printed sign's URL fresh) as well as via
-  // in-app navigation from ScanEntryModal -- both funnel through the same
-  // `path` state and ScanScreen below.
-  const [path, setPath] = useState(() => window.location.pathname)
   const [showScanEntry, setShowScanEntry] = useState(false)
   const [showContactStaff, setShowContactStaff] = useState(false)
   const [showPassport, setShowPassport] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
-  // FAQ->Map deep link (FaqScreen's washroom answer "Show me on the map"
-  // button) -- set right before switching activeTab to 'map', consumed and
-  // cleared by MapScreen once it opens the key spot's highlight.
-  const [pendingMapKeySpot, setPendingMapKeySpot] = useState<string | null>(null)
-  // /animals/:slug deep link (QR signage at an enclosure) -- consumed and
-  // cleared by AnimalsScreen once it has resolved the slug into its own
-  // initial view state, same pattern as pendingMapKeySpot above. Left set
-  // (not cleared here) so it flows into AnimalsScreen the first time it's
-  // rendered, even though `activeTab`/`showHome` above already jumped straight
-  // to the Our Animals tab.
-  const [pendingAnimalSlug, setPendingAnimalSlug] = useState<string | null>(
-    initialAnimalSlug ? decodeURIComponent(initialAnimalSlug) : null,
-  )
-
-  useEffect(() => {
-    const onPopState = () => setPath(window.location.pathname)
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
-  }, [])
-
-  const navigate = (nextPath: string) => {
-    window.history.pushState({}, '', nextPath)
-    setPath(nextPath)
-  }
-
-  const scanMatch = path.match(/^\/scan\/([^/]+)$/)
-  const isStaffView = path === '/staff'
 
   const [nodes, setNodes] = useState<MapNode[] | null>(null)
   const [nodesError, setNodesError] = useState<string | null>(null)
@@ -281,7 +238,7 @@ function App() {
   const applyBaseFollowup = (followup: { milestones: MilestoneEvent[]; extraMinigame: Minigame | null }) => {
     if (followup.milestones.length === 0) return
     setMilestoneQueue((prev) => [...prev, ...followup.milestones])
-    setActiveTab('bingo')
+    navigate('/bingo')
     if (followup.extraMinigame) {
       setPendingMilestoneMinigames((prev) => [...prev, followup.extraMinigame as Minigame])
     }
@@ -410,194 +367,391 @@ function App() {
     }
   }
 
-  if (isStaffView) {
-    // Lightweight, separate view (Plan.md 2.10) -- no shared header/nav with
-    // the guest-facing app. Gated behind a shared staff password
-    // (app/staff_auth.py) -- StaffPage itself handles the login screen.
-    return <StaffPage />
-  }
+  const dismissToast = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id))
 
-  if (scanMatch) {
-    const code = decodeURIComponent(scanMatch[1])
-    return (
-      <div id="app-root">
-        <header className="app-header">
-          <div className="app-header-top">
-            <BrandLogo
-              onClick={() => {
-                navigate('/')
-                setShowHome(true)
-              }}
-            />
-          </div>
-        </header>
-        <main className="app-main">
-          <ScanScreen
-            code={code}
-            characters={huntCharacters}
+  return (
+    <Routes>
+      {/* Lightweight, separate view (Plan.md 2.10) -- no shared header/nav
+          with the guest-facing app. Gated behind a shared staff password
+          (app/staff_auth.py) -- StaffPage itself handles the login screen. */}
+      <Route path="/staff" element={<StaffPage />} />
+      <Route
+        path="/scan/:code"
+        element={
+          <ScanRoute
+            huntCharacters={huntCharacters}
             onCompleteChallenge={completeHuntChallenge}
             onUnlockCharacter={unlockHuntCharacter}
-            onPlayMinigame={handlePlayHuntMinigame}
-            onClose={() => navigate('/')}
+            onPlayHuntMinigame={handlePlayHuntMinigame}
+            toasts={toasts}
+            onDismissToast={dismissToast}
+            activeMinigame={activeMinigame}
+            onMinigameOverlayClose={handleMinigameOverlayClose}
+            announcements={announcements}
+            announcementResetSignal={announcementResetSignal}
           />
-        </main>
-        <ToastStack toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
-        {activeMinigame && <MinigameOverlay game={activeMinigame} onClose={handleMinigameOverlayClose} />}
-        <AnnouncementPopup announcements={announcements} resetSignal={announcementResetSignal} />
-      </div>
-    )
-  }
+        }
+      />
+      <Route
+        path="/*"
+        element={
+          <GuestShell
+            showScanEntry={showScanEntry}
+            setShowScanEntry={setShowScanEntry}
+            showContactStaff={showContactStaff}
+            setShowContactStaff={setShowContactStaff}
+            showPassport={showPassport}
+            setShowPassport={setShowPassport}
+            showResetConfirm={showResetConfirm}
+            setShowResetConfirm={setShowResetConfirm}
+            nodes={nodes}
+            nodesError={nodesError}
+            reloadNodes={reloadNodes}
+            handleVisitResult={handleVisitResult}
+            card={card}
+            cardError={cardError}
+            cardId={cardId}
+            reloadCard={reloadCard}
+            handleTileResult={handleTileResult}
+            milestoneQueue={milestoneQueue}
+            setMilestoneQueue={setMilestoneQueue}
+            pendingMilestoneMinigames={pendingMilestoneMinigames}
+            handlePlayMilestoneMinigame={handlePlayMilestoneMinigame}
+            puzzles={puzzles}
+            puzzlesError={puzzlesError}
+            reloadPuzzles={reloadPuzzles}
+            reloadCoins={reloadCoins}
+            scoringGames={scoringGames}
+            scoringGamesError={scoringGamesError}
+            reloadScoringGames={reloadScoringGames}
+            huntCharacters={huntCharacters}
+            huntError={huntError}
+            reloadHuntCharacters={reloadHuntCharacters}
+            completeHuntChallenge={completeHuntChallenge}
+            handlePlayHuntMinigame={handlePlayHuntMinigame}
+            collectibleCatalog={collectibleCatalog}
+            collectibleCatalogError={collectibleCatalogError}
+            reloadCollectibleCatalog={reloadCollectibleCatalog}
+            collectibleCards={collectibleCards}
+            collectibleCardsError={collectibleCardsError}
+            reloadCollectibleCards={reloadCollectibleCards}
+            coinsSummary={coinsSummary}
+            purchaseCollectible={purchaseCollectible}
+            photoGallery={photoGallery}
+            photoGalleryError={photoGalleryError}
+            reloadPhotoGallery={reloadPhotoGallery}
+            announcements={announcements}
+            announcementResetSignal={announcementResetSignal}
+            toasts={toasts}
+            onDismissToast={dismissToast}
+            activeMinigame={activeMinigame}
+            onMinigameOverlayClose={handleMinigameOverlayClose}
+            handleResetSession={handleResetSession}
+          />
+        }
+      />
+    </Routes>
+  )
+}
+
+interface ScanRouteProps {
+  huntCharacters: HuntCharacter[] | null
+  onCompleteChallenge: (challengeId: string) => Promise<HuntCharacter>
+  onUnlockCharacter: (characterId: string) => Promise<HuntCharacter>
+  onPlayHuntMinigame: (challengeId: string, minigameSlug: string) => void
+  toasts: ToastItem[]
+  onDismissToast: (id: string) => void
+  activeMinigame: Minigame | null
+  onMinigameOverlayClose: () => void
+  announcements: Announcement[] | null
+  announcementResetSignal: number
+}
+
+// The Scavenger Hunt QR deep-link entry point -- must work as a hard deep
+// link (someone else's camera app opening a printed sign's URL fresh) as
+// well as via in-app navigation from ScanEntryModal. React Router decodes
+// dynamic path segments itself, so `code` here is already URL-decoded.
+function ScanRoute({
+  huntCharacters,
+  onCompleteChallenge,
+  onUnlockCharacter,
+  onPlayHuntMinigame,
+  toasts,
+  onDismissToast,
+  activeMinigame,
+  onMinigameOverlayClose,
+  announcements,
+  announcementResetSignal,
+}: ScanRouteProps) {
+  const { code = '' } = useParams<{ code: string }>()
+  const navigate = useNavigate()
 
   return (
     <div id="app-root">
       <header className="app-header">
         <div className="app-header-top">
-          <BrandLogo onClick={() => setShowHome(true)} />
+          <BrandLogo onClick={() => navigate('/')} />
+        </div>
+      </header>
+      <main className="app-main">
+        <ScanScreen
+          code={code}
+          characters={huntCharacters}
+          onCompleteChallenge={onCompleteChallenge}
+          onUnlockCharacter={onUnlockCharacter}
+          onPlayMinigame={onPlayHuntMinigame}
+          onClose={() => navigate('/')}
+        />
+      </main>
+      <ToastStack toasts={toasts} onDismiss={onDismissToast} />
+      {activeMinigame && <MinigameOverlay game={activeMinigame} onClose={onMinigameOverlayClose} />}
+      <AnnouncementPopup announcements={announcements} resetSignal={announcementResetSignal} />
+    </div>
+  )
+}
+
+interface GuestShellProps {
+  showScanEntry: boolean
+  setShowScanEntry: (show: boolean) => void
+  showContactStaff: boolean
+  setShowContactStaff: (show: boolean) => void
+  showPassport: boolean
+  setShowPassport: (show: boolean) => void
+  showResetConfirm: boolean
+  setShowResetConfirm: (show: boolean) => void
+  nodes: MapNode[] | null
+  nodesError: string | null
+  reloadNodes: () => void
+  handleVisitResult: (result: VisitNodeResponse) => void
+  card: BingoCard | null
+  cardError: string | null
+  cardId: string | null
+  reloadCard: (id: string) => void
+  handleTileResult: (result: TileCompletionResult) => void
+  milestoneQueue: MilestoneEvent[]
+  setMilestoneQueue: Dispatch<SetStateAction<MilestoneEvent[]>>
+  pendingMilestoneMinigames: Minigame[]
+  handlePlayMilestoneMinigame: () => void
+  puzzles: Puzzle[] | null
+  puzzlesError: string | null
+  reloadPuzzles: () => void
+  reloadCoins: () => void
+  scoringGames: ScoringGame[] | null
+  scoringGamesError: string | null
+  reloadScoringGames: () => void
+  huntCharacters: HuntCharacter[] | null
+  huntError: string | null
+  reloadHuntCharacters: () => void
+  completeHuntChallenge: (challengeId: string) => Promise<HuntCharacter>
+  handlePlayHuntMinigame: (challengeId: string, minigameSlug: string) => void
+  collectibleCatalog: CollectibleCatalogEntry[] | null
+  collectibleCatalogError: string | null
+  reloadCollectibleCatalog: () => void
+  collectibleCards: CollectibleCard[] | null
+  collectibleCardsError: string | null
+  reloadCollectibleCards: () => void
+  coinsSummary: CoinsSummary | null
+  purchaseCollectible: (animalSlug: string, guestName: string) => Promise<CollectibleCard>
+  photoGallery: PhotoSubmission[] | null
+  photoGalleryError: string | null
+  reloadPhotoGallery: () => void
+  announcements: Announcement[] | null
+  announcementResetSignal: number
+  toasts: ToastItem[]
+  onDismissToast: (id: string) => void
+  activeMinigame: Minigame | null
+  onMinigameOverlayClose: () => void
+  handleResetSession: () => void
+}
+
+// Guest-facing shell: shared header/nav/toasts/modals, wrapping every
+// guest-facing screen -- each a real route mounted below, including (via its
+// own nested <Routes>) the Our Animals feature. Mounted at the top-level
+// "/*" route, so it also acts as the fallback for any path that isn't
+// /staff or /scan/:code.
+function GuestShell(props: GuestShellProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const navActiveTab =
+    TABS.find((t) =>
+      t.key === '/animals' ? location.pathname.startsWith('/animals') : location.pathname === t.key,
+    )?.key ?? null
+
+  const selectTab = (path: string) => navigate(path)
+
+  return (
+    <div id="app-root">
+      <header className="app-header">
+        <div className="app-header-top">
+          <BrandLogo onClick={() => navigate('/')} />
           <NavMenu
             tabs={TABS}
-            activeTab={showHome ? null : activeTab}
-            onSelectTab={(tab) => {
-              setShowHome(false)
-              setActiveTab(tab)
-            }}
-            coinTotal={coinsSummary?.total ?? 0}
-            onScanQr={() => setShowScanEntry(true)}
-            onGeneratePassport={() => setShowPassport(true)}
-            onContactStaff={() => setShowContactStaff(true)}
-            onResetSession={() => setShowResetConfirm(true)}
+            activeTab={navActiveTab}
+            onSelectTab={selectTab}
+            coinTotal={props.coinsSummary?.total ?? 0}
+            onScanQr={() => props.setShowScanEntry(true)}
+            onGeneratePassport={() => props.setShowPassport(true)}
+            onContactStaff={() => props.setShowContactStaff(true)}
+            onResetSession={() => props.setShowResetConfirm(true)}
             onStaffNav={() => navigate('/staff')}
           />
         </div>
       </header>
 
       <main className="app-main">
-        {showHome && (
-          <HomePage
-            announcements={announcements}
-            onBrowsePhotos={() => {
-              setShowHome(false)
-              setActiveTab('photos')
-            }}
-            onNavigateMap={() => {
-              setShowHome(false)
-              setActiveTab('map')
-            }}
-            onNavigateBingo={() => {
-              setShowHome(false)
-              setActiveTab('bingo')
-            }}
-            onScanQr={() => setShowScanEntry(true)}
-            onNavigateScoring={() => {
-              setShowHome(false)
-              setActiveTab('scoring')
-            }}
-            onNavigateCollectibles={() => {
-              setShowHome(false)
-              setActiveTab('collectibles')
-            }}
+        <Routes>
+          <Route index element={<HomePage announcements={props.announcements} onScanQr={() => props.setShowScanEntry(true)} />} />
+          <Route
+            path="map"
+            element={
+              <MapRoute
+                nodes={props.nodes}
+                error={props.nodesError}
+                onReload={props.reloadNodes}
+                onVisitResult={props.handleVisitResult}
+              />
+            }
           />
-        )}
-        {!showHome && activeTab === 'map' && (
-          <MapScreen
-            nodes={nodes}
-            error={nodesError}
-            onReload={reloadNodes}
-            onVisitResult={handleVisitResult}
-            initialKeySpot={pendingMapKeySpot}
-            onInitialKeySpotHandled={() => setPendingMapKeySpot(null)}
+          <Route
+            path="bingo"
+            element={
+              <BingoScreen
+                card={props.card}
+                error={props.cardError}
+                onReload={() => props.cardId && props.reloadCard(props.cardId)}
+                onTileResult={props.handleTileResult}
+                milestoneQueue={props.milestoneQueue}
+                onMilestoneShown={() => props.setMilestoneQueue((q) => q.slice(1))}
+                pendingMilestoneMinigame={props.pendingMilestoneMinigames[0] ?? null}
+                onPlayMilestoneMinigame={props.handlePlayMilestoneMinigame}
+              />
+            }
           />
-        )}
-        {!showHome && activeTab === 'bingo' && (
-          <BingoScreen
-            card={card}
-            error={cardError}
-            onReload={() => cardId && reloadCard(cardId)}
-            onTileResult={handleTileResult}
-            milestoneQueue={milestoneQueue}
-            onMilestoneShown={() => setMilestoneQueue((q) => q.slice(1))}
-            pendingMilestoneMinigame={pendingMilestoneMinigames[0] ?? null}
-            onPlayMilestoneMinigame={handlePlayMilestoneMinigame}
+          <Route
+            path="puzzles"
+            element={
+              <PuzzleScreen
+                puzzles={props.puzzles}
+                error={props.puzzlesError}
+                onReload={props.reloadPuzzles}
+                onCoinsChanged={props.reloadCoins}
+              />
+            }
           />
-        )}
-        {!showHome && activeTab === 'puzzles' && (
-          <PuzzleScreen puzzles={puzzles} error={puzzlesError} onReload={reloadPuzzles} onCoinsChanged={reloadCoins} />
-        )}
-        {!showHome && activeTab === 'scoring' && (
-          <ScoringScreen
-            games={scoringGames}
-            error={scoringGamesError}
-            onReload={reloadScoringGames}
-            onCoinsChanged={reloadCoins}
+          <Route
+            path="scoring"
+            element={
+              <ScoringScreen
+                games={props.scoringGames}
+                error={props.scoringGamesError}
+                onReload={props.reloadScoringGames}
+                onCoinsChanged={props.reloadCoins}
+              />
+            }
           />
-        )}
-        {!showHome && activeTab === 'hunt' && (
-          <HuntScreen
-            characters={huntCharacters}
-            error={huntError}
-            onReload={reloadHuntCharacters}
-            onCompleteChallenge={completeHuntChallenge}
-            onPlayMinigame={handlePlayHuntMinigame}
-            onScanQr={() => setShowScanEntry(true)}
+          <Route
+            path="hunt"
+            element={
+              <HuntScreen
+                characters={props.huntCharacters}
+                error={props.huntError}
+                onReload={props.reloadHuntCharacters}
+                onCompleteChallenge={props.completeHuntChallenge}
+                onPlayMinigame={props.handlePlayHuntMinigame}
+                onScanQr={() => props.setShowScanEntry(true)}
+              />
+            }
           />
-        )}
-        {!showHome && activeTab === 'animals' && (
-          <AnimalsScreen
-            onScanQr={() => setShowScanEntry(true)}
-            initialSlug={pendingAnimalSlug}
-            onInitialSlugHandled={() => setPendingAnimalSlug(null)}
+          <Route path="animals/*" element={<AnimalsScreen onScanQr={() => props.setShowScanEntry(true)} />} />
+          <Route
+            path="collectibles"
+            element={
+              <CollectiblesScreen
+                catalog={props.collectibleCatalog}
+                catalogError={props.collectibleCatalogError}
+                onReloadCatalog={props.reloadCollectibleCatalog}
+                cards={props.collectibleCards}
+                cardsError={props.collectibleCardsError}
+                onReloadCards={props.reloadCollectibleCards}
+                coinsSummary={props.coinsSummary}
+                onPurchase={props.purchaseCollectible}
+              />
+            }
           />
-        )}
-        {!showHome && activeTab === 'collectibles' && (
-          <CollectiblesScreen
-            catalog={collectibleCatalog}
-            catalogError={collectibleCatalogError}
-            onReloadCatalog={reloadCollectibleCatalog}
-            cards={collectibleCards}
-            cardsError={collectibleCardsError}
-            onReloadCards={reloadCollectibleCards}
-            coinsSummary={coinsSummary}
-            onPurchase={purchaseCollectible}
+          <Route
+            path="photos"
+            element={
+              <PhotoScreen gallery={props.photoGallery} error={props.photoGalleryError} onReload={props.reloadPhotoGallery} />
+            }
           />
-        )}
-        {!showHome && activeTab === 'photos' && (
-          <PhotoScreen gallery={photoGallery} error={photoGalleryError} onReload={reloadPhotoGallery} />
-        )}
-        {!showHome && activeTab === 'foodtrucks' && <FoodTruckScreen />}
-        {!showHome && activeTab === 'faq' && (
-          <FaqScreen
-            onOpenMapKeySpot={(key) => {
-              setPendingMapKeySpot(key)
-              setActiveTab('map')
-            }}
-          />
-        )}
+          <Route path="food-trucks" element={<FoodTruckScreen />} />
+          <Route path="faq" element={<FaqRoute />} />
+        </Routes>
       </main>
 
-      <ToastStack toasts={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
+      <ToastStack toasts={props.toasts} onDismiss={props.onDismissToast} />
 
-      {activeMinigame && <MinigameOverlay game={activeMinigame} onClose={handleMinigameOverlayClose} />}
+      {props.activeMinigame && <MinigameOverlay game={props.activeMinigame} onClose={props.onMinigameOverlayClose} />}
 
-      {showScanEntry && (
+      {props.showScanEntry && (
         <ScanEntryModal
-          onClose={() => setShowScanEntry(false)}
+          onClose={() => props.setShowScanEntry(false)}
           onCodeSubmitted={(code) => {
-            setShowScanEntry(false)
+            props.setShowScanEntry(false)
             navigate(`/scan/${encodeURIComponent(code)}`)
           }}
         />
       )}
 
-      {showContactStaff && <ContactStaffModal nodes={nodes} onClose={() => setShowContactStaff(false)} />}
-
-      {showPassport && <PassportModal onClose={() => setShowPassport(false)} />}
-
-      {showResetConfirm && (
-        <ResetSessionModal onClose={() => setShowResetConfirm(false)} onReset={handleResetSession} />
+      {props.showContactStaff && (
+        <ContactStaffModal nodes={props.nodes} onClose={() => props.setShowContactStaff(false)} />
       )}
 
-      <AnnouncementPopup announcements={announcements} resetSignal={announcementResetSignal} />
+      {props.showPassport && <PassportModal onClose={() => props.setShowPassport(false)} />}
+
+      {props.showResetConfirm && (
+        <ResetSessionModal onClose={() => props.setShowResetConfirm(false)} onReset={props.handleResetSession} />
+      )}
+
+      <AnnouncementPopup announcements={props.announcements} resetSignal={props.announcementResetSignal} />
     </div>
   )
+}
+
+interface MapRouteProps {
+  nodes: MapNode[] | null
+  error: string | null
+  onReload: () => void
+  onVisitResult: (result: VisitNodeResponse) => void
+}
+
+// FAQ's washroom answer ("Show me on the map") deep-links here via
+// navigate('/map', { state: { keySpot } }) -- router location state instead
+// of a value lifted in App, since it's inherently a one-shot handoff between
+// two routes rather than app-wide state. Cleared (not just consumed) via a
+// replace navigation so Back from Map doesn't land on a history entry that
+// would replay the highlight.
+function MapRoute({ nodes, error, onReload, onVisitResult }: MapRouteProps) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const keySpot = (location.state as { keySpot?: string } | null)?.keySpot ?? null
+
+  return (
+    <MapScreen
+      nodes={nodes}
+      error={error}
+      onReload={onReload}
+      onVisitResult={onVisitResult}
+      initialKeySpot={keySpot}
+      onInitialKeySpotHandled={() => navigate(location.pathname, { replace: true, state: null })}
+    />
+  )
+}
+
+function FaqRoute() {
+  const navigate = useNavigate()
+  return <FaqScreen onOpenMapKeySpot={(key) => navigate('/map', { state: { keySpot: key } })} />
 }
 
 export default App
