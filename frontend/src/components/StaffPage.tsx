@@ -4,7 +4,9 @@ import { ANIMALS } from '../animalContent'
 import { clearStaffToken, getStaffToken } from '../staffAuth'
 import { ClearShortlistModal } from './ClearShortlistModal'
 import { ClipboardIcon } from './NavIcons'
+import { StaffAnalytics } from './StaffAnalytics'
 import { StaffLoginScreen } from './StaffLoginScreen'
+import { StaffSidebar, type StaffTab } from './StaffSidebar'
 import './StaffPage.css'
 
 // Simple polling refresh rather than websockets -- fine for a POC-scale
@@ -12,7 +14,7 @@ import './StaffPage.css'
 // more than a POC.
 const POLL_INTERVAL_MS = 12_000
 
-type Tab = 'photos' | 'requests' | 'announcements' | 'attractions' | 'animal-photos'
+type Tab = StaffTab
 
 const TYPE_LABEL: Record<StaffRequest['type'], string> = {
   question: 'Question',
@@ -349,54 +351,15 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
         </div>
       </div>
 
-      <div className="staff-page-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'photos'}
-          className={`staff-page-tab ${tab === 'photos' ? 'staff-page-tab-active' : ''}`}
-          onClick={() => setTab('photos')}
-        >
-          Photo Queue
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'requests'}
-          className={`staff-page-tab ${tab === 'requests' ? 'staff-page-tab-active' : ''}`}
-          onClick={() => setTab('requests')}
-        >
-          Contact Requests
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'announcements'}
-          className={`staff-page-tab ${tab === 'announcements' ? 'staff-page-tab-active' : ''}`}
-          onClick={() => setTab('announcements')}
-        >
-          Announcements
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'attractions'}
-          className={`staff-page-tab ${tab === 'attractions' ? 'staff-page-tab-active' : ''}`}
-          onClick={() => setTab('attractions')}
-        >
-          Attractions
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'animal-photos'}
-          className={`staff-page-tab ${tab === 'animal-photos' ? 'staff-page-tab-active' : ''}`}
-          onClick={() => setTab('animal-photos')}
-        >
-          Animal Photos
-        </button>
-      </div>
+      <div className="staff-page-body">
+        <StaffSidebar
+          tab={tab}
+          onSelectTab={setTab}
+          pendingPhotosCount={pendingPhotos?.length ?? 0}
+          openRequestsCount={requests?.filter((r) => r.status === 'open').length ?? 0}
+        />
 
+        <div className="staff-page-content">
       {tab === 'photos' && (
         <section className="staff-photos-section">
           <h2 className="staff-photos-subheading">Pending Review</h2>
@@ -776,6 +739,10 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
           </form>
         </section>
       )}
+
+      {tab === 'analytics' && <StaffAnalytics />}
+        </div>
+      </div>
     </div>
   )
 }

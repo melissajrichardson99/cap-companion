@@ -1,0 +1,130 @@
+.staff-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+}
+
+/* Same wood-plank border recipe as .nav-menu-frame (NavMenu.css) -- the
+   guest-facing nav dropdown -- so the sidebar reads as the same wood chrome
+   material as that component, not just a similar approximation. */
+.staff-sidebar-frame {
+  border-radius: var(--cap-radius-lg);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* Matches .nav-menu-panel-inner exactly -- one continuous green card holding
+   both the brand header and the tab list, not two separate wood-framed
+   blocks. */
+.staff-sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cap-space-3);
+  padding: var(--cap-space-4);
+  border-radius: calc(var(--cap-radius-lg) - 8px);
+  border: var(--cap-outline-width) solid var(--cap-color-outline);
+  background: var(--cap-color-nav-panel-green);
+}
+
+.staff-sidebar-brand {
+  display: flex;
+  justify-content: center;
+}
+
+.staff-sidebar-brand .brand-logo {
+  max-width: 140px;
+  height: auto;
+}
+
+/* Matches .nav-menu-tabs. */
+.staff-sidebar-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: var(--cap-space-1);
+  border-top: 2px solid var(--cap-color-on-header-muted);
+}
+
+/* Matches .nav-menu-tab. */
+.staff-sidebar-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--cap-font-body);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--cap-radius-md);
+  border: none;
+  background: transparent;
+  color: var(--cap-color-on-header);
+  cursor: pointer;
+  border-left: 4px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.staff-sidebar-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.staff-sidebar-tab-active,
+.staff-sidebar-tab-active:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-left-color: var(--cap-color-sunset-orange);
+  color: var(--cap-color-sunset-orange);
+}
+
+.staff-sidebar-tab-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+}
+
+.staff-sidebar-tab-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.staff-sidebar-tab-label {
+  flex: 1;
+}
+
+.staff-sidebar-tab-badge {
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--cap-color-contact-red);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .staff-sidebar {
+    width: 100%;
+  }
+
+  .staff-sidebar-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-top: none;
+    padding-top: 0;
+  }
+}

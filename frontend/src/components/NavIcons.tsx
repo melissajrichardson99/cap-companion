@@ -325,3 +325,30 @@ export function ChevronRightIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+// Megaphone -- the Staff Page sidebar's Announcements item. A one-way
+// broadcast shape, distinct from MessageIcon's two-way speech bubble
+// (Contact Requests is a guest-initiated conversation; Announcements is
+// staff posting outward). Nothing else in the app covers this shape.
+export function MegaphoneIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M2.5 8.5v3l3 .8V13a1.3 1.3 0 0 0 2.6 0v-.2" />
+      <path d="M5.5 9.3L15 6v8l-9.5-3.3z" />
+      <path d="M15 6a2.5 4 0 0 1 0 8" />
+    </svg>
+  )
+}
+
+// Simple ascending bar chart -- the Staff Page sidebar's Analytics item.
+// Nothing else in the app covers this shape.
+export function BarChartIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <line x1="2.5" y1="17.5" x2="17.5" y2="17.5" />
+      <rect x="4" y="11" width="3.2" height="6.5" />
+      <rect x="8.4" y="6.5" width="3.2" height="11" />
+      <rect x="12.8" y="2.5" width="3.2" height="15" />
+    </svg>
+  )
+}

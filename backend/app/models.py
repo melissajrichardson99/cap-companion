@@ -606,3 +606,126 @@ class DeviceSession(BaseModel):
     id: UUID
     created_at: datetime
     last_active_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Staff Page Analytics dashboard -- see app/services/analytics.py for the
+# date-range convention and the reasoning behind every ambiguous-metric
+# choice referenced in these fields' docstrings.
+# ---------------------------------------------------------------------------
+
+
+class UsersOverTimePoint(BaseModel):
+    date: str  # YYYY-MM-DD
+    count: int = Field(ge=0)
+
+
+class DailyRatePoint(BaseModel):
+    date: str  # YYYY-MM-DD
+    pct: float = Field(ge=0, le=100)
+
+
+class AnalyticsOverview(BaseModel):
+    total_users: int = Field(ge=0)
+    users_over_time: list[UsersOverTimePoint]
+
+
+class AnalyticsCoins(BaseModel):
+    total_coins_earned: int = Field(ge=0)
+    # Denominator is every app user in range, not just users who earned a
+    # coin -- see analytics.py.
+    avg_coins_per_user: float = Field(ge=0)
+
+
+class HuntCharacterFoundRate(BaseModel):
+    character_id: UUID
+    name: str
+    # Of every app user in range (not just users who engaged with the hunt at
+    # all), the percentage whose hunt_progress.unlocked_at is set for this
+    # character.
+    found_pct: float = Field(ge=0, le=100)
+
+
+class AnalyticsScavengerHunt(BaseModel):
+    # Average, across app users in range, of (characters unlocked / total
+    # characters) -- partial-progress average, not "% of users who fully
+    # finished" (that stricter number lives in
+    # AnalyticsEngagement.full_completionist_rate_pct instead). See
+    # analytics.py for why this definition was chosen.
+    avg_completion_rate_pct: float = Field(ge=0, le=100)
+    character_found_rates: list[HuntCharacterFoundRate]
+
+
+class AnalyticsBingo(BaseModel):
+    # Raw count of tiles completed within the window (session_tile_completions
+    # rows), averaged across app users in range -- not a percentage of the
+    # 25-tile board.
+    avg_tiles_completed: float = Field(ge=0)
+    # Count of achieved milestone tiers (lines + X + blackout, per
+    # milestone.py's achieved_milestones) averaged across app users in range.
+    avg_milestones_per_session: float = Field(ge=0)
+
+
+class MapNodeVisitRank(BaseModel):
+    node_id: UUID
+    name: str
+    visits: int = Field(ge=0)
+
+
+class AnalyticsMapExploration(BaseModel):
+    avg_nodes_visited_per_session: float = Field(ge=0)
+    # Sorted descending by visits -- the frontend slices the head/tail for
+    # "most"/"least" visited without a second request.
+    node_rankings: list[MapNodeVisitRank]
+
+
+class AnimalPurchaseRank(BaseModel):
+    animal_slug: str
+    count: int = Field(ge=0)
+
+
+class AnalyticsCollectibles(BaseModel):
+    # Sorted descending by count.
+    most_purchased: list[AnimalPurchaseRank]
+
+
+class AnalyticsPuzzleScoring(BaseModel):
+    # puzzle_attempts rows are only ever written after a successful solve
+    # (app/services/puzzles.py::record_attempt) -- there's no "attempted but
+    # not solved" event captured anywhere in the schema, so unlike Scoring
+    # Sheet there's only one honest number to report here. See analytics.py.
+    puzzle_timer_solves: int = Field(ge=0)
+    scoring_sheet_attempts: int = Field(ge=0)
+    scoring_sheet_completions: int = Field(ge=0)
+
+
+class AnalyticsPhotosPassport(BaseModel):
+    photos_submitted: int = Field(ge=0)
+    pct_sessions_voting: float = Field(ge=0, le=100)
+    passports_generated: int = Field(ge=0)
+
+
+class AnalyticsEngagement(BaseModel):
+    full_completionist_rate_pct: float = Field(ge=0, le=100)
+    full_completionist_trend: list[DailyRatePoint]
+
+
+class AnalyticsStaffOps(BaseModel):
+    total_requests: int = Field(ge=0)
+    general_count: int = Field(ge=0)
+    emergency_count: int = Field(ge=0)
+
+
+class AnalyticsSummary(BaseModel):
+    range_start: str  # YYYY-MM-DD
+    range_end: str
+    overview: AnalyticsOverview
+    coins: AnalyticsCoins
+    hunt: AnalyticsScavengerHunt
+    bingo: AnalyticsBingo
+    map_exploration: AnalyticsMapExploration
+    collectibles: AnalyticsCollectibles
+    puzzle_scoring: AnalyticsPuzzleScoring
+    photos_passport: AnalyticsPhotosPassport
+    engagement: AnalyticsEngagement
+    staff_ops: AnalyticsStaffOps

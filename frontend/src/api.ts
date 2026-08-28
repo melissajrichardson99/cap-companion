@@ -371,6 +371,113 @@ export interface AnimalPhoto {
   display_order: number
 }
 
+// Staff Page Analytics dashboard -- see backend/app/services/analytics.py
+// for the date-range convention and the reasoning behind every
+// ambiguous-metric choice referenced in the comments below.
+export interface UsersOverTimePoint {
+  date: string
+  count: number
+}
+
+export interface DailyRatePoint {
+  date: string
+  pct: number
+}
+
+export interface AnalyticsOverview {
+  total_users: number
+  users_over_time: UsersOverTimePoint[]
+}
+
+export interface AnalyticsCoins {
+  total_coins_earned: number
+  // Denominator is every app user in range, not just users who earned a coin.
+  avg_coins_per_user: number
+}
+
+export interface HuntCharacterFoundRate {
+  character_id: string
+  name: string
+  found_pct: number
+}
+
+export interface AnalyticsScavengerHunt {
+  // Average, across app users in range, of (characters found / total
+  // characters) -- partial-progress average, not "% of users who fully
+  // finished" (see AnalyticsEngagement.full_completionist_rate_pct for that).
+  avg_completion_rate_pct: number
+  character_found_rates: HuntCharacterFoundRate[]
+}
+
+export interface AnalyticsBingo {
+  // Raw average count of tiles completed per session in range, not a
+  // percentage of the 25-tile board.
+  avg_tiles_completed: number
+  avg_milestones_per_session: number
+}
+
+export interface MapNodeVisitRank {
+  node_id: string
+  name: string
+  visits: number
+}
+
+export interface AnalyticsMapExploration {
+  avg_nodes_visited_per_session: number
+  // Sorted descending by visits.
+  node_rankings: MapNodeVisitRank[]
+}
+
+export interface AnimalPurchaseRank {
+  animal_slug: string
+  count: number
+}
+
+export interface AnalyticsCollectibles {
+  most_purchased: AnimalPurchaseRank[]
+}
+
+export interface AnalyticsPuzzleScoring {
+  // puzzle_attempts rows are only ever written after a successful solve, so
+  // there's no separate "attempted but not solved" count for Puzzle Timer,
+  // unlike Scoring Sheet.
+  puzzle_timer_solves: number
+  scoring_sheet_attempts: number
+  scoring_sheet_completions: number
+}
+
+export interface AnalyticsPhotosPassport {
+  photos_submitted: number
+  pct_sessions_voting: number
+  passports_generated: number
+}
+
+export interface AnalyticsEngagement {
+  full_completionist_rate_pct: number
+  full_completionist_trend: DailyRatePoint[]
+}
+
+export interface AnalyticsStaffOps {
+  total_requests: number
+  general_count: number
+  emergency_count: number
+}
+
+export interface AnalyticsSummary {
+  range_start: string
+  range_end: string
+  overview: AnalyticsOverview
+  coins: AnalyticsCoins
+  hunt: AnalyticsScavengerHunt
+  bingo: AnalyticsBingo
+  map_exploration: AnalyticsMapExploration
+  collectibles: AnalyticsCollectibles
+  puzzle_scoring: AnalyticsPuzzleScoring
+  photos_passport: AnalyticsPhotosPassport
+  engagement: AnalyticsEngagement
+  staff_ops: AnalyticsStaffOps
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -461,6 +568,10 @@ export const api = {
     staffRequest<StaffRequest>(`/staff-requests/${requestId}/acknowledge`, { method: 'POST' }),
   resolveStaffRequest: (requestId: string) =>
     staffRequest<StaffRequest>(`/staff-requests/${requestId}/resolve`, { method: 'POST' }),
+  // start/end are YYYY-MM-DD (date-only, matching the backend's `date` query
+  // params) -- no time-of-day component from the frontend.
+  getAnalyticsSummary: (start: string, end: string) =>
+    staffRequest<AnalyticsSummary>(`/analytics/summary?start=${start}&end=${end}`),
   staffLogin: (password: string) =>
     request<{ token: string }>('/staff/login', { method: 'POST', body: JSON.stringify({ password }) }),
   staffCheckSession: async (): Promise<boolean> => {

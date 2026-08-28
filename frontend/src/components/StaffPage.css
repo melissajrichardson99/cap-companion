@@ -10,7 +10,7 @@
      default cross-axis stretch, shrink-wrapping to content instead of
      filling #root -- same #app-root bug as App.css, fixed the same way. */
   width: 100%;
-  max-width: 860px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: var(--cap-space-5);
   font-family: var(--cap-font-body);
@@ -103,27 +103,23 @@
   border: 1.5px solid rgba(69, 88, 93, 0.35);
 }
 
-.staff-page-tabs {
+/* Sidebar + content layout (replaces the old horizontal .staff-page-tabs
+   row) -- see StaffSidebar.css for the sidebar itself. */
+.staff-page-body {
   display: flex;
-  gap: var(--cap-space-2);
-  margin-bottom: var(--cap-space-4);
+  align-items: flex-start;
+  gap: var(--cap-space-5);
 }
 
-.staff-page-tab {
-  font-family: var(--cap-font-body);
-  font-weight: 700;
-  font-size: 14px;
-  padding: 9px 16px;
-  border-radius: var(--cap-radius-pill);
-  border: 2px solid var(--cap-color-outline);
-  background: rgba(255, 255, 255, 0.5);
-  color: var(--cap-color-ink);
-  cursor: pointer;
+.staff-page-content {
+  flex: 1;
+  min-width: 0;
 }
 
-.staff-page-tab-active {
-  background: var(--cap-color-sunset-orange);
-  color: #fff;
+@media (max-width: 720px) {
+  .staff-page-body {
+    flex-direction: column;
+  }
 }
 
 .staff-requests-loading,
