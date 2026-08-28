@@ -361,6 +361,16 @@ export interface Announcement {
   updated_at: string
 }
 
+// Staff-managed "Our Animals" photos -- distinct from Collectibles' curated
+// pool (CollectibleCard.photo_index / imageCandidates()), which is
+// unaffected by this and stays resolved against the static frontend files.
+export interface AnimalPhoto {
+  id: string
+  animal_slug: string
+  photo_url: string
+  display_order: number
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -498,6 +508,30 @@ export const api = {
   listPhotoGallery: () => request<PhotoSubmission[]>('/photos/gallery'),
   votePhoto: (submissionId: string) => request<PhotoSubmission>(`/photos/${submissionId}/vote`, { method: 'POST' }),
   getPhotoOfTheDay: () => request<PhotoSubmission | null>('/photos/of-the-day'),
+  listAnimalPhotos: () => request<AnimalPhoto[]>('/animal-photos'),
+  uploadAnimalPhoto: async (animalSlug: string, file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    // Not routed through request(): same multipart-vs-JSON-Content-Type
+    // reasoning as submitPhoto above.
+    const token = getStaffToken()
+    const res = await fetch(`${API_BASE_URL}/animal-photos/${animalSlug}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body,
+    })
+    if (!res.ok) {
+      const responseBody = await res.text()
+      throw new Error(`POST /animal-photos/${animalSlug} -> ${res.status}: ${responseBody}`)
+    }
+    return res.json() as Promise<AnimalPhoto>
+  },
+  deleteAnimalPhoto: (photoId: string) => staffRequest<void>(`/animal-photos/${photoId}`, { method: 'DELETE' }),
+  reorderAnimalPhotos: (animalSlug: string, photoIds: string[]) =>
+    staffRequest<AnimalPhoto[]>(`/animal-photos/${animalSlug}/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ photo_ids: photoIds }),
+    }),
   generatePassport: async (familyLabel: string, file: File | null) => {
     const body = new FormData()
     body.append('family_label', familyLabel)

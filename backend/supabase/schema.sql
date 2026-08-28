@@ -510,3 +510,32 @@ create index if not exists passport_sessions_session_id_idx on passport_sessions
 insert into storage.buckets (id, name, public)
 values ('family-passport-photos', 'family-passport-photos', true)
 on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- animal_photos (Staff-managed Our Animals photos -- migration 031)
+-- ---------------------------------------------------------------------------
+-- Staff-uploaded, permanent reference content for the "Our Animals" guest
+-- flow -- deliberately separate from the Collectibles curated photo pool
+-- (backend/app/services/collectibles.py's PHOTO_POOL_SIZE), which continues
+-- to resolve straight against the static files in frontend/public/animals/
+-- via animalContent.ts's imageCandidates(). No moderation status column
+-- here (unlike photo_submissions) -- staff uploading directly IS the
+-- approval, there's no guest-submission step to gate.
+create table if not exists animal_photos (
+    id            uuid primary key default gen_random_uuid(),
+    animal_slug   text not null,
+    -- Supabase Storage object key in the 'animal-photos' bucket -- see
+    -- photo_submissions.storage_path above for the same "derive, don't
+    -- duplicate" discipline this follows.
+    storage_path  text not null,
+    display_order integer not null,
+    created_at    timestamptz not null default now()
+);
+
+create index if not exists animal_photos_animal_slug_idx on animal_photos(animal_slug);
+
+-- Public, same reasoning as favorite-photos: guest devices load images
+-- directly with no signed-URL round trip, fine for a POC with no PII.
+insert into storage.buckets (id, name, public)
+values ('animal-photos', 'animal-photos', true)
+on conflict (id) do nothing;

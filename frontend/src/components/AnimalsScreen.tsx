@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Route, Routes, useNavigate, useParams } from 'react-router-dom'
+import type { AnimalPhoto } from '../api'
 import { ANIMALS } from '../animalContent'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { AnimalCardsScreen } from './AnimalCardsScreen'
@@ -10,6 +11,13 @@ import './AnimalsScreen.css'
 
 interface AnimalsScreenProps {
   onScanQr: () => void
+  // Staff-managed photos (api.listAnimalPhotos, fetched once by App.tsx) --
+  // null while loading. Grouped by slug below so every nested route can pull
+  // its animal's photos from one shared fetch instead of re-fetching per
+  // route. Deliberately unrelated to Collectibles' own curated photo pool,
+  // which never touches this prop.
+  photos: AnimalPhoto[] | null
+  photosError: string | null
 }
 
 // "Our Animals" (rebranded Encyclopedia, Plan.md 2.5/5): a 3-screen flow
@@ -22,12 +30,27 @@ interface AnimalsScreenProps {
 // (via React Router's own remount-on-param-change) still gives each a fresh
 // mount -- and therefore fresh internal state (About/Photos tab, card
 // index) -- whenever the selected animal changes.
-export function AnimalsScreen({ onScanQr }: AnimalsScreenProps) {
+export function AnimalsScreen({ onScanQr, photos, photosError }: AnimalsScreenProps) {
+  const photosBySlug = useMemo(() => {
+    const map = new Map<string, AnimalPhoto[]>()
+    for (const photo of photos ?? []) {
+      const forSlug = map.get(photo.animal_slug)
+      if (forSlug) forSlug.push(photo)
+      else map.set(photo.animal_slug, [photo])
+    }
+    return map
+  }, [photos])
+
   return (
     <Routes>
-      <Route index element={<AnimalsListView onScanQr={onScanQr} />} />
-      <Route path=":slug" element={<AnimalDetailRoute />} />
-      <Route path=":slug/cards" element={<AnimalCardsRoute />} />
+      <Route
+        index
+        element={
+          <AnimalsListView onScanQr={onScanQr} photosBySlug={photosBySlug} loading={photos === null} error={photosError} />
+        }
+      />
+      <Route path=":slug" element={<AnimalDetailRoute photosBySlug={photosBySlug} />} />
+      <Route path=":slug/cards" element={<AnimalCardsRoute photosBySlug={photosBySlug} />} />
     </Routes>
   )
 }
@@ -64,7 +87,7 @@ function AnimalNotFound({ slug, onBrowse }: { slug: string; onBrowse: () => void
   )
 }
 
-function AnimalDetailRoute() {
+function AnimalDetailRoute({ photosBySlug }: { photosBySlug: Map<string, AnimalPhoto[]> }) {
   useResetHorizontalScroll()
   const { slug = '' } = useParams<{ slug: string }>()
   const navigate = useNavigate()
@@ -78,13 +101,14 @@ function AnimalDetailRoute() {
     <AnimalDetailScreen
       key={animal.slug}
       animal={animal}
+      photos={photosBySlug.get(animal.slug) ?? []}
       onBack={() => navigate('/animals')}
       onViewCards={() => navigate(`/animals/${animal.slug}/cards`)}
     />
   )
 }
 
-function AnimalCardsRoute() {
+function AnimalCardsRoute({ photosBySlug }: { photosBySlug: Map<string, AnimalPhoto[]> }) {
   useResetHorizontalScroll()
   const { slug = '' } = useParams<{ slug: string }>()
   const navigate = useNavigate()
@@ -94,10 +118,27 @@ function AnimalCardsRoute() {
     return <AnimalNotFound slug={slug} onBrowse={() => navigate('/animals')} />
   }
 
-  return <AnimalCardsScreen key={animal.slug} animal={animal} onBack={() => navigate(`/animals/${animal.slug}`)} />
+  return (
+    <AnimalCardsScreen
+      key={animal.slug}
+      animal={animal}
+      photos={photosBySlug.get(animal.slug) ?? []}
+      onBack={() => navigate(`/animals/${animal.slug}`)}
+    />
+  )
 }
 
-function AnimalsListView({ onScanQr }: { onScanQr: () => void }) {
+function AnimalsListView({
+  onScanQr,
+  photosBySlug,
+  loading,
+  error,
+}: {
+  onScanQr: () => void
+  photosBySlug: Map<string, AnimalPhoto[]>
+  loading: boolean
+  error: string | null
+}) {
   useResetHorizontalScroll()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
@@ -124,23 +165,34 @@ function AnimalsListView({ onScanQr }: { onScanQr: () => void }) {
         />
       </div>
 
-      {filtered.length === 0 ? (
+      {error && <p className="screen-error">Couldn't load animal photos: {error}</p>}
+
+      {loading ? (
+        <p className="animals-empty">Loading animals…</p>
+      ) : filtered.length === 0 ? (
         <p className="animals-empty">No animals match "{search}".</p>
       ) : (
         <div className="animals-grid">
-          {filtered.map((animal) => (
-            <button
-              type="button"
-              key={animal.slug}
-              className="animal-card cap-parchment-card"
-              onClick={() => navigate(`/animals/${animal.slug}`)}
-            >
-              <span className="animal-card-photo">
-                <AnimalImage candidates={animal.photoCandidates} alt="" className="animal-card-photo-img" />
-              </span>
-              <span className="animal-card-name">{animal.name}</span>
-            </button>
-          ))}
+          {filtered.map((animal) => {
+            const firstPhoto = photosBySlug.get(animal.slug)?.[0]
+            return (
+              <button
+                type="button"
+                key={animal.slug}
+                className="animal-card cap-parchment-card"
+                onClick={() => navigate(`/animals/${animal.slug}`)}
+              >
+                <span className="animal-card-photo">
+                  <AnimalImage
+                    candidates={firstPhoto ? [firstPhoto.photo_url] : []}
+                    alt=""
+                    className="animal-card-photo-img"
+                  />
+                </span>
+                <span className="animal-card-name">{animal.name}</span>
+              </button>
+            )
+          })}
         </div>
       )}
 

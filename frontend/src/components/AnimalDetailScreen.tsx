@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { AnimalPhoto } from '../api'
 import type { AnimalContent } from '../animalContent'
 import { AnimalImage } from './AnimalImage'
 import { ChevronLeftIcon, HeartIcon } from './NavIcons'
@@ -7,6 +8,10 @@ import './AnimalDetailScreen.css'
 
 interface AnimalDetailScreenProps {
   animal: AnimalContent
+  // Staff-managed photos for this animal, already filtered/ordered by
+  // AnimalsScreen (api.listAnimalPhotos, grouped by animal_slug). Can be
+  // empty for an animal with no photos uploaded yet.
+  photos: AnimalPhoto[]
   onBack: () => void
   onViewCards: () => void
 }
@@ -19,9 +24,10 @@ type DetailTab = 'about' | 'photos'
 // deliberately non-interactive: no favoriting concept exists anywhere else
 // in the app yet, so this stays decorative rather than speculatively
 // building a new favorites system for one screen.
-export function AnimalDetailScreen({ animal, onBack, onViewCards }: AnimalDetailScreenProps) {
+export function AnimalDetailScreen({ animal, photos, onBack, onViewCards }: AnimalDetailScreenProps) {
   const [tab, setTab] = useState<DetailTab>('about')
   const [lightbox, setLightbox] = useState<{ photos: LightboxPhoto[]; startIndex: number } | null>(null)
+  const heroCandidates = photos[0] ? [photos[0].photo_url] : []
 
   return (
     <div className="animal-detail-screen">
@@ -41,11 +47,13 @@ export function AnimalDetailScreen({ animal, onBack, onViewCards }: AnimalDetail
       </div>
 
       <AnimalImage
-        candidates={animal.photoCandidates}
+        candidates={heroCandidates}
         alt={`${animal.name}`}
         className="animal-detail-hero"
-        onClick={() =>
-          setLightbox({ photos: [{ candidates: animal.photoCandidates, alt: animal.name }], startIndex: 0 })
+        onClick={
+          photos.length > 0
+            ? () => setLightbox({ photos: [{ candidates: heroCandidates, alt: animal.name }], startIndex: 0 })
+            : undefined
         }
       />
 
@@ -92,22 +100,29 @@ export function AnimalDetailScreen({ animal, onBack, onViewCards }: AnimalDetail
 
       {tab === 'photos' && (
         <section className="animal-detail-photos cap-parchment-card">
-          <div className="animal-detail-photos-grid">
-            {animal.photos.map((photo, i) => (
-              <AnimalImage
-                key={i}
-                candidates={photo.candidates}
-                alt={photo.alt}
-                className="animal-detail-photo"
-                onClick={() =>
-                  setLightbox({
-                    photos: animal.photos.map((p) => ({ candidates: p.candidates, alt: p.alt })),
-                    startIndex: i,
-                  })
-                }
-              />
-            ))}
-          </div>
+          {photos.length === 0 ? (
+            <p className="animals-empty">No photos of {animal.name} yet -- check back soon!</p>
+          ) : (
+            <div className="animal-detail-photos-grid">
+              {photos.map((photo, i) => (
+                <AnimalImage
+                  key={photo.id}
+                  candidates={[photo.photo_url]}
+                  alt={`Photo ${i + 1} of ${animal.name}`}
+                  className="animal-detail-photo"
+                  onClick={() =>
+                    setLightbox({
+                      photos: photos.map((p, j) => ({
+                        candidates: [p.photo_url],
+                        alt: `Photo ${j + 1} of ${animal.name}`,
+                      })),
+                      startIndex: i,
+                    })
+                  }
+                />
+              ))}
+            </div>
+          )}
         </section>
       )}
 

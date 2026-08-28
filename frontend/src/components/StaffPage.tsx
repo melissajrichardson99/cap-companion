@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { api, type Announcement, type MapNode, type PhotoSubmission, type StaffRequest } from '../api'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { api, type AnimalPhoto, type Announcement, type MapNode, type PhotoSubmission, type StaffRequest } from '../api'
+import { ANIMALS } from '../animalContent'
 import { clearStaffToken, getStaffToken } from '../staffAuth'
 import { ClearShortlistModal } from './ClearShortlistModal'
 import { ClipboardIcon } from './NavIcons'
@@ -11,7 +12,7 @@ import './StaffPage.css'
 // more than a POC.
 const POLL_INTERVAL_MS = 12_000
 
-type Tab = 'photos' | 'requests' | 'announcements' | 'attractions'
+type Tab = 'photos' | 'requests' | 'announcements' | 'attractions' | 'animal-photos'
 
 const TYPE_LABEL: Record<StaffRequest['type'], string> = {
   question: 'Question',
@@ -90,6 +91,14 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [attractionsError, setAttractionsError] = useState<string | null>(null)
   const [pendingAttractionActionId, setPendingAttractionActionId] = useState<string | null>(null)
 
+  const [animalPhotos, setAnimalPhotos] = useState<AnimalPhoto[] | null>(null)
+  const [animalPhotosError, setAnimalPhotosError] = useState<string | null>(null)
+  const [pendingAnimalPhotoActionId, setPendingAnimalPhotoActionId] = useState<string | null>(null)
+  const [selectedAnimalSlug, setSelectedAnimalSlug] = useState(ANIMALS[0].slug)
+  const [animalPhotoUploadFile, setAnimalPhotoUploadFile] = useState<File | null>(null)
+  const [uploadingAnimalPhoto, setUploadingAnimalPhoto] = useState(false)
+  const animalPhotoFileInputRef = useRef<HTMLInputElement>(null)
+
   const reload = () => {
     api
       .listStaffRequests(showResolved)
@@ -150,17 +159,29 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
       .catch((err) => setAttractionsError(String(err)))
   }
 
+  const reloadAnimalPhotos = () => {
+    api
+      .listAnimalPhotos()
+      .then((rows) => {
+        setAnimalPhotos(rows)
+        setAnimalPhotosError(null)
+      })
+      .catch((err) => setAnimalPhotosError(String(err)))
+  }
+
   // Re-runs (and restarts the poll interval) whenever showResolved changes,
   // so toggling it doesn't wait up to POLL_INTERVAL_MS for a stale closure
   // to pick up the new value.
   useEffect(() => {
     reload()
     reloadAllPhotos()
+    reloadAnimalPhotos()
     reloadAnnouncements()
     reloadAttractionNodes()
     const interval = setInterval(() => {
       reload()
       reloadAllPhotos()
+      reloadAnimalPhotos()
       reloadAnnouncements()
       reloadAttractionNodes()
     }, POLL_INTERVAL_MS)
@@ -175,6 +196,50 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
       .then(reloadAttractionNodes)
       .catch((err) => setAttractionsError(String(err)))
       .finally(() => setPendingAttractionActionId(null))
+  }
+
+  const deleteAnimalPhoto = (photoId: string) => {
+    if (!window.confirm('Permanently delete this photo? This cannot be undone.')) return
+    setPendingAnimalPhotoActionId(photoId)
+    api
+      .deleteAnimalPhoto(photoId)
+      .then(reloadAnimalPhotos)
+      .catch((err) => setAnimalPhotosError(String(err)))
+      .finally(() => setPendingAnimalPhotoActionId(null))
+  }
+
+  // Swaps `photo` with its neighbor in `direction` and persists the whole
+  // animal's new order -- the reorder endpoint takes a full ordered id list,
+  // not a single-item move, matching how few photos per animal there
+  // realistically are (a handful at most).
+  const moveAnimalPhoto = (photosForAnimal: AnimalPhoto[], photo: AnimalPhoto, direction: -1 | 1) => {
+    const index = photosForAnimal.indexOf(photo)
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= photosForAnimal.length) return
+    const reordered = [...photosForAnimal]
+    ;[reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]]
+
+    setPendingAnimalPhotoActionId(photo.id)
+    api
+      .reorderAnimalPhotos(selectedAnimalSlug, reordered.map((p) => p.id))
+      .then(reloadAnimalPhotos)
+      .catch((err) => setAnimalPhotosError(String(err)))
+      .finally(() => setPendingAnimalPhotoActionId(null))
+  }
+
+  const uploadAnimalPhoto = (e: FormEvent) => {
+    e.preventDefault()
+    if (!animalPhotoUploadFile) return
+    setUploadingAnimalPhoto(true)
+    api
+      .uploadAnimalPhoto(selectedAnimalSlug, animalPhotoUploadFile)
+      .then(() => {
+        setAnimalPhotoUploadFile(null)
+        if (animalPhotoFileInputRef.current) animalPhotoFileInputRef.current.value = ''
+        reloadAnimalPhotos()
+      })
+      .catch((err) => setAnimalPhotosError(String(err)))
+      .finally(() => setUploadingAnimalPhoto(false))
   }
 
   const runAction = (requestId: string, action: (id: string) => Promise<StaffRequest>) => {
@@ -320,6 +385,15 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
           onClick={() => setTab('attractions')}
         >
           Attractions
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'animal-photos'}
+          className={`staff-page-tab ${tab === 'animal-photos' ? 'staff-page-tab-active' : ''}`}
+          onClick={() => setTab('animal-photos')}
+        >
+          Animal Photos
         </button>
       </div>
 
@@ -616,6 +690,90 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                 ))}
             </ul>
           )}
+        </section>
+      )}
+
+      {tab === 'animal-photos' && (
+        <section className="staff-animal-photos-section">
+          <div className="staff-animal-picker" role="tablist" aria-label="Choose an animal">
+            {ANIMALS.map((animal) => (
+              <button
+                type="button"
+                key={animal.slug}
+                role="tab"
+                aria-selected={selectedAnimalSlug === animal.slug}
+                className={`staff-animal-picker-btn ${selectedAnimalSlug === animal.slug ? 'staff-animal-picker-btn-active' : ''}`}
+                onClick={() => setSelectedAnimalSlug(animal.slug)}
+              >
+                {animal.name}
+              </button>
+            ))}
+          </div>
+
+          {animalPhotosError && <p className="screen-error">Couldn't load animal photos: {animalPhotosError}</p>}
+
+          {animalPhotos === null ? (
+            <p className="staff-photos-loading">Loading animal photos…</p>
+          ) : animalPhotos.filter((p) => p.animal_slug === selectedAnimalSlug).length === 0 ? (
+            <p className="staff-photos-empty">No photos uploaded for this animal yet.</p>
+          ) : (
+            <ul className="staff-photos-list">
+              {animalPhotos
+                .filter((p) => p.animal_slug === selectedAnimalSlug)
+                .sort((a, b) => a.display_order - b.display_order)
+                .map((photo, i, photosForAnimal) => (
+                  <li key={photo.id} className="staff-photo-row cap-parchment-card" data-photo-id={photo.id}>
+                    <img src={photo.photo_url} alt="" className="staff-photo-thumb" />
+                    <span className="staff-photo-label">Photo {i + 1}</span>
+                    <div className="staff-photo-actions">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={pendingAnimalPhotoActionId !== null || i === 0}
+                        onClick={() => moveAnimalPhoto(photosForAnimal, photo, -1)}
+                        aria-label="Move photo up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={pendingAnimalPhotoActionId !== null || i === photosForAnimal.length - 1}
+                        onClick={() => moveAnimalPhoto(photosForAnimal, photo, 1)}
+                        aria-label="Move photo down"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-delete"
+                        disabled={pendingAnimalPhotoActionId !== null}
+                        onClick={() => deleteAnimalPhoto(photo.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          )}
+
+          <form className="staff-animal-photo-upload-form" onSubmit={uploadAnimalPhoto}>
+            <input
+              ref={animalPhotoFileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => setAnimalPhotoUploadFile(e.target.files?.[0] ?? null)}
+              disabled={uploadingAnimalPhoto}
+            />
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!animalPhotoUploadFile || uploadingAnimalPhoto}
+            >
+              {uploadingAnimalPhoto ? 'Uploading…' : 'Upload Photo'}
+            </button>
+          </form>
         </section>
       )}
     </div>

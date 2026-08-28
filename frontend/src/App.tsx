@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { api, type Announcement, type BingoCard, type CoinsSummary, type CollectibleCard, type CollectibleCatalogEntry, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { api, type AnimalPhoto, type Announcement, type BingoCard, type CoinsSummary, type CollectibleCard, type CollectibleCatalogEntry, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { AnimalsScreen } from './components/AnimalsScreen'
 import { AnnouncementPopup } from './components/AnnouncementPopup'
 import { BingoScreen } from './components/BingoScreen'
@@ -86,6 +86,9 @@ function App() {
 
   const [photoGallery, setPhotoGallery] = useState<PhotoSubmission[] | null>(null)
   const [photoGalleryError, setPhotoGalleryError] = useState<string | null>(null)
+
+  const [animalPhotos, setAnimalPhotos] = useState<AnimalPhoto[] | null>(null)
+  const [animalPhotosError, setAnimalPhotosError] = useState<string | null>(null)
 
   const [announcements, setAnnouncements] = useState<Announcement[] | null>(null)
   // Bumped on Reset Session so the mounted AnnouncementPopup re-reads its
@@ -189,6 +192,11 @@ function App() {
       .catch((err) => setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `Couldn't load announcements: ${err}` }]))
   }
 
+  const reloadAnimalPhotos = () => {
+    setAnimalPhotosError(null)
+    api.listAnimalPhotos().then(setAnimalPhotos).catch((err) => setAnimalPhotosError(String(err)))
+  }
+
   useEffect(() => {
     reloadNodes()
     reloadPuzzles()
@@ -200,6 +208,7 @@ function App() {
     reloadCollectibleCards()
     reloadPhotoGallery()
     reloadAnnouncements()
+    reloadAnimalPhotos()
     api
       .listBingoCards()
       .then((summaries) => {
@@ -440,6 +449,8 @@ function App() {
             photoGallery={photoGallery}
             photoGalleryError={photoGalleryError}
             reloadPhotoGallery={reloadPhotoGallery}
+            animalPhotos={animalPhotos}
+            animalPhotosError={animalPhotosError}
             announcements={announcements}
             announcementResetSignal={announcementResetSignal}
             toasts={toasts}
@@ -555,6 +566,8 @@ interface GuestShellProps {
   photoGallery: PhotoSubmission[] | null
   photoGalleryError: string | null
   reloadPhotoGallery: () => void
+  animalPhotos: AnimalPhoto[] | null
+  animalPhotosError: string | null
   announcements: Announcement[] | null
   announcementResetSignal: number
   toasts: ToastItem[]
@@ -663,7 +676,16 @@ function GuestShell(props: GuestShellProps) {
               />
             }
           />
-          <Route path="animals/*" element={<AnimalsScreen onScanQr={() => props.setShowScanEntry(true)} />} />
+          <Route
+            path="animals/*"
+            element={
+              <AnimalsScreen
+                onScanQr={() => props.setShowScanEntry(true)}
+                photos={props.animalPhotos}
+                photosError={props.animalPhotosError}
+              />
+            }
+          />
           <Route
             path="collectibles"
             element={

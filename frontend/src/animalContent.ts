@@ -8,61 +8,40 @@
 // `encyclopedia_entries` table, which only backs the existing
 // QR-scan-to-EncyclopediaEntryScreen stub.
 //
-// Photos live in frontend/public/animals/<slug>/1..5.{jpg,png} -- dropped in
-// by Melissa outside of source control review, so counts/extensions vary per
-// animal (some animals don't have a 5th photo yet). Every image reference
-// resolves through imageCandidates() + the AnimalImage component's runtime
-// jpg -> png -> placeholder-SVG fallback chain, so a missing file degrades
-// gracefully instead of breaking the layout, and dropping in the missing
-// photos later needs no code changes.
+// Photos themselves are NOT part of this static content -- Our Animals now
+// fetches them dynamically from the staff-managed animal-photos API
+// (api.listAnimalPhotos, consumed by AnimalsScreen/AnimalDetailScreen/
+// AnimalCardsScreen). imageCandidates()/PLACEHOLDER_PHOTO_SRC below are kept
+// only for Collectibles (CollectibleCardVisual.tsx, CollectibleShop.tsx),
+// which still resolves its own curated photo pool straight against the
+// static files in frontend/public/animals/<slug>/1..3.{jpg,png} and is
+// deliberately unaffected by the dynamic animal-photos system.
 export interface AnimalFact {
   label: string
   value: string
 }
 
-export interface AnimalPhoto {
-  candidates: string[]
-  alt: string
-}
-
 export interface AnimalNugget {
   title: string
   text: string
-  imageCandidates: string[]
 }
 
 export interface AnimalContent {
   slug: string
   name: string
-  photoCandidates: string[]
   aboutHeading: string
   description: string
   facts: AnimalFact[]
-  photos: AnimalPhoto[]
   nuggets: AnimalNugget[]
 }
 
 export const PLACEHOLDER_PHOTO_SRC = '/animal-photo-placeholder.svg'
-const PHOTOS_PER_ANIMAL = 5
 
-// Exported for reuse by the Collectible Cards feature (collectibleCardImage
-// helpers/components), which resolves a purchased card's photo via the same
-// slug + 1-based index convention -- see CollectibleCard.photo_index.
+// Collectibles-only: resolves a purchased/previewed card's photo via the
+// slug + 1-based index convention -- see CollectibleCard.photo_index and
+// collectibles.py's PHOTO_POOL_SIZE. NOT used by Our Animals anymore.
 export function imageCandidates(slug: string, index: number): string[] {
   return [`/animals/${slug}/${index}.jpg`, `/animals/${slug}/${index}.png`]
-}
-
-function buildPhotos(slug: string, name: string): AnimalPhoto[] {
-  return Array.from({ length: PHOTOS_PER_ANIMAL }, (_, i) => ({
-    candidates: imageCandidates(slug, i + 1),
-    alt: `Photo ${i + 1} of ${name}`,
-  }))
-}
-
-// 6 info cards cycle through the 5 available photos (card 6 reuses photo 1).
-function nuggetImage(slug: string, cardIndex: number): string[] {
-  const photoIndex = (cardIndex % PHOTOS_PER_ANIMAL) + 1
-  return imageCandidates(slug, photoIndex)
 }
 
 interface AnimalDefinition {
@@ -78,16 +57,10 @@ function buildAnimal(def: AnimalDefinition): AnimalContent {
   return {
     slug: def.slug,
     name: def.name,
-    photoCandidates: imageCandidates(def.slug, 1),
     aboutHeading: def.aboutHeading,
     description: def.description,
     facts: def.facts,
-    photos: buildPhotos(def.slug, def.name),
-    nuggets: def.nuggets.map((nugget, i) => ({
-      title: nugget.title,
-      text: nugget.text,
-      imageCandidates: nuggetImage(def.slug, i),
-    })),
+    nuggets: def.nuggets,
   }
 }
 

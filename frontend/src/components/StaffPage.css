@@ -509,3 +509,35 @@
 .staff-announcement-edit .staff-announcement-actions {
   align-self: flex-end;
 }
+
+.staff-animal-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--cap-space-4);
+}
+
+.staff-animal-picker-btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--cap-color-ink);
+  cursor: pointer;
+}
+
+.staff-animal-picker-btn-active {
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+}
+
+.staff-animal-photo-upload-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: var(--cap-space-5);
+}

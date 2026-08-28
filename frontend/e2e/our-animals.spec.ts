@@ -1,17 +1,23 @@
 import { test, expect, type Page } from '@playwright/test'
-import { ANIMALS, PLACEHOLDER_PHOTO_SRC } from '../src/animalContent'
+import { ANIMALS } from '../src/animalContent'
 
 // Covers the "Our Animals" feature (rebranded Encyclopedia, Plan.md 2.5/5):
 // the 9-animal list + name search, the individual animal detail page's
 // About/Photos tabs (no third Fun Facts tab), the Photos tab's plain
 // uncategorized grid (no filter/voting UI), the information-cards flashcard
 // view's text counter + linear side-arrow navigation (no dots, no Shuffle/
-// bottom Next button), and the list screen's QR scan entry point. All
-// content here is frontend-only real content (animalContent.ts) with no
-// backend dependency, unlike most other specs in this suite. Facts are a
-// flexible { label, value }[] list (length varies per animal, always 6 here)
-// rather than a fixed schema -- assertions below check labels present in the
-// current content rather than hardcoding a fixed 5-row table.
+// bottom Next button), and the list screen's QR scan entry point. Facts are
+// a flexible { label, value }[] list (length varies per animal, always 6
+// here) rather than a fixed schema -- assertions below check labels present
+// in the current content rather than hardcoding a fixed 5-row table.
+//
+// Photos themselves ARE backend-dependent now (Staff-Managed Animal Photos):
+// each grid/hero/nugget image comes from GET /animal-photos, seeded once by
+// backend/scripts/migrate_animal_photos.py from the old static files and
+// otherwise left alone by this suite -- assertions below check against that
+// migrated data's real counts/order/extensions, not a fixed 5-slot grid with
+// placeholder padding. Upload/delete/reorder themselves are covered by
+// staff-animal-photos.spec.ts, not here.
 //
 // The guest nav is a closed-by-default hamburger dropdown -- every
 // tab click below opens it first via "Open menu", per NavMenu.tsx.
@@ -111,7 +117,10 @@ test.describe('Our Animals', () => {
 
     const grid = page.locator('.animal-detail-photos-grid')
     await expect(grid).toBeVisible()
-    await expect(grid.locator('img')).toHaveCount(5)
+    // Alpaca has 4 real photos seeded by the animal-photos migration
+    // (backend/scripts/migrate_animal_photos.py) -- the grid shows exactly
+    // as many photos as are uploaded, no fixed-slot padding.
+    await expect(grid.locator('img')).toHaveCount(4)
     // No category filter tabs beyond the two top-level About/Photos tabs.
     await expect(page.locator('[role="tab"]')).toHaveCount(2)
     await expect(page.getByText('Swimming')).toHaveCount(0)
@@ -122,30 +131,34 @@ test.describe('Our Animals', () => {
     await expect(page.locator('.animal-detail-facts-table')).toHaveCount(0)
   })
 
-  test('Photos tab resolves real uploaded photos and falls back to the placeholder only for genuinely missing files', async ({
+  test('Photos tab resolves real staff-managed photos from the animal-photos API, in display order', async ({
     page,
   }) => {
     await openAnimalsTab(page)
 
-    // Capybara has all 5 real photos uploaded -- none should fall back.
+    // Capybara has 5 photos seeded by the migration -- each grid image
+    // resolves to a real Storage URL for that animal/index, in order, not
+    // the old jpg->png->placeholder guessing chain.
     await animalCard(page, 'Capybara').click()
     await page.getByRole('tab', { name: 'Photos' }).click()
     const capybaraImgs = page.locator('.animal-detail-photos-grid img')
     await expect(capybaraImgs).toHaveCount(5)
     for (let i = 0; i < 5; i++) {
-      await expect(capybaraImgs.nth(i)).toHaveAttribute('src', `/animals/capybara/${i + 1}.jpg`)
+      await expect(capybaraImgs.nth(i)).toHaveAttribute('src', new RegExp(`/animal-photos/capybara/${i + 1}\\.jpg$`))
     }
 
     await page.getByRole('button', { name: 'Back to Our Animals' }).click()
 
-    // Goat only has photos 1-4 uploaded -- the 5th slot should fall back to
-    // the placeholder SVG once the real image genuinely 404s.
+    // Goat only has 4 photos seeded -- the grid shows exactly 4, no
+    // placeholder padding for a 5th slot (there is no fixed slot count
+    // anymore).
     await animalCard(page, 'Goat').click()
     await page.getByRole('tab', { name: 'Photos' }).click()
     const goatImgs = page.locator('.animal-detail-photos-grid img')
-    await expect(goatImgs).toHaveCount(5)
-    await expect(goatImgs.nth(0)).toHaveAttribute('src', '/animals/goat/1.jpg')
-    await expect(goatImgs.nth(4)).toHaveAttribute('src', '/animal-photo-placeholder.svg')
+    await expect(goatImgs).toHaveCount(4)
+    for (let i = 0; i < 4; i++) {
+      await expect(goatImgs.nth(i)).toHaveAttribute('src', new RegExp(`/animal-photos/goat/${i + 1}\\.jpg$`))
+    }
   })
 
   test('Information Cards: text counter (not dots), cycles both directions, no Shuffle/Next button', async ({
@@ -189,56 +202,51 @@ test.describe('Our Animals', () => {
     await expect(page.getByRole('button', { name: 'View Information Cards' })).toBeVisible()
   })
 
-  test('Information Cards: repeated cycling past a missing photo never corrupts an unrelated card\'s image', async ({
+  test('Information Cards: repeated cycling through more cards than photos never corrupts an unrelated card\'s image', async ({
     page,
   }) => {
-    // Regression test for a bug where AnimalImage's jpg->png->placeholder
-    // fallback `attempt` counter never reset between cards (no `key`), so
-    // once one card's image genuinely 404'd, every card cycled to
-    // afterwards -- including card 1 on wraparound -- permanently inherited
-    // that stale attempt count and rendered the placeholder forever, no
-    // matter how many times the guest cycled through. Goat's card 5 (of 6)
-    // maps to photo 5, which isn't uploaded (see the Photos-tab test above),
-    // making it a real 404 rather than a simulated one.
+    // Regression coverage for AnimalImage's jpg->png->placeholder fallback
+    // `attempt` counter needing a reset between cards (via `key={index}` in
+    // AnimalCardsScreen) -- previously proven with a genuinely-missing 5th
+    // photo forcing a real 404 mid-cycle. Goat only has 4 real photos now
+    // (migrated by backend/scripts/migrate_animal_photos.py) against 6 info
+    // cards, so nugget images cycle `cardIndex % photos.length` -- every
+    // card always resolves to a real photo (never the placeholder), but
+    // still exercises the same reset-on-remount path every time the cycle
+    // wraps past the last photo.
     await openAnimalsTab(page)
     await animalCard(page, 'Goat').click()
     await page.getByRole('button', { name: 'View Information Cards' }).click()
 
     const img = page.locator('.animal-card-nugget-image')
     await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
-    await expect(img).toHaveAttribute('src', '/animals/goat/1.jpg')
+    await expect(img).toHaveAttribute('src', new RegExp('/animal-photos/goat/1\\.jpg$'))
 
     const next = page.getByRole('button', { name: 'Next card' })
     const prev = page.getByRole('button', { name: 'Previous card' })
 
-    // Cycle forward through 3 full loops (18 clicks) -- passes card 5's
-    // missing photo 6 times, well past the original failure mode's
-    // single-cycle blind spot.
+    // Cycle forward through 3 full loops (18 clicks) -- wraps past the
+    // 4-photo pool well beyond the original failure mode's single-cycle
+    // blind spot.
     for (let i = 0; i < 18; i++) {
       await next.click()
       const cardNum = ((i + 1) % 6) + 1
       await expect(page.locator('.animal-cards-counter')).toHaveText(`Card ${cardNum} of 6`)
-      if (cardNum === 5) {
-        // The missing photo: falls back to the placeholder, but only for
-        // this card -- not proof of the bug by itself.
-        await expect(img).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
-      } else {
-        const photoNum = ((cardNum - 1) % 5) + 1
-        await expect(img).toHaveAttribute('src', `/animals/goat/${photoNum}.jpg`)
-      }
+      const photoNum = ((cardNum - 1) % 4) + 1
+      await expect(img).toHaveAttribute('src', new RegExp(`/animal-photos/goat/${photoNum}\\.jpg$`))
     }
 
     // The real assertion: card 1's real photo still renders after extensive
-    // forward cycling through the missing-photo card, not the placeholder.
+    // forward cycling, not a stale/corrupted src from an earlier card.
     await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
-    await expect(img).toHaveAttribute('src', '/animals/goat/1.jpg')
+    await expect(img).toHaveAttribute('src', new RegExp('/animal-photos/goat/1\\.jpg$'))
 
     // Same check cycling backward through 2 full loops (12 clicks).
     for (let i = 0; i < 12; i++) {
       await prev.click()
     }
     await expect(page.locator('.animal-cards-counter')).toHaveText('Card 1 of 6')
-    await expect(img).toHaveAttribute('src', '/animals/goat/1.jpg')
+    await expect(img).toHaveAttribute('src', new RegExp('/animal-photos/goat/1\\.jpg$'))
   })
 
   test('Sloth, Porcupine, and Pig show the newly added real content', async ({ page }) => {
@@ -276,66 +284,64 @@ test.describe('Our Animals', () => {
     await expect(page.getByText('A Nose for Adventure')).toBeVisible()
   })
 
-  test('Photo resolution reflects the real-photo drop for new and updated animals', async ({ page }) => {
+  test('Photo grid size and order match each animal\'s real migrated photo count -- no fixed-slot padding', async ({
+    page,
+  }) => {
     await openAnimalsTab(page)
 
-    // Kangaroo: 2 real photos uploaded, slots 3-5 fall back to the placeholder.
+    // Kangaroo: only 2 photos ever existed for this animal -- the grid is 2
+    // long, not padded out to a fixed slot count.
     await animalCard(page, 'Kangaroo').click()
     await page.getByRole('tab', { name: 'Photos' }).click()
     const kangarooImgs = page.locator('.animal-detail-photos-grid img')
-    await expect(kangarooImgs).toHaveCount(5)
-    await expect(kangarooImgs.nth(0)).toHaveAttribute('src', '/animals/kangaroo/1.jpg')
-    await expect(kangarooImgs.nth(1)).toHaveAttribute('src', '/animals/kangaroo/2.jpg')
-    await expect(kangarooImgs.nth(2)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
-    await expect(kangarooImgs.nth(4)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
+    await expect(kangarooImgs).toHaveCount(2)
+    await expect(kangarooImgs.nth(0)).toHaveAttribute('src', new RegExp('/animal-photos/kangaroo/1\\.jpg$'))
+    await expect(kangarooImgs.nth(1)).toHaveAttribute('src', new RegExp('/animal-photos/kangaroo/2\\.jpg$'))
     await page.getByRole('tab', { name: 'About' }).click()
     await page.getByRole('button', { name: 'Back to Our Animals' }).click()
 
-    // Wallaby: 4 real photos, slot 1 is a .png (jpg candidate 404s first), slot 5 falls back.
+    // Wallaby: 4 photos, the first migrated from a .png -- the migration
+    // preserves each file's original extension in its storage_path.
     await animalCard(page, 'Wallaby').click()
     await page.getByRole('tab', { name: 'Photos' }).click()
     const wallabyImgs = page.locator('.animal-detail-photos-grid img')
-    await expect(wallabyImgs).toHaveCount(5)
-    await expect(wallabyImgs.nth(0)).toHaveAttribute('src', '/animals/wallaby/1.png')
-    await expect(wallabyImgs.nth(1)).toHaveAttribute('src', '/animals/wallaby/2.jpg')
-    await expect(wallabyImgs.nth(3)).toHaveAttribute('src', '/animals/wallaby/4.jpg')
-    await expect(wallabyImgs.nth(4)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
+    await expect(wallabyImgs).toHaveCount(4)
+    await expect(wallabyImgs.nth(0)).toHaveAttribute('src', new RegExp('/animal-photos/wallaby/1\\.png$'))
+    await expect(wallabyImgs.nth(1)).toHaveAttribute('src', new RegExp('/animal-photos/wallaby/2\\.jpg$'))
+    await expect(wallabyImgs.nth(3)).toHaveAttribute('src', new RegExp('/animal-photos/wallaby/4\\.jpg$'))
     await page.getByRole('tab', { name: 'About' }).click()
     await page.getByRole('button', { name: 'Back to Our Animals' }).click()
 
-    // Sloth: all 5 real photos uploaded -- none should fall back.
+    // Sloth: 5 photos, in order.
     await animalCard(page, 'Sloth').click()
     await page.getByRole('tab', { name: 'Photos' }).click()
     const slothImgs = page.locator('.animal-detail-photos-grid img')
     await expect(slothImgs).toHaveCount(5)
     for (let i = 0; i < 5; i++) {
-      await expect(slothImgs.nth(i)).toHaveAttribute('src', `/animals/sloth/${i + 1}.jpg`)
+      await expect(slothImgs.nth(i)).toHaveAttribute('src', new RegExp(`/animal-photos/sloth/${i + 1}\\.jpg$`))
     }
     await page.getByRole('tab', { name: 'About' }).click()
     await page.getByRole('button', { name: 'Back to Our Animals' }).click()
 
-    // Porcupine: 4 real photos, slot 5 falls back.
+    // Porcupine: 4 photos.
     await animalCard(page, 'Porcupine').click()
     await page.getByRole('tab', { name: 'Photos' }).click()
     const porcupineImgs = page.locator('.animal-detail-photos-grid img')
-    await expect(porcupineImgs).toHaveCount(5)
+    await expect(porcupineImgs).toHaveCount(4)
     for (let i = 0; i < 4; i++) {
-      await expect(porcupineImgs.nth(i)).toHaveAttribute('src', `/animals/porcupine/${i + 1}.jpg`)
+      await expect(porcupineImgs.nth(i)).toHaveAttribute('src', new RegExp(`/animal-photos/porcupine/${i + 1}\\.jpg$`))
     }
-    await expect(porcupineImgs.nth(4)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
     await page.getByRole('tab', { name: 'About' }).click()
     await page.getByRole('button', { name: 'Back to Our Animals' }).click()
 
-    // Pig: 3 real photos, slots 4-5 fall back.
+    // Pig: 3 photos.
     await animalCard(page, 'Pig').click()
     await page.getByRole('tab', { name: 'Photos' }).click()
     const pigImgs = page.locator('.animal-detail-photos-grid img')
-    await expect(pigImgs).toHaveCount(5)
+    await expect(pigImgs).toHaveCount(3)
     for (let i = 0; i < 3; i++) {
-      await expect(pigImgs.nth(i)).toHaveAttribute('src', `/animals/pig/${i + 1}.jpg`)
+      await expect(pigImgs.nth(i)).toHaveAttribute('src', new RegExp(`/animal-photos/pig/${i + 1}\\.jpg$`))
     }
-    await expect(pigImgs.nth(3)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
-    await expect(pigImgs.nth(4)).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
   })
 
   test('"Scan a QR Code" opens the existing scan-entry flow', async ({ page }) => {

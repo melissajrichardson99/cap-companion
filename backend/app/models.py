@@ -500,6 +500,19 @@ class PhotoSubmission(BaseModel):
     voted_by_me: bool = False
 
 
+class AnimalPhoto(BaseModel):
+    id: UUID
+    animal_slug: str
+    # Derived from storage_path via the Storage API at read time, never
+    # stored -- same discipline as PhotoSubmission.photo_url above.
+    photo_url: str
+    display_order: int
+
+
+class ReorderAnimalPhotosRequest(BaseModel):
+    photo_ids: list[UUID]
+
+
 class Announcement(BaseModel):
     id: UUID
     text: str

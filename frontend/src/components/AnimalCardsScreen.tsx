@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { AnimalPhoto } from '../api'
 import type { AnimalContent } from '../animalContent'
 import { AnimalImage } from './AnimalImage'
 import { ChevronLeftIcon, ChevronRightIcon } from './NavIcons'
@@ -6,6 +7,10 @@ import './AnimalCardsScreen.css'
 
 interface AnimalCardsScreenProps {
   animal: AnimalContent
+  // Same staff-managed photo list AnimalDetailScreen gets -- info-card
+  // images cycle through it (card 6 wraps back to photo 1, etc.) instead of
+  // the old fixed mod-5 static-file cycling.
+  photos: AnimalPhoto[]
   onBack: () => void
 }
 
@@ -13,10 +18,11 @@ interface AnimalCardsScreenProps {
 // a "Card X of Y" text counter (no dot-progress indicator), and side arrow
 // buttons that cycle linearly through the deck -- deliberately no Shuffle
 // Cards or bottom Next Card button, per the mockup trim.
-export function AnimalCardsScreen({ animal, onBack }: AnimalCardsScreenProps) {
+export function AnimalCardsScreen({ animal, photos, onBack }: AnimalCardsScreenProps) {
   const [index, setIndex] = useState(0)
   const total = animal.nuggets.length
   const nugget = animal.nuggets[index]
+  const nuggetImageCandidates = photos.length > 0 ? [photos[index % photos.length].photo_url] : []
 
   const goPrev = () => setIndex((i) => (i - 1 + total) % total)
   const goNext = () => setIndex((i) => (i + 1) % total)
@@ -41,7 +47,7 @@ export function AnimalCardsScreen({ animal, onBack }: AnimalCardsScreenProps) {
         </button>
 
         <div className="animal-card-nugget cap-parchment-card">
-          <AnimalImage key={index} candidates={nugget.imageCandidates} alt="" className="animal-card-nugget-image" />
+          <AnimalImage key={index} candidates={nuggetImageCandidates} alt="" className="animal-card-nugget-image" />
           <h3 className="animal-card-nugget-title">{nugget.title}</h3>
           <p className="animal-card-nugget-text">{nugget.text}</p>
         </div>
