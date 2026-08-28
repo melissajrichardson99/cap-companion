@@ -118,6 +118,32 @@ test('navbar logo returns to Home from another screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
 })
 
+test('How It Works card renders between Announcements/Reviews and Quick Links', async ({ page }) => {
+  await page.goto('/')
+  const howto = page.getByRole('heading', { name: 'How It Works' })
+  await expect(howto).toBeVisible()
+  await expect(page.locator('.home-howto-list .home-howto-step')).toHaveCount(5)
+
+  // DOCUMENT_POSITION_FOLLOWING (4) means the reference node comes after the
+  // node compareDocumentPosition was called on -- i.e. review card precedes
+  // howto, and howto precedes Quick Links, in page order.
+  const reviewCard = page.getByRole('heading', { name: 'Leave a Review, Get a Treat!' }).locator('..')
+  const howtoCard = howto.locator('..')
+  const quickLinksCard = page.getByRole('heading', { name: 'Quick Links' }).locator('..')
+
+  const reviewBeforeHowto = await reviewCard.evaluate(
+    (el, target) => !!(el.compareDocumentPosition(target as Node) & Node.DOCUMENT_POSITION_FOLLOWING),
+    await howtoCard.elementHandle(),
+  )
+  const howtoBeforeQuickLinks = await howtoCard.evaluate(
+    (el, target) => !!(el.compareDocumentPosition(target as Node) & Node.DOCUMENT_POSITION_FOLLOWING),
+    await quickLinksCard.elementHandle(),
+  )
+
+  expect(reviewBeforeHowto).toBe(true)
+  expect(howtoBeforeQuickLinks).toBe(true)
+})
+
 test('Quick Links quick-nav card links to the right destinations', async ({ page }) => {
   await page.goto('/')
   const quicknav = page.locator('.home-quicknav-grid')

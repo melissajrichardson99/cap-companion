@@ -484,6 +484,66 @@
   line-height: 1.2;
 }
 
+/* "How It Works" step list -- numbered rows echoing the orange of the Quick
+   Links buttons directly below, so the two cards read as one continuous
+   "here's the loop, now go do it" flow rather than unrelated sections. */
+.home-howto-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cap-space-3);
+}
+
+.home-howto-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cap-space-2);
+}
+
+.home-howto-number {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--cap-color-outline);
+  background: var(--cap-color-sunset-orange);
+  color: #fff;
+  font-family: var(--cap-font-display);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.home-howto-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--cap-color-header-green);
+}
+
+.home-howto-text {
+  min-width: 0;
+}
+
+.home-howto-heading {
+  font-family: var(--cap-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cap-color-ink);
+  margin: 0 0 2px;
+}
+
+.home-howto-desc {
+  font-size: 13px;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}
+
 .home-quicknav-note {
   font-size: 13px;
   font-style: italic;

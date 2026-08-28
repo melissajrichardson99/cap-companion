@@ -13,7 +13,7 @@ import {
 } from '../homePageContent'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { fetchCurrentWeather, type CurrentWeather } from '../weather'
-import { CameraIcon, ClipboardIcon, GridIcon, HomeIcon, MapPinIcon, PawIcon } from './NavIcons'
+import { CameraIcon, ClipboardIcon, GridIcon, HomeIcon, MapPinIcon, PawIcon, QuestionMarkIcon } from './NavIcons'
 import { PhotoLightbox } from './PhotoLightbox'
 import './HomePage.css'
 
@@ -203,6 +203,61 @@ export function HomePage({ announcements, onScanQr }: HomePageProps) {
           </a>
         </section>
       </div>
+
+      <section className="home-card cap-parchment-card">
+        <h2 className="home-section-title">How It Works</h2>
+        <ol className="home-howto-list">
+          <li className="home-howto-step">
+            <span className="home-howto-number">1</span>
+            <MapPinIcon className="home-howto-icon" />
+            <div className="home-howto-text">
+              <h3 className="home-howto-heading">Explore the Map</h3>
+              <p className="home-howto-desc">
+                Visit map nodes around the park and complete any challenges you find along the way.
+              </p>
+            </div>
+          </li>
+          <li className="home-howto-step">
+            <span className="home-howto-number">2</span>
+            <CameraIcon className="home-howto-icon" />
+            <div className="home-howto-text">
+              <h3 className="home-howto-heading">Scan QR Codes</h3>
+              <p className="home-howto-desc">
+                Scan codes around the park to meet Scavenger Hunt characters, score games and puzzles, and learn
+                about the animals.
+              </p>
+            </div>
+          </li>
+          <li className="home-howto-step">
+            <span className="home-howto-number">3</span>
+            <GridIcon className="home-howto-icon" />
+            <div className="home-howto-text">
+              <h3 className="home-howto-heading">Fill Your Bingo Card</h3>
+              <p className="home-howto-desc">
+                Complete nearby challenges as you go to check off tiles and work toward Bingo milestones.
+              </p>
+            </div>
+          </li>
+          <li className="home-howto-step">
+            <span className="home-howto-number">4</span>
+            <QuestionMarkIcon className="home-howto-icon" />
+            <div className="home-howto-text">
+              <h3 className="home-howto-heading">Check In Anytime</h3>
+              <p className="home-howto-desc">
+                Pop open the menu whenever you need it — vote for Photo of the Day, or contact staff.
+              </p>
+            </div>
+          </li>
+          <li className="home-howto-step">
+            <span className="home-howto-number">5</span>
+            <PawIcon className="home-howto-icon" />
+            <div className="home-howto-text">
+              <h3 className="home-howto-heading">Spend Your Cobb Coins</h3>
+              <p className="home-howto-desc">🪙 Cash in the coins you've earned on Collectibles in the shop.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
 
       <section className="home-card cap-parchment-card">
         <h2 className="home-section-title">Quick Links</h2>
