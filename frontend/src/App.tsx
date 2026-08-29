@@ -741,9 +741,9 @@ function GuestShell(props: GuestShellProps) {
       {props.showScanEntry && (
         <ScanEntryModal
           onClose={() => props.setShowScanEntry(false)}
-          onCodeSubmitted={(code) => {
+          onResolved={(path) => {
             props.setShowScanEntry(false)
-            navigate(`/scan/${encodeURIComponent(code)}`)
+            navigate(path)
           }}
         />
       )}

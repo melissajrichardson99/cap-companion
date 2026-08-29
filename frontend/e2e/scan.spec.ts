@@ -1,3 +1,6 @@
+import { execFileSync } from 'node:child_process'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { test, expect, type Page } from '@playwright/test'
 import { seedDeviceSession } from './deviceSessionHelper'
 
@@ -12,6 +15,16 @@ import { seedDeviceSession } from './deviceSessionHelper'
 // working as a hard direct deep link (page.goto straight to the URL,
 // simulating someone else's camera app opening it fresh rather than in-app
 // navigation).
+//
+// Also covers ScanEntryModal's unified handling of the other 3 QR-routable
+// destinations (Animals, Scoring, Puzzles) -- previously camera decode
+// treated any decoded URL that didn't match /scan/xxx as a bare Hunt code
+// (always 404ing), and manual entry only ever navigated to /scan/:code
+// regardless of what was typed. See the "unified scan resolution" describe
+// block below; the collision test there shells out to a backend fixture
+// script (same execFileSync-a-Python-script pattern as global-setup.ts)
+// since there's no staff-facing creation UI to seed a genuine cross-type
+// collision through the app itself.
 //
 // Per-Device Sessions Phase 6b (migration 030, final phase): Hunt progress
 // (including unlocked_at) is now scoped per device session, not global --
@@ -71,7 +84,7 @@ test.describe('QR / manual code scanning', () => {
     await openScanEntry(page)
 
     const modal = page.locator('.modal-panel')
-    await modal.getByLabel('Code from the sign').fill('brave-otter')
+    await modal.getByLabel("What's on the sign").fill('brave-otter')
     await modal.getByRole('button', { name: 'Go' }).click()
 
     // This is Kangaroo's first-ever scan in the suite (this file runs
@@ -97,7 +110,7 @@ test.describe('QR / manual code scanning', () => {
     await openScanEntry(page)
 
     const modal = page.locator('.modal-panel')
-    await modal.getByLabel('Code from the sign').fill('  Brave Otter  ')
+    await modal.getByLabel("What's on the sign").fill('  Brave Otter  ')
     await modal.getByRole('button', { name: 'Go' }).click()
 
     // Kangaroo is already unlocked by the previous test, so this is a
@@ -169,7 +182,7 @@ test.describe('QR / manual code scanning', () => {
     await openScanEntry(page)
 
     const modal = page.locator('.modal-panel')
-    await modal.getByLabel('Code from the sign').fill('jolly-zebra')
+    await modal.getByLabel("What's on the sign").fill('jolly-zebra')
     await modal.getByRole('button', { name: 'Go' }).click()
 
     await expect(page.getByRole('heading', { name: 'Red Panda' })).toBeVisible()
@@ -180,7 +193,7 @@ test.describe('QR / manual code scanning', () => {
     await openScanEntry(page)
 
     const modal = page.locator('.modal-panel')
-    await modal.getByLabel('Code from the sign').fill('totally-bogus-code')
+    await modal.getByLabel("What's on the sign").fill('totally-bogus-code')
     await modal.getByRole('button', { name: 'Go' }).click()
 
     await expect(page.getByText(/couldn't find a code matching/i)).toBeVisible()
@@ -224,5 +237,210 @@ test.describe('QR / manual code scanning', () => {
   test('/scan/:code deep link for an unknown code also shows not-found, not a crash', async ({ page }) => {
     await page.goto('/scan/nonexistent-code')
     await expect(page.getByText(/couldn't find a code matching/i)).toBeVisible()
+  })
+})
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const backendDir = path.resolve(__dirname, '..', '..', 'backend')
+const backendPython = path.join(backendDir, 'venv', 'Scripts', 'python.exe')
+
+test.describe('unified scan resolution (Animals / Scoring / Puzzles)', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedDeviceSession(page, crypto.randomUUID())
+  })
+
+  test('camera scan (mocked decode) of an Animals QR routes straight to that animal, not a bare-code 404', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      class FakeBarcodeDetector {
+        async detect() {
+          return [{ rawValue: 'https://cap-companion.example/animals/goat' }]
+        }
+      }
+      // @ts-expect-error test-only global stub
+      window.BarcodeDetector = FakeBarcodeDetector
+      // @ts-expect-error test-only global stub
+      navigator.mediaDevices.getUserMedia = async () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 10
+        canvas.height = 10
+        const ctx = canvas.getContext('2d')
+        ctx.fillStyle = 'green'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        return canvas.captureStream(10)
+      }
+    })
+
+    await openScanEntry(page)
+
+    await expect(page).toHaveURL(/\/animals\/goat$/)
+    await expect(page.getByRole('heading', { name: 'Goat', exact: true })).toBeVisible()
+  })
+
+  test('camera scan (mocked decode) of a Scoring QR routes straight to that game', async ({ page }) => {
+    await page.addInitScript(() => {
+      class FakeBarcodeDetector {
+        async detect() {
+          return [{ rawValue: 'https://cap-companion.example/scoring/farm-toss' }]
+        }
+      }
+      // @ts-expect-error test-only global stub
+      window.BarcodeDetector = FakeBarcodeDetector
+      // @ts-expect-error test-only global stub
+      navigator.mediaDevices.getUserMedia = async () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 10
+        canvas.height = 10
+        const ctx = canvas.getContext('2d')
+        ctx.fillStyle = 'green'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        return canvas.captureStream(10)
+      }
+    })
+
+    await openScanEntry(page)
+
+    await expect(page).toHaveURL(/\/scoring\/farm-toss$/)
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText('Farm Toss', { exact: true })).toBeVisible()
+  })
+
+  test('camera scan (mocked decode) of a Puzzles QR routes straight to that challenge', async ({ page }) => {
+    await page.addInitScript(() => {
+      class FakeBarcodeDetector {
+        async detect() {
+          return [{ rawValue: 'https://cap-companion.example/puzzles/math-maze-standard' }]
+        }
+      }
+      // @ts-expect-error test-only global stub
+      window.BarcodeDetector = FakeBarcodeDetector
+      // @ts-expect-error test-only global stub
+      navigator.mediaDevices.getUserMedia = async () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 10
+        canvas.height = 10
+        const ctx = canvas.getContext('2d')
+        ctx.fillStyle = 'green'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        return canvas.captureStream(10)
+      }
+    })
+
+    await openScanEntry(page)
+
+    await expect(page).toHaveURL(/\/puzzles\/math-maze-standard$/)
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText('Math Maze — Standard')).toBeVisible()
+  })
+
+  test('camera scan (mocked decode) of a bare code with no URL still resolves, same as manual entry', async ({
+    page,
+  }) => {
+    // A sign that somehow encodes just the bare code, not a full URL --
+    // this has no recognizable /scan//animals//scoring//puzzles/ prefix to
+    // route on directly, so it must fall through to the same server-side
+    // lookup manual entry uses, rather than 404ing as a bad /scan/:code.
+    await page.addInitScript(() => {
+      class FakeBarcodeDetector {
+        async detect() {
+          return [{ rawValue: 'quick-falcon' }]
+        }
+      }
+      // @ts-expect-error test-only global stub
+      window.BarcodeDetector = FakeBarcodeDetector
+      // @ts-expect-error test-only global stub
+      navigator.mediaDevices.getUserMedia = async () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 10
+        canvas.height = 10
+        const ctx = canvas.getContext('2d')
+        ctx.fillStyle = 'green'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        return canvas.captureStream(10)
+      }
+    })
+
+    await openScanEntry(page)
+
+    // Snake's first-ever scan in the suite -- found popup before Challenge 1.
+    await expect(page.getByText('You found')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Snake' })).toBeVisible()
+    await page.getByRole('button', { name: 'Start Challenges' }).click()
+    await expect(page.getByText('Snake — Challenge 1')).toBeVisible()
+    await expect(page).toHaveURL(/\/scan\/quick-falcon$/)
+  })
+
+  test('manual entry resolves an Animal slug and routes to that animal', async ({ page }) => {
+    await openScanEntry(page)
+
+    const modal = page.locator('.modal-panel')
+    await modal.getByLabel("What's on the sign").fill('goat')
+    await modal.getByRole('button', { name: 'Go' }).click()
+
+    await expect(page).toHaveURL(/\/animals\/goat$/)
+    await expect(page.getByRole('heading', { name: 'Goat', exact: true })).toBeVisible()
+  })
+
+  test('manual entry resolves a Scoring game slug and routes to that game', async ({ page }) => {
+    await openScanEntry(page)
+
+    const modal = page.locator('.modal-panel')
+    await modal.getByLabel("What's on the sign").fill('farm-toss')
+    await modal.getByRole('button', { name: 'Go' }).click()
+
+    await expect(page).toHaveURL(/\/scoring\/farm-toss$/)
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText('Farm Toss', { exact: true })).toBeVisible()
+  })
+
+  test('manual entry resolves a Puzzle challenge slug and routes to that challenge', async ({ page }) => {
+    await openScanEntry(page)
+
+    const modal = page.locator('.modal-panel')
+    await modal.getByLabel("What's on the sign").fill('math-maze-standard')
+    await modal.getByRole('button', { name: 'Go' }).click()
+
+    await expect(page).toHaveURL(/\/puzzles\/math-maze-standard$/)
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText('Math Maze — Standard')).toBeVisible()
+  })
+
+  test('manual entry is case-insensitive/whitespace-tolerant for non-Hunt slugs too', async ({ page }) => {
+    await openScanEntry(page)
+
+    const modal = page.locator('.modal-panel')
+    await modal.getByLabel("What's on the sign").fill('  Farm Toss  ')
+    await modal.getByRole('button', { name: 'Go' }).click()
+
+    await expect(page).toHaveURL(/\/scoring\/farm-toss$/)
+  })
+
+  test('a manual entry matching more than one destination shows a clear error, not a silent wrong redirect', async ({
+    page,
+  }) => {
+    // No real collision exists in seed data -- temporarily makes the
+    // existing "farm-toss" Scoring Sheet slug also exist as a
+    // scannable_codes code, via a test-only backend fixture script (see
+    // backend/scripts/e2e_collision_fixture.py), so resolve_manual_entry()
+    // has a genuine two-source collision to 409 on. Always cleaned up, even
+    // if an assertion below throws.
+    execFileSync(backendPython, ['scripts/e2e_collision_fixture.py', 'insert'], { cwd: backendDir, stdio: 'inherit' })
+    try {
+      await openScanEntry(page)
+
+      const modal = page.locator('.modal-panel')
+      await modal.getByLabel("What's on the sign").fill('farm-toss')
+      await modal.getByRole('button', { name: 'Go' }).click()
+
+      await expect(page.getByText(/matches more than one/i)).toBeVisible()
+      // No silent wrong-destination redirect -- still on the scan-entry
+      // modal, not routed to either colliding destination.
+      await expect(modal).toBeVisible()
+      await expect(page).not.toHaveURL(/\/scoring\/farm-toss$/)
+      await expect(page).not.toHaveURL(/\/scan\/farm-toss$/)
+    } finally {
+      execFileSync(backendPython, ['scripts/e2e_collision_fixture.py', 'remove'], { cwd: backendDir, stdio: 'inherit' })
+    }
   })
 })

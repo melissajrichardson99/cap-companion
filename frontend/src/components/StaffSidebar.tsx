@@ -45,41 +45,46 @@ export function StaffSidebar({ tab, onSelectTab, pendingPhotosCount, openRequest
   ]
 
   return (
-    <nav className="staff-sidebar" aria-label="Staff sections">
-      <div className="staff-sidebar-brand">
-        {/* Real navigation to the guest-facing Home Page -- does not touch
-            the staff auth token, so returning to /staff later still works. */}
-        <BrandLogo onClick={() => navigate('/')} />
-      </div>
-      <div className="staff-sidebar-tabs" role="tablist">
-        {items.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.key}
-            className={`staff-sidebar-tab ${tab === item.key ? 'staff-sidebar-tab-active' : ''}`}
-            onClick={() => onSelectTab(item.key)}
-          >
-            {/* Label before the icon+badge group in DOM order (accessible
-                name / textContent must stay "<label><badge digits>", exactly
-                as before) -- the icon+badge group is pulled visually above
-                the label with CSS `order` so it still LOOKS icon-on-top. */}
-            <span className="staff-sidebar-tab-label">{item.label}</span>
-            <span className="staff-sidebar-tab-icon-wrap">
-              <span className="staff-sidebar-tab-icon">{item.icon}</span>
-              {/* aria-hidden: decorative count, kept out of the tab's
-                  accessible name so it stays exactly the label text (existing
-                  e2e specs locate tabs by name). */}
-              {!!item.badge && (
-                <span className="staff-sidebar-tab-badge" aria-hidden="true">
-                  {item.badge}
-                </span>
-              )}
-            </span>
-          </button>
-        ))}
-      </div>
-    </nav>
+    // Anchor wrapper (StaffSidebar.css) -- mirrors #root's own centering
+    // recipe so the rail below tracks #root's real edge exactly, including
+    // when a vertical scrollbar appears on tall tabs.
+    <div className="staff-sidebar-anchor">
+      <nav className="staff-sidebar" aria-label="Staff sections">
+        <div className="staff-sidebar-brand">
+          {/* Real navigation to the guest-facing Home Page -- does not touch
+              the staff auth token, so returning to /staff later still works. */}
+          <BrandLogo onClick={() => navigate('/')} />
+        </div>
+        <div className="staff-sidebar-tabs" role="tablist">
+          {items.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.key}
+              className={`staff-sidebar-tab ${tab === item.key ? 'staff-sidebar-tab-active' : ''}`}
+              onClick={() => onSelectTab(item.key)}
+            >
+              {/* Label before the icon+badge group in DOM order (accessible
+                  name / textContent must stay "<label><badge digits>", exactly
+                  as before) -- the icon+badge group is pulled visually above
+                  the label with CSS `order` so it still LOOKS icon-on-top. */}
+              <span className="staff-sidebar-tab-label">{item.label}</span>
+              <span className="staff-sidebar-tab-icon-wrap">
+                <span className="staff-sidebar-tab-icon">{item.icon}</span>
+                {/* aria-hidden: decorative count, kept out of the tab's
+                    accessible name so it stays exactly the label text (existing
+                    e2e specs locate tabs by name). */}
+                {!!item.badge && (
+                  <span className="staff-sidebar-tab-badge" aria-hidden="true">
+                    {item.badge}
+                  </span>
+                )}
+              </span>
+            </button>
+          ))}
+        </div>
+      </nav>
+    </div>
   )
 }

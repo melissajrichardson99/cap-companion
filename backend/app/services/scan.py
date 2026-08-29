@@ -17,9 +17,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from app.errors import NotFoundError
-from app.models import EncyclopediaEntry, ScanResult, ScanResultType
+from app.errors import ConflictError, NotFoundError
+from app.models import EncyclopediaEntry, ManualEntryMatchType, ManualEntryResolution, ScanResult, ScanResultType
 from app.services import hunt as hunt_service
+from app.services.collectibles import ANIMAL_SLUGS
 from app.services.scan_codes import normalize_code
 from app.supabase_client import get_supabase_client
 
@@ -47,3 +48,81 @@ def resolve_code(raw_code: str, session_id: UUID | None) -> ScanResult:
     if not entry_rows:
         raise NotFoundError(f'Encyclopedia entry for code "{code}" not found')
     return ScanResult(type=ScanResultType.ENCYCLOPEDIA_ENTRY, target=_row_to_entry(entry_rows[0]))
+
+
+def resolve_manual_entry(raw_text: str) -> ManualEntryResolution:
+    """Resolves free-typed sign text against every QR-routable destination --
+    Hunt/Encyclopedia codes (scannable_codes), Scoring game slugs, Puzzle
+    challenge slugs, and Our Animals slugs -- since ScanEntryModal's manual
+    entry field is one shared input, not a per-destination-type one. Camera
+    decodes never need this: the QR itself encodes a full URL whose path
+    prefix says the type outright (see ScanEntryModal.tsx). This is only for
+    a guest typing what's printed on the sign, which carries no such prefix.
+
+    Animal slugs have no table of their own (Our Animals is static frontend
+    content, not DB-backed) -- ANIMAL_SLUGS, already the canonical
+    backend-side mirror collectibles.purchase() validates against, stands in
+    for a real query there.
+    """
+    client = get_supabase_client()
+    text = normalize_code(raw_text)
+
+    matches: list[ManualEntryResolution] = []
+
+    if client.table("scannable_codes").select("code").eq("code", text).execute().data:
+        matches.append(ManualEntryResolution(type=ManualEntryMatchType.SCAN, slug=text))
+    if text in ANIMAL_SLUGS:
+        matches.append(ManualEntryResolution(type=ManualEntryMatchType.ANIMAL, slug=text))
+    if client.table("scoring_games").select("slug").eq("slug", text).execute().data:
+        matches.append(ManualEntryResolution(type=ManualEntryMatchType.SCORING_GAME, slug=text))
+    if client.table("puzzle_challenges").select("slug").eq("slug", text).execute().data:
+        matches.append(ManualEntryResolution(type=ManualEntryMatchType.PUZZLE_CHALLENGE, slug=text))
+
+    if len(matches) > 1:
+        matched_types = ", ".join(m.type.value for m in matches)
+        raise ConflictError(
+            f'"{text}" matches more than one QR destination ({matched_types}) -- '
+            "this is a content-authoring collision, not a guest error; a staff "
+            "member needs to rename one of them (see check_slug_collisions.py)"
+        )
+    if not matches:
+        raise NotFoundError(f'No code, game, puzzle, or animal matching "{text}" found')
+    return matches[0]
+
+
+def _collisions_among(sources: dict[ManualEntryMatchType, list[str]]) -> dict[str, list[ManualEntryMatchType]]:
+    """Pure grouping logic behind find_cross_type_collisions -- split out so
+    it's unit-testable without a live DB, same "pure logic vs. DB-backed"
+    split as collectibles.py/test_collectibles.py."""
+    seen: dict[str, list[ManualEntryMatchType]] = {}
+    for kind, texts in sources.items():
+        for text in texts:
+            seen.setdefault(text, []).append(kind)
+    return {text: kinds for text, kinds in seen.items() if len(kinds) > 1}
+
+
+def find_cross_type_collisions() -> dict[str, list[ManualEntryMatchType]]:
+    """Every text value that appears under more than one QR-routable
+    namespace. scannable_codes, scoring_games.slug, and puzzle_challenges.slug
+    each already enforce their own uniqueness at the DB level, but nothing
+    enforces uniqueness *across* those tables, and Animal slugs (ANIMAL_SLUGS)
+    aren't DB-backed at all -- so no single DB constraint can cover all four
+    sources. Run this manually (see scripts/check_slug_collisions.py)
+    whenever a new scannable code, scoring game, or puzzle challenge is added
+    via migration, since there's no staff-facing creation UI for any of them
+    yet that could otherwise check this automatically.
+    """
+    client = get_supabase_client()
+    sources = {
+        ManualEntryMatchType.SCAN: [
+            row["code"] for row in client.table("scannable_codes").select("code").execute().data
+        ],
+        ManualEntryMatchType.ANIMAL: list(ANIMAL_SLUGS),
+        ManualEntryMatchType.SCORING_GAME: [
+            row["slug"] for row in client.table("scoring_games").select("slug").execute().data
+        ],
+        ManualEntryMatchType.PUZZLE_CHALLENGE: [
+            row["slug"] for row in client.table("puzzle_challenges").select("slug").execute().data
+        ],
+    }
+    return _collisions_among(sources)

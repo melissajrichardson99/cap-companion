@@ -144,7 +144,7 @@ test.describe('Scavenger Hunt', () => {
     await page.getByRole('button', { name: 'Scan QR Code' }).click()
 
     await expect(page.getByText('Scan a Code')).toBeVisible()
-    await expect(page.getByLabel('Code from the sign')).toBeVisible()
+    await expect(page.getByLabel("What's on the sign")).toBeVisible()
   })
 
   test('tapping a locked character shows a location hint, not its identity', async ({ page }) => {
@@ -170,7 +170,7 @@ test.describe('Scavenger Hunt', () => {
     await page.locator('.modal-panel').getByRole('button', { name: 'Scan Now' }).click()
 
     await expect(page.getByText('Scan a Code')).toBeVisible()
-    await expect(page.getByLabel('Code from the sign')).toBeVisible()
+    await expect(page.getByLabel("What's on the sign")).toBeVisible()
   })
 
   test('a fresh scan shows the "character found" popup before any challenge starts, and moves the overall progress bar', async ({

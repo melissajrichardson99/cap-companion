@@ -7,6 +7,11 @@ interface QrEntry {
   key: string
   name: string
   url: string
+  // The plain text a guest can type into ScanEntryModal's manual-entry field
+  // instead of scanning -- the same value the URL's last path segment
+  // carries, surfaced separately so staff can print it as human-readable
+  // text under a QR code on physical signage.
+  code: string
 }
 
 // Read-only reference view (Staff Page "QR Codes" tab): every QR-ready
@@ -42,14 +47,21 @@ export function StaffQrDirectory() {
     key: `animal-${a.slug}`,
     name: a.name,
     url: `${origin}/animals/${a.slug}`,
+    code: a.slug,
   }))
 
   const huntEntries: QrEntry[] | null =
-    scanCodes && scanCodes.map((c) => ({ key: `hunt-${c.id}`, name: c.name, url: `${origin}/scan/${c.code}` }))
+    scanCodes &&
+    scanCodes.map((c) => ({ key: `hunt-${c.id}`, name: c.name, url: `${origin}/scan/${c.code}`, code: c.code }))
 
   const scoringEntries: QrEntry[] | null =
     scoringGames &&
-    scoringGames.map((g) => ({ key: `scoring-${g.id}`, name: g.name, url: `${origin}/scoring/${g.slug}` }))
+    scoringGames.map((g) => ({
+      key: `scoring-${g.id}`,
+      name: g.name,
+      url: `${origin}/scoring/${g.slug}`,
+      code: g.slug,
+    }))
 
   const puzzleEntries: QrEntry[] | null =
     puzzles &&
@@ -58,6 +70,7 @@ export function StaffQrDirectory() {
         key: `puzzle-${c.id}`,
         name: `${p.name} — ${c.label}`,
         url: `${origin}/puzzles/${c.slug}`,
+        code: c.slug,
       })),
     )
 
@@ -125,10 +138,26 @@ function StaffQrSection({
               <div className="staff-qr-row-main">
                 <span className="staff-qr-row-name">{entry.name}</span>
                 <span className="staff-qr-row-url">{entry.url}</span>
+                <span className="staff-qr-row-code">
+                  Manual code: <code>{entry.code}</code>
+                </span>
               </div>
-              <button type="button" className="btn btn-secondary" onClick={() => onCopy(entry.key, entry.url)}>
-                {copiedKey === entry.key ? 'Copied!' : 'Copy Link'}
-              </button>
+              <div className="staff-qr-row-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => onCopy(`${entry.key}-url`, entry.url)}
+                >
+                  {copiedKey === `${entry.key}-url` ? 'Copied!' : 'Copy Link'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => onCopy(`${entry.key}-code`, entry.code)}
+                >
+                  {copiedKey === `${entry.key}-code` ? 'Copied!' : 'Copy Code'}
+                </button>
+              </div>
             </li>
           ))}
         </ul>

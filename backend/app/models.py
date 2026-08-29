@@ -395,6 +395,23 @@ class ScanResult(BaseModel):
     target: HuntCharacter | EncyclopediaEntry
 
 
+class ManualEntryMatchType(StrEnum):
+    """Which of the four QR-routable destinations a manually-typed sign
+    code/name resolved to -- lets ScanEntryModal's single input route to
+    /scan/:code, /animals/:slug, /scoring/:gameSlug, or /puzzles/:challengeSlug
+    without the guest picking a type up front."""
+
+    SCAN = "scan"
+    ANIMAL = "animal"
+    SCORING_GAME = "scoring"
+    PUZZLE_CHALLENGE = "puzzle"
+
+
+class ManualEntryResolution(BaseModel):
+    type: ManualEntryMatchType
+    slug: str
+
+
 class StaffRequestType(StrEnum):
     QUESTION = "question"
     EMERGENCY = "emergency"

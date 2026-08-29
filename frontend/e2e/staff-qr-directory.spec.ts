@@ -79,4 +79,37 @@ test.describe('Staff Page QR Code Directory', () => {
     await page.goto(copied)
     await expect(page.getByRole('dialog').getByText('Farm Toss', { exact: true })).toBeVisible()
   })
+
+  // Each row also shows the plain manual code (ScanEntryModal's "What's on
+  // the sign" field takes free text, not a URL) and a matching Copy Code
+  // button, distinct from Copy Link -- staff print this alongside the QR so
+  // guests without a working camera can still type it in.
+  test('shows the manual-entry code for one entry of each type, and Copy Code copies just the code', async ({
+    page,
+  }) => {
+    await openQrCodesTab(page)
+
+    const animalRow = section(page, 'Our Animals').locator('.staff-qr-row', { hasText: 'Capybara' })
+    await expect(animalRow.locator('.staff-qr-row-code')).toHaveText('Manual code: capybara')
+
+    const huntRow = section(page, 'Scavenger Hunt Characters').locator('.staff-qr-row', { hasText: 'Kangaroo' })
+    await expect(huntRow.locator('.staff-qr-row-code')).toHaveText('Manual code: brave-otter')
+
+    const scoringRow = section(page, 'Scoring Sheet Games').locator('.staff-qr-row', { hasText: 'Farm Toss' })
+    await expect(scoringRow.locator('.staff-qr-row-code')).toHaveText('Manual code: farm-toss')
+
+    const puzzleRow = section(page, 'Puzzle Challenges').locator('.staff-qr-row', {
+      hasText: 'Math Maze — Standard',
+    })
+    await expect(puzzleRow.locator('.staff-qr-row-code')).toHaveText('Manual code: math-maze-standard')
+
+    await scoringRow.getByRole('button', { name: 'Copy Code' }).click()
+    await expect(scoringRow.getByRole('button', { name: 'Copied!' })).toBeVisible()
+    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    expect(copied).toBe('farm-toss')
+
+    // Copy Link on the same row is unaffected -- the two buttons track their
+    // own copied state independently.
+    await expect(scoringRow.getByRole('button', { name: 'Copy Link' })).toBeVisible()
+  })
 })

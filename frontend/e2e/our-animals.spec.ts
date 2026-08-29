@@ -349,6 +349,6 @@ test.describe('Our Animals', () => {
     await page.getByRole('button', { name: 'Scan a QR Code' }).click()
 
     await expect(page.getByText('Scan a Code')).toBeVisible()
-    await expect(page.getByLabel('Code from the sign')).toBeVisible()
+    await expect(page.getByLabel("What's on the sign")).toBeVisible()
   })
 })

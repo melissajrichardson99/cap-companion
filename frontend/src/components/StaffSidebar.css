@@ -1,32 +1,43 @@
+/* Fixed wrapper spanning the true viewport, sized and centered with the
+   exact same recipe #root uses (index.css: width:1126px; max-width:100%;
+   margin:0 auto) so it always lands exactly on #root's real edge -- the
+   previous approach computed the rail's own `left` from `100vw`, which
+   (unlike a normal margin:auto block) is measured against the initial
+   containing block *before* the browser reserves the vertical scrollbar's
+   gutter. On any tab whose content is tall enough to need page scroll
+   (Attractions, QR Codes, Analytics with a full dataset -- a matter of
+   content HEIGHT, not width) #root's real centering shifts left by roughly
+   half the scrollbar's width while the old 100vw-based `left` didn't, so
+   the rail drifted off #root's edge and revealed tan background in the
+   gap. left:0/right:0 here (via `inset:0`, not 100vw) resolve against the
+   actual rendered viewport -- already scrollbar-reduced -- so this anchor
+   tracks #root exactly regardless of whether a given tab happens to need a
+   scrollbar. pointer-events:none so the ~1038px of empty centered space it
+   spans doesn't intercept clicks; only the rail itself re-enables them. */
+.staff-sidebar-anchor {
+  position: fixed;
+  inset: 0;
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  z-index: 10;
+  pointer-events: none;
+}
+
 /* Compact icon-rail nav (YouTube-collapsed-sidebar style) -- a deliberate
    departure from the app's usual wood-frame/parchment chrome, not an
-   oversight. Solid green, white text, narrow fixed width.
-   Fixed + pinned to top:0/bottom:0 rather than laid out in-flow inside
-   .staff-page's own padding -- same full-bleed idea as .app-header spanning
-   edge-to-edge at the top of the guest-facing app, just rotated to the left
-   side. .staff-page-header/.staff-page-body carry matching padding-left
-   (StaffPage.css) so content clears the rail. */
+   oversight. Solid green, white text, narrow fixed width. Positioned
+   relative to .staff-sidebar-anchor above (not the viewport directly). */
 .staff-sidebar {
-  position: fixed;
+  position: absolute;
   top: 0;
-  /* NOT left:0 -- that's the raw viewport edge, which only matches the real
-     content column when the viewport is narrower than #root's own
-     width:1126px (index.css: .staff-page mounts as #root's sole child, so
-     #root -- not .staff-page's own max-width:1180, which never actually
-     binds since its parent is narrower -- is what defines the app's
-     content column). On desktop #root centers itself with plain page
-     background bleeding evenly on both sides (margin:0 auto), so pinning
-     the rail to the true edge left it detached from that column with a gap
-     in between. This mirrors #root's own centering math instead: half the
-     leftover space (viewport minus 1126px), plus 1px to sit past #root's
-     border-inline. When the viewport is narrower than 1126px, #root's
-     max-width:100% makes it fill the viewport, so this resolves to ~0 and
-     the rail is flush to the true edge exactly as before -- same as mobile
-     always looked. */
-  left: max(0px, calc((100vw - 1126px) / 2 + 1px));
+  /* +1px to sit past #root's own 1px border-inline, same reasoning as
+     before -- but now relative to the anchor's edge, which always
+     coincides with #root's real edge instead of an estimate of it. */
+  left: 1px;
   bottom: 0;
   width: 88px;
-  z-index: 10;
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: center;

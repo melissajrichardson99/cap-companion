@@ -267,6 +267,18 @@ export type ScanResult =
   | { type: 'hunt_character'; target: HuntCharacter }
   | { type: 'encyclopedia_entry'; target: EncyclopediaEntry }
 
+// Which of the 4 QR-routable destinations ScanEntryModal's manual-entry
+// field resolved to -- see GET /scan/lookup/:text (app/services/scan.py's
+// resolve_manual_entry). 'scan' covers both hunt_character and
+// encyclopedia_entry, same as ScanResult above, since both route through
+// /scan/:code regardless.
+export type ManualEntryMatchType = 'scan' | 'animal' | 'scoring' | 'puzzle'
+
+export interface ManualEntryResolution {
+  type: ManualEntryMatchType
+  slug: string
+}
+
 export type StaffRequestType = 'question' | 'emergency'
 export type StaffRequestStatus = 'open' | 'acknowledged' | 'resolved'
 
@@ -565,6 +577,7 @@ export const api = {
   unlockHuntCharacter: (characterId: string) =>
     request<HuntCharacter>(`/hunt/characters/${characterId}/unlock`, { method: 'POST' }),
   resolveScanCode: (code: string) => request<ScanResult>(`/scan/${encodeURIComponent(code)}`),
+  resolveManualEntry: (text: string) => request<ManualEntryResolution>(`/scan/lookup/${encodeURIComponent(text)}`),
   createStaffRequest: (
     type: StaffRequestType,
     locationNodeId: string | null,
