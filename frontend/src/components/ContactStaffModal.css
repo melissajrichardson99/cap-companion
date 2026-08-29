@@ -291,6 +291,46 @@
   margin-bottom: 8px;
 }
 
+.contact-staff-active-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.contact-staff-status-badge {
+  display: inline-block;
+  font-family: var(--cap-font-body);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 10px;
+  border-radius: var(--cap-radius-pill);
+  border: 1.5px solid currentColor;
+}
+
+.contact-staff-status-badge-open {
+  color: var(--cap-color-contact-red);
+}
+
+.contact-staff-status-badge-acknowledged {
+  color: var(--cap-color-adventure-green);
+}
+
+.contact-staff-active-location,
+.contact-staff-active-description {
+  margin: 0;
+  font-size: 14px;
+  color: var(--cap-color-ink);
+}
+
+.contact-staff-cancel {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
 .contact-staff-back {
   width: 100%;
 }

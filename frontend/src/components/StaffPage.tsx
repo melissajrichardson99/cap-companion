@@ -26,6 +26,7 @@ const STATUS_LABEL: Record<StaffRequest['status'], string> = {
   open: 'Open',
   acknowledged: 'Acknowledged',
   resolved: 'Resolved',
+  cancelled: 'Cancelled',
 }
 
 const NODE_CATEGORY_LABEL: Record<MapNode['category'], string> = {
@@ -469,7 +470,7 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
               checked={showResolved}
               onChange={(e) => setShowResolved(e.target.checked)}
             />
-            Show Resolved
+            Show Resolved &amp; Cancelled
           </label>
           {requests === null ? (
             <p className="staff-requests-loading">Loading requests…</p>
@@ -478,7 +479,12 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
           ) : (
             <ul className="staff-requests-list">
               {requests.map((r) => (
-                <li key={r.id} className={`staff-request-row cap-parchment-card staff-request-${r.type}`}>
+                <li
+                  key={r.id}
+                  className={`staff-request-row cap-parchment-card staff-request-${r.type} ${
+                    r.status === 'cancelled' ? 'staff-request-row-cancelled' : ''
+                  }`}
+                >
                   <div className="staff-request-content">
                     <div className="staff-request-main">
                       <span className={`staff-request-type-badge staff-request-type-badge-${r.type}`}>
@@ -504,7 +510,7 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                         Acknowledge
                       </button>
                     )}
-                    {r.status !== 'resolved' && (
+                    {(r.status === 'open' || r.status === 'acknowledged') && (
                       <button
                         type="button"
                         className="btn btn-approve"

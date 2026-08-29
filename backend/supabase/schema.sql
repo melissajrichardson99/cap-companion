@@ -371,15 +371,21 @@ create table if not exists staff_requests (
     -- type and nothing else. description is capped so it stays a brief note.
     name              text,
     description       text check (description is null or char_length(description) <= 500),
-    -- One-way: open -> acknowledged -> resolved. See
+    -- Per-Device Sessions (migration 033) -- lets a guest check/cancel their
+    -- own request via app/services/staff_requests.py's get_active_request /
+    -- cancel_active_request, scoped to the session that submitted it.
+    session_id        uuid not null references device_sessions(id),
+    -- One-way except for guest-initiated cancellation: open -> acknowledged
+    -- -> resolved, or open/acknowledged -> cancelled (migration 033). See
     -- app/services/staff_requests.py's _transition for the allowed-from checks.
-    status            text not null default 'open' check (status in ('open', 'acknowledged', 'resolved')),
+    status            text not null default 'open' check (status in ('open', 'acknowledged', 'resolved', 'cancelled')),
     created_at        timestamptz not null default now(),
     resolved_at       timestamptz
 );
 
 create index if not exists staff_requests_status_idx on staff_requests(status);
 create index if not exists staff_requests_location_node_id_idx on staff_requests(location_node_id);
+create index if not exists staff_requests_session_id_idx on staff_requests(session_id);
 
 -- ---------------------------------------------------------------------------
 -- coin_awards / collectible_redemptions (Cobb Coins -- earn + spend ledgers)

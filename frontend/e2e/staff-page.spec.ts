@@ -152,15 +152,29 @@ test('Approve promotes a photo into the gallery; Reject and Delete both remove i
 test('an emergency request sorts above an earlier question; Mark Resolved removes it from the default view; Show Resolved brings it back', async ({
   page,
   context,
+  browser,
 }) => {
   const questionDialog = await openContactStaff(page)
   await questionDialog.getByRole('button', { name: 'I have a question' }).click()
-  await questionDialog.getByRole('button', { name: 'Critter Cafe', exact: true }).click()
+  // Not "Critter Cafe" -- staff-analytics.spec.ts also submits a Critter
+  // Cafe Contact Staff question as its own fixture data and runs earlier in
+  // file order, and this test's assertions below need an exact single-row
+  // match by location name.
+  await questionDialog.getByRole('button', { name: 'Playground', exact: true }).click()
   await questionDialog.getByRole('button', { name: 'Submit Question' }).click()
   await expect(questionDialog.getByText('Question sent')).toBeVisible()
   await questionDialog.getByRole('button', { name: 'Close' }).click()
 
-  const emergencyDialog = await openContactStaff(page)
+  // Separate browser context (its own device session) for the emergency
+  // submission -- `page`'s session already has an active request from the
+  // question above, and reopening Contact Staff on a session with an active
+  // request now shows that request's status instead of the normal menu
+  // (Per-Device Sessions Contact Staff feature), which isn't what this test
+  // is about (it only cares about staff-side sorting/resolve behavior across
+  // two independent requests).
+  const emergencyContext = await browser.newContext()
+  const emergencyPage = await emergencyContext.newPage()
+  const emergencyDialog = await openContactStaff(emergencyPage)
   await emergencyDialog.getByRole('button', { name: 'I need help now' }).click()
   await emergencyDialog.getByRole('button', { name: 'Sugar Shack', exact: true }).click()
   await expect(emergencyDialog.getByText('Help is on the way')).toBeVisible()
@@ -177,11 +191,11 @@ test('an emergency request sorts above an earlier question; Mark Resolved remove
   // wait for both rows to actually be visible first or this flakes under
   // load.
   await expect(staffPage.locator('.staff-request-row', { hasText: 'Sugar Shack' })).toBeVisible()
-  await expect(staffPage.locator('.staff-request-row', { hasText: 'Critter Cafe' })).toBeVisible()
+  await expect(staffPage.locator('.staff-request-row', { hasText: 'Playground' })).toBeVisible()
 
   const rowTexts = await staffPage.locator('.staff-request-row').allTextContents()
   const emergencyIndex = rowTexts.findIndex((t) => t.includes('Sugar Shack'))
-  const questionIndex = rowTexts.findIndex((t) => t.includes('Critter Cafe'))
+  const questionIndex = rowTexts.findIndex((t) => t.includes('Playground'))
   expect(emergencyIndex).toBeGreaterThanOrEqual(0)
   expect(questionIndex).toBeGreaterThanOrEqual(0)
   expect(emergencyIndex).toBeLessThan(questionIndex)
@@ -194,4 +208,6 @@ test('an emergency request sorts above an earlier question; Mark Resolved remove
   const resolvedRow = staffPage.locator('.staff-request-row', { hasText: 'Sugar Shack' })
   await expect(resolvedRow).toBeVisible()
   await expect(resolvedRow.getByText('Resolved', { exact: true })).toBeVisible()
+
+  await emergencyContext.close()
 })

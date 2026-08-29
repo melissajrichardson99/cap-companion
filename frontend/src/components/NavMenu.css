@@ -258,6 +258,33 @@
   color: #fff;
 }
 
+/* Persistent "you have an active request" indicator -- the check-anytime
+   counterpart to App.tsx's proactive acknowledged toast, for a guest who
+   isn't looking at the modal when it fires. Same absolutely-positioned-pill
+   structure as StaffSidebar.css's .staff-sidebar-tab-badge, just a plain dot
+   (no count) since there's at most one active request per session. */
+.nav-menu-contact-staff-btn {
+  position: relative;
+}
+
+.nav-menu-contact-staff-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--cap-color-outline);
+}
+
+.nav-menu-contact-staff-badge-open {
+  background: var(--cap-color-acid-yellow);
+}
+
+.nav-menu-contact-staff-badge-acknowledged {
+  background: var(--cap-color-adventure-green);
+}
+
 /* Two narrow, low-emphasis links -- Staff and the guest-facing reset --
    distinct from the primary/danger pill buttons above -- underlined text,
    not its own button chrome, so both read as "advanced"/irrelevant-to-most

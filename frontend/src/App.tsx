@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { api, type AnimalPhoto, type Announcement, type BingoCard, type CoinsSummary, type CollectibleCard, type CollectibleCatalogEntry, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { api, type AnimalPhoto, type Announcement, type BingoCard, type CoinsSummary, type CollectibleCard, type CollectibleCatalogEntry, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type StaffRequest, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { AnimalsScreen } from './components/AnimalsScreen'
 import { AnnouncementPopup } from './components/AnnouncementPopup'
 import { BingoScreen } from './components/BingoScreen'
@@ -34,6 +34,15 @@ import './App.css'
 // the nested /animals routing. `key` doubles as the route path (relative to
 // GuestShell's mount point) and the value NavMenu compares against the
 // current location to highlight the active tab.
+// Test-only hook (same spirit as main.tsx's window.__capWhoami) so e2e can
+// force an immediate Contact Staff status poll tick instead of sleeping past
+// the real 12s interval.
+declare global {
+  interface Window {
+    __capReloadContactStatus?: () => void
+  }
+}
+
 const TABS: { key: string; label: string; icon: ReactNode }[] = [
   { key: '/map', label: 'Map', icon: <MapPinIcon /> },
   { key: '/bingo', label: 'Bingo Card', icon: <GridIcon /> },
@@ -77,6 +86,15 @@ function App() {
   const [minigames, setMinigames] = useState<Minigame[] | null>(null)
 
   const [coinsSummary, setCoinsSummary] = useState<CoinsSummary | null>(null)
+
+  // undefined = not yet loaded once (mirrors nodes === null elsewhere);
+  // null = loaded, no active request; otherwise the session's own active
+  // (open/acknowledged) Contact Staff request. myRequestStatusRef mirrors
+  // the state so the poll's setInterval closure can compare against the
+  // PREVIOUS value without depending on stale state from when the interval
+  // was created.
+  const [myRequestStatus, setMyRequestStatus] = useState<StaffRequest | null | undefined>(undefined)
+  const myRequestStatusRef = useRef<StaffRequest | null | undefined>(undefined)
 
   const [collectibleCatalog, setCollectibleCatalog] = useState<CollectibleCatalogEntry[] | null>(null)
   const [collectibleCatalogError, setCollectibleCatalogError] = useState<string | null>(null)
@@ -160,6 +178,30 @@ function App() {
       .catch((err) => setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `Couldn't load Cobb Coins: ${err}` }]))
   }
 
+  // Proactive-notification poll (Contact Staff): the only guest-facing
+  // status change worth interrupting the guest for is open -> acknowledged
+  // ("a staff member has seen this and is on the way") -- resolved/cancelled
+  // just clear the indicator silently, same as the guest closing the modal
+  // themselves. Compares against myRequestStatusRef (not React state) since
+  // this also runs from a setInterval callback created once on mount, which
+  // would otherwise only ever see the myRequestStatus value from that first
+  // render.
+  const reloadMyRequestStatus = () => {
+    api
+      .getMyStaffRequest()
+      .then((next) => {
+        const prev = myRequestStatusRef.current
+        if (prev?.status === 'open' && next?.status === 'acknowledged') {
+          setToasts((t) => [...t, { id: crypto.randomUUID(), text: '\u{1F44B} Staff has seen your request and is on the way!' }])
+        }
+        myRequestStatusRef.current = next
+        setMyRequestStatus(next)
+      })
+      // A background poll failing once isn't worth a toast -- it'll just
+      // retry on the next tick.
+      .catch(() => {})
+  }
+
   const reloadCollectibleCatalog = () => {
     setCollectibleCatalogError(null)
     api.listCollectibleCatalog().then(setCollectibleCatalog).catch((err) => setCollectibleCatalogError(String(err)))
@@ -220,6 +262,19 @@ function App() {
         reloadCard(summaries[0].id)
       })
       .catch((err) => setCardError(String(err)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Contact Staff proactive-notification poll -- mirrors StaffPage.tsx's own
+  // POLL_INTERVAL_MS (12s) simple-polling approach (no websockets in this
+  // app). window.__capReloadContactStatus is a test-only hook (same spirit
+  // as main.tsx's window.__capWhoami) so e2e can force an immediate poll
+  // tick instead of sleeping past the real interval.
+  useEffect(() => {
+    reloadMyRequestStatus()
+    const timer = window.setInterval(reloadMyRequestStatus, 12_000)
+    window.__capReloadContactStatus = reloadMyRequestStatus
+    return () => window.clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -445,6 +500,8 @@ function App() {
             collectibleCardsError={collectibleCardsError}
             reloadCollectibleCards={reloadCollectibleCards}
             coinsSummary={coinsSummary}
+            myRequestStatus={myRequestStatus}
+            reloadMyRequestStatus={reloadMyRequestStatus}
             purchaseCollectible={purchaseCollectible}
             photoGallery={photoGallery}
             photoGalleryError={photoGalleryError}
@@ -562,6 +619,8 @@ interface GuestShellProps {
   collectibleCardsError: string | null
   reloadCollectibleCards: () => void
   coinsSummary: CoinsSummary | null
+  myRequestStatus: StaffRequest | null | undefined
+  reloadMyRequestStatus: () => void
   purchaseCollectible: (animalSlug: string, guestName: string) => Promise<CollectibleCard>
   photoGallery: PhotoSubmission[] | null
   photoGalleryError: string | null
@@ -603,6 +662,7 @@ function GuestShell(props: GuestShellProps) {
             activeTab={navActiveTab}
             onSelectTab={selectTab}
             coinTotal={props.coinsSummary?.total ?? 0}
+            contactRequestStatus={props.myRequestStatus?.status ?? null}
             onScanQr={() => props.setShowScanEntry(true)}
             onGeneratePassport={() => props.setShowPassport(true)}
             onContactStaff={() => props.setShowContactStaff(true)}
@@ -749,7 +809,12 @@ function GuestShell(props: GuestShellProps) {
       )}
 
       {props.showContactStaff && (
-        <ContactStaffModal nodes={props.nodes} onClose={() => props.setShowContactStaff(false)} />
+        <ContactStaffModal
+          nodes={props.nodes}
+          myRequestStatus={props.myRequestStatus}
+          onRequestChanged={props.reloadMyRequestStatus}
+          onClose={() => props.setShowContactStaff(false)}
+        />
       )}
 
       {props.showPassport && <PassportModal onClose={() => props.setShowPassport(false)} />}

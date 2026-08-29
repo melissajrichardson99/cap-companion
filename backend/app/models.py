@@ -421,6 +421,7 @@ class StaffRequestStatus(StrEnum):
     OPEN = "open"
     ACKNOWLEDGED = "acknowledged"
     RESOLVED = "resolved"
+    CANCELLED = "cancelled"
 
 
 class StaffRequest(BaseModel):

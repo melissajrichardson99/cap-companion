@@ -278,6 +278,18 @@
   color: var(--cap-color-adventure-green);
 }
 
+.staff-request-status-badge-cancelled {
+  color: var(--cap-color-body-text);
+}
+
+/* Cancelled requests stay visible (not deleted -- staff should see a
+   cancellation happened, not have it silently disappear) but dimmed so they
+   read as inactive at a glance, never confusable with an open/acknowledged
+   row still needing a response. */
+.staff-request-row-cancelled {
+  opacity: 0.6;
+}
+
 .staff-request-actions {
   display: flex;
   gap: 8px;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import type { StaffRequestStatus } from '../api'
 import './NavMenu.css'
 
 export interface NavMenuTab<T extends string> {
@@ -15,6 +16,11 @@ interface NavMenuProps<T extends string> {
   activeTab: T | null
   onSelectTab: (tab: T) => void
   coinTotal: number
+  // The guest's own active (open/acknowledged) Contact Staff request status,
+  // if any -- null when there isn't one. Drives the persistent "you have an
+  // active request" badge, the check-anytime counterpart to the proactive
+  // toast App.tsx fires on open -> acknowledged.
+  contactRequestStatus: StaffRequestStatus | null
   onScanQr: () => void
   onGeneratePassport: () => void
   onContactStaff: () => void
@@ -32,6 +38,7 @@ export function NavMenu<T extends string>({
   activeTab,
   onSelectTab,
   coinTotal,
+  contactRequestStatus,
   onScanQr,
   onGeneratePassport,
   onContactStaff,
@@ -148,8 +155,19 @@ export function NavMenu<T extends string>({
               <button type="button" className="btn btn-primary" onClick={() => runAction(onGeneratePassport)}>
                 Generate Passport
               </button>
-              <button type="button" className="btn btn-danger" onClick={() => runAction(onContactStaff)}>
+              <button
+                type="button"
+                className="btn btn-danger nav-menu-contact-staff-btn"
+                aria-label={contactRequestStatus ? `Contact Staff — request ${contactRequestStatus}` : undefined}
+                onClick={() => runAction(onContactStaff)}
+              >
                 Contact Staff
+                {contactRequestStatus && (
+                  <span
+                    className={`nav-menu-contact-staff-badge nav-menu-contact-staff-badge-${contactRequestStatus}`}
+                    aria-hidden="true"
+                  />
+                )}
               </button>
             </div>
 

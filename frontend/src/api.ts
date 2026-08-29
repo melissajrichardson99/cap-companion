@@ -280,7 +280,7 @@ export interface ManualEntryResolution {
 }
 
 export type StaffRequestType = 'question' | 'emergency'
-export type StaffRequestStatus = 'open' | 'acknowledged' | 'resolved'
+export type StaffRequestStatus = 'open' | 'acknowledged' | 'resolved' | 'cancelled'
 
 export interface StaffRequest {
   id: string
@@ -588,12 +588,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ type, location_node_id: locationNodeId, name, description }),
     }),
-  listStaffRequests: (includeResolved = false) =>
-    staffRequest<StaffRequest[]>(`/staff-requests?include_resolved=${includeResolved}`),
+  listStaffRequests: (includeClosed = false) =>
+    staffRequest<StaffRequest[]>(`/staff-requests?include_closed=${includeClosed}`),
   acknowledgeStaffRequest: (requestId: string) =>
     staffRequest<StaffRequest>(`/staff-requests/${requestId}/acknowledge`, { method: 'POST' }),
   resolveStaffRequest: (requestId: string) =>
     staffRequest<StaffRequest>(`/staff-requests/${requestId}/resolve`, { method: 'POST' }),
+  getMyStaffRequest: () => request<StaffRequest | null>('/staff-requests/mine'),
+  cancelMyStaffRequest: () => request<StaffRequest>('/staff-requests/mine/cancel', { method: 'POST' }),
   // start/end are YYYY-MM-DD (date-only, matching the backend's `date` query
   // params) -- no time-of-day component from the frontend.
   getAnalyticsSummary: (start: string, end: string) =>
