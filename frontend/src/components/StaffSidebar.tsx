@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BrandLogo } from './BrandLogo'
 import { BarChartIcon, BinocularsIcon, CameraIcon, MapPinIcon, MegaphoneIcon, MessageIcon, QrCodeIcon } from './NavIcons'
 import './StaffSidebar.css'
@@ -31,6 +32,8 @@ interface SidebarItem {
 // excludes the mockup's Dashboard/Reports/Settings/Quick Actions/Food Trucks,
 // none of which have a real staff-manageable backing feature.
 export function StaffSidebar({ tab, onSelectTab, pendingPhotosCount, openRequestsCount }: StaffSidebarProps) {
+  const navigate = useNavigate()
+
   const items: SidebarItem[] = [
     { key: 'photos', label: 'Photo Queue', icon: <CameraIcon />, badge: pendingPhotosCount },
     { key: 'requests', label: 'Contact Requests', icon: <MessageIcon />, badge: openRequestsCount },
@@ -43,38 +46,39 @@ export function StaffSidebar({ tab, onSelectTab, pendingPhotosCount, openRequest
 
   return (
     <nav className="staff-sidebar" aria-label="Staff sections">
-      {/* Same wood-frame + green-panel recipe as the guest-facing nav
-          dropdown (.nav-menu-frame/.nav-menu-panel-inner in NavMenu.css) --
-          one continuous card, not the old two stacked wood-framed blocks. */}
-      <div className="staff-sidebar-frame">
-        <div className="staff-sidebar-inner">
-          <div className="staff-sidebar-brand">
-            <BrandLogo />
-          </div>
-          <div className="staff-sidebar-tabs" role="tablist">
-            {items.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                role="tab"
-                aria-selected={tab === item.key}
-                className={`staff-sidebar-tab ${tab === item.key ? 'staff-sidebar-tab-active' : ''}`}
-                onClick={() => onSelectTab(item.key)}
-              >
-                <span className="staff-sidebar-tab-icon">{item.icon}</span>
-                <span className="staff-sidebar-tab-label">{item.label}</span>
-                {/* aria-hidden: decorative count, kept out of the tab's
-                    accessible name so it stays exactly the label text (existing
-                    e2e specs locate tabs by name). */}
-                {!!item.badge && (
-                  <span className="staff-sidebar-tab-badge" aria-hidden="true">
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="staff-sidebar-brand">
+        {/* Real navigation to the guest-facing Home Page -- does not touch
+            the staff auth token, so returning to /staff later still works. */}
+        <BrandLogo onClick={() => navigate('/')} />
+      </div>
+      <div className="staff-sidebar-tabs" role="tablist">
+        {items.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.key}
+            className={`staff-sidebar-tab ${tab === item.key ? 'staff-sidebar-tab-active' : ''}`}
+            onClick={() => onSelectTab(item.key)}
+          >
+            {/* Label before the icon+badge group in DOM order (accessible
+                name / textContent must stay "<label><badge digits>", exactly
+                as before) -- the icon+badge group is pulled visually above
+                the label with CSS `order` so it still LOOKS icon-on-top. */}
+            <span className="staff-sidebar-tab-label">{item.label}</span>
+            <span className="staff-sidebar-tab-icon-wrap">
+              <span className="staff-sidebar-tab-icon">{item.icon}</span>
+              {/* aria-hidden: decorative count, kept out of the tab's
+                  accessible name so it stays exactly the label text (existing
+                  e2e specs locate tabs by name). */}
+              {!!item.badge && (
+                <span className="staff-sidebar-tab-badge" aria-hidden="true">
+                  {item.badge}
+                </span>
+              )}
+            </span>
+          </button>
+        ))}
       </div>
     </nav>
   )

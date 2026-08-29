@@ -1,78 +1,90 @@
+/* Compact icon-rail nav (YouTube-collapsed-sidebar style) -- a deliberate
+   departure from the app's usual wood-frame/parchment chrome, not an
+   oversight. Solid green, white text, narrow fixed width.
+   Fixed + pinned to top:0/bottom:0 rather than laid out in-flow inside
+   .staff-page's own padding -- same full-bleed idea as .app-header spanning
+   edge-to-edge at the top of the guest-facing app, just rotated to the left
+   side. .staff-page-header/.staff-page-body carry matching padding-left
+   (StaffPage.css) so content clears the rail. */
 .staff-sidebar {
-  width: 220px;
-  flex-shrink: 0;
-}
-
-/* Same wood-plank border recipe as .nav-menu-frame (NavMenu.css) -- the
-   guest-facing nav dropdown -- so the sidebar reads as the same wood chrome
-   material as that component, not just a similar approximation. */
-.staff-sidebar-frame {
-  border-radius: var(--cap-radius-lg);
-  background:
-    repeating-linear-gradient(
-      100deg,
-      rgba(255, 255, 255, 0.05) 0px,
-      rgba(255, 255, 255, 0.05) 2px,
-      rgba(0, 0, 0, 0.04) 2px,
-      rgba(0, 0, 0, 0.04) 4px
-    ),
-    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
-  padding: 8px;
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
-}
-
-/* Matches .nav-menu-panel-inner exactly -- one continuous green card holding
-   both the brand header and the tab list, not two separate wood-framed
-   blocks. */
-.staff-sidebar-inner {
+  position: fixed;
+  top: 0;
+  /* NOT left:0 -- that's the raw viewport edge, which only matches the real
+     content column when the viewport is narrower than #root's own
+     width:1126px (index.css: .staff-page mounts as #root's sole child, so
+     #root -- not .staff-page's own max-width:1180, which never actually
+     binds since its parent is narrower -- is what defines the app's
+     content column). On desktop #root centers itself with plain page
+     background bleeding evenly on both sides (margin:0 auto), so pinning
+     the rail to the true edge left it detached from that column with a gap
+     in between. This mirrors #root's own centering math instead: half the
+     leftover space (viewport minus 1126px), plus 1px to sit past #root's
+     border-inline. When the viewport is narrower than 1126px, #root's
+     max-width:100% makes it fill the viewport, so this resolves to ~0 and
+     the rail is flush to the true edge exactly as before -- same as mobile
+     always looked. */
+  left: max(0px, calc((100vw - 1126px) / 2 + 1px));
+  bottom: 0;
+  width: 88px;
+  z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: var(--cap-space-3);
-  padding: var(--cap-space-4);
-  border-radius: calc(var(--cap-radius-lg) - 8px);
-  border: var(--cap-outline-width) solid var(--cap-color-outline);
-  background: var(--cap-color-nav-panel-green);
+  align-items: center;
+  gap: var(--cap-space-4);
+  padding: var(--cap-space-3) var(--cap-space-1);
+  overflow-y: auto;
+  border-radius: 0;
+  border: none;
+  border-right: var(--cap-outline-width) solid var(--cap-color-outline);
+  background: var(--cap-color-header-green);
 }
 
 .staff-sidebar-brand {
   display: flex;
   justify-content: center;
+  width: 100%;
 }
 
+/* The logo <img> is wrapped in a <button> (BrandLogo.tsx, since this usage
+   passes onClick) -- that button defaults to shrink-to-fit width, which
+   makes the img's own width:100% below resolve against an indefinite
+   containing block (i.e. intrinsic size, not actually 100%). Giving the
+   button itself width:100% first makes the img's percentage resolve against
+   a definite width, so it actually fills the rail. */
+.staff-sidebar-brand .brand-logo-button {
+  width: 100%;
+}
+
+/* Enlarged to a near-edge-to-edge element (the rail is 88px wide, minus this
+   container's own side padding) instead of a small icon floating in empty
+   green space. */
 .staff-sidebar-brand .brand-logo {
-  max-width: 140px;
+  width: 100%;
   height: auto;
 }
 
-/* Matches .nav-menu-tabs. */
 .staff-sidebar-tabs {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding-top: var(--cap-space-1);
+  gap: 4px;
+  width: 100%;
+  padding-top: var(--cap-space-2);
   border-top: 2px solid var(--cap-color-on-header-muted);
 }
 
-/* Matches .nav-menu-tab. */
 .staff-sidebar-tab {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  font-family: var(--cap-font-body);
-  font-size: 15px;
-  font-weight: 700;
-  text-align: left;
-  padding: 10px 12px;
-  border-radius: var(--cap-radius-md);
+  width: 100%;
+  padding: 8px 2px;
   border: none;
+  border-radius: var(--cap-radius-md);
   background: transparent;
   color: var(--cap-color-on-header);
   cursor: pointer;
-  border-left: 4px solid transparent;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
 .staff-sidebar-tab:hover {
@@ -82,14 +94,39 @@
 .staff-sidebar-tab-active,
 .staff-sidebar-tab-active:hover {
   background: rgba(255, 255, 255, 0.16);
-  border-left-color: var(--cap-color-sunset-orange);
   color: var(--cap-color-sunset-orange);
 }
 
+/* Side accent bar marking the active item -- a thin colored strip along the
+   item's left edge, in addition to the orange label text. */
+.staff-sidebar-tab::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: var(--cap-radius-pill);
+  background: transparent;
+}
+
+.staff-sidebar-tab-active::before {
+  background: var(--cap-color-sunset-orange);
+}
+
+/* Icon+badge group visually leads (order: -1) even though it comes after
+   the label in DOM order -- see the comment in StaffSidebar.tsx for why. */
+.staff-sidebar-tab-icon-wrap {
+  position: relative;
+  order: -1;
+  width: 22px;
+  height: 22px;
+  margin-bottom: 4px;
+}
+
 .staff-sidebar-tab-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
 }
 
@@ -99,32 +136,39 @@
 }
 
 .staff-sidebar-tab-label {
-  flex: 1;
+  font-family: var(--cap-font-body);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .staff-sidebar-tab-badge {
-  font-size: 11px;
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  font-size: 10px;
   font-weight: 700;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
   border-radius: 999px;
   background: var(--cap-color-contact-red);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1.5px solid var(--cap-color-header-green);
 }
 
 @media (max-width: 720px) {
   .staff-sidebar {
-    width: 100%;
+    width: 72px;
   }
 
-  .staff-sidebar-tabs {
-    flex-direction: row;
-    flex-wrap: wrap;
-    border-top: none;
-    padding-top: 0;
+  .staff-sidebar-tab-label {
+    font-size: 10px;
   }
 }

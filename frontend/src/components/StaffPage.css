@@ -12,7 +12,12 @@
   width: 100%;
   max-width: 1180px;
   margin: 0 auto;
-  padding: var(--cap-space-5);
+  /* Left padding is 0 here -- StaffSidebar is position:fixed at the true
+     viewport edge (StaffSidebar.css), and .staff-page-header/.staff-page-body
+     below carry the padding-left that clears its width instead, so the rail
+     itself has zero gap against the edge rather than sitting inside this
+     container's own padding. */
+  padding: var(--cap-space-5) var(--cap-space-5) var(--cap-space-5) 0;
   font-family: var(--cap-font-body);
   background: var(--cap-color-page-bg);
   position: relative;
@@ -71,54 +76,93 @@
   text-align: center;
 }
 
+/* First column reserves the fixed sidebar's width (kept empty); the middle
+   two 1fr columns are equal, so the indicator (col 3) sits centered within
+   the content area only -- not the whole page including the rail -- and the
+   actions (col 4) stay pinned to the true right edge. */
 .staff-page-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: calc(88px + var(--cap-space-5)) 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: var(--cap-space-4);
   margin-bottom: var(--cap-space-4);
 }
 
-.staff-page-header .cap-sign-board {
-  margin: 0;
+/* Narrow widths don't have room for the badge and both buttons on one row
+   (4-column grid above would clip "Log Out" against .staff-page's own
+   overflow:hidden) -- stack them as two centered rows within the space
+   after the rail instead. */
+@media (max-width: 720px) {
+  .staff-page-header {
+    grid-template-columns: 1fr;
+    row-gap: var(--cap-space-3);
+    padding-left: calc(72px + var(--cap-space-4));
+  }
+
+  .staff-mode-badge,
+  .staff-page-header-actions {
+    grid-column: 1;
+    justify-self: center;
+  }
+
+  .staff-page-header-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 
 .staff-page-header-actions {
+  grid-column: 4;
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: var(--cap-space-3);
 }
 
-/* Neutral/slate, deliberately not a brand color -- this badge just signals
-   "you're on the internal page", it isn't a new CTA or urgency signal. */
+/* Relocated here from a wood-grain badge that used to sit above the
+   sidebar's top-left corner -- neutral/slate, deliberately not a brand
+   color, since this just signals "you're in staff mode" rather than acting
+   as a CTA or urgency signal. Centered (grid-column 3, justify-self:center)
+   in the page header instead of tucked in the corner. */
 .staff-mode-badge {
+  grid-column: 3;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 4px 10px;
+  padding: 6px 14px;
   border-radius: var(--cap-radius-pill);
   background: rgba(69, 88, 93, 0.14);
   color: var(--cap-color-body-text);
   border: 1.5px solid rgba(69, 88, 93, 0.35);
 }
 
+.staff-mode-badge-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
 /* Sidebar + content layout (replaces the old horizontal .staff-page-tabs
-   row) -- see StaffSidebar.css for the sidebar itself. */
+   row) -- see StaffSidebar.css for the sidebar itself. The sidebar is
+   position:fixed (pinned to the true viewport edge, not laid out here), so
+   this padding-left is what actually reserves its width -- 88px rail +
+   var(--cap-space-5) breathing room before the content column starts. */
 .staff-page-body {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--cap-space-5);
+  padding-left: calc(88px + var(--cap-space-5));
 }
 
 .staff-page-content {
-  flex: 1;
   min-width: 0;
 }
 
 @media (max-width: 720px) {
   .staff-page-body {
-    flex-direction: column;
+    padding-left: calc(72px + var(--cap-space-4));
   }
 }
 

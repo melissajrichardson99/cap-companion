@@ -323,12 +323,11 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
   return (
     <div className="staff-page">
       <div className="staff-page-header">
-        <h1 className="cap-sign-board">
-          <ClipboardIcon className="cap-sign-board-icon" />
-          Staff
-        </h1>
+        <span className="staff-mode-badge">
+          <ClipboardIcon className="staff-mode-badge-icon" />
+          Staff Mode
+        </span>
         <div className="staff-page-header-actions">
-          <span className="staff-mode-badge">Staff Mode</span>
           <button
             type="button"
             className="btn btn-secondary"
