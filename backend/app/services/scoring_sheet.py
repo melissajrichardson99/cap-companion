@@ -52,6 +52,7 @@ def _row_to_game(row: dict, events: list[GameScoreEvent]) -> ScoringGame:
     return ScoringGame(
         id=row["id"],
         name=row["name"],
+        slug=row["slug"],
         rules_text=row["rules_text"],
         win_condition_text=row["win_condition_text"],
         win_condition_type=row["win_condition_type"],

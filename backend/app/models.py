@@ -219,6 +219,10 @@ class PuzzleChallenge(BaseModel):
     id: UUID
     puzzle_id: UUID
     label: str
+    # QR-routable identifier for /puzzles/:challengeSlug -- derived from
+    # `puzzle name + label` (migration 032), not label alone, since label is
+    # only unique per-puzzle and several repeat verbatim across puzzles.
+    slug: str
     description: str
     staff_time_seconds: int | None = Field(default=None, gt=0)
     solution_type: SolutionType
@@ -263,6 +267,8 @@ class GameScoreEvent(BaseModel):
 class ScoringGame(BaseModel):
     id: UUID
     name: str
+    # QR-routable identifier for /scoring/:gameSlug (migration 032).
+    slug: str
     rules_text: str
     win_condition_text: str
     win_condition_type: WinConditionType
@@ -353,6 +359,16 @@ class HuntCharacter(BaseModel):
     # character, +25 more if it was also the 5th/last character in the hunt.
     # list_characters()/get_character()/unlock_character() leave this at 0.
     coins_awarded: int = Field(default=0, ge=0)
+
+
+class HuntCharacterScanCode(BaseModel):
+    """Staff-only: a Hunt character paired with its scannable_codes.code, for
+    the Staff Page's QR Code Directory. HuntCharacter itself (guest-facing)
+    deliberately doesn't carry this -- see hunt_service.list_character_scan_codes."""
+
+    id: UUID
+    name: str
+    code: str
 
 
 class EncyclopediaStatus(StrEnum):

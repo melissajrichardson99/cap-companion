@@ -6,6 +6,7 @@ import { ClearShortlistModal } from './ClearShortlistModal'
 import { ClipboardIcon } from './NavIcons'
 import { StaffAnalytics } from './StaffAnalytics'
 import { StaffLoginScreen } from './StaffLoginScreen'
+import { StaffQrDirectory } from './StaffQrDirectory'
 import { StaffSidebar, type StaffTab } from './StaffSidebar'
 import './StaffPage.css'
 
@@ -741,6 +742,8 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
       )}
 
       {tab === 'analytics' && <StaffAnalytics />}
+
+      {tab === 'qr-codes' && <StaffQrDirectory />}
         </div>
       </div>
     </div>

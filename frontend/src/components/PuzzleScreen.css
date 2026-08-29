@@ -233,3 +233,8 @@
 .puzzle-challenge-label {
   font-weight: 700;
 }
+
+.puzzle-not-found {
+  color: var(--cap-color-body-text);
+  padding: 12px 0;
+}

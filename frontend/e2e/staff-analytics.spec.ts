@@ -18,14 +18,14 @@ async function submitContactStaffQuestion(page: import('@playwright/test').Page)
   await expect(dialog.getByText('Question sent')).toBeVisible()
 }
 
-test('the sidebar shows exactly the real staff features plus Analytics -- nothing from the mockup\'s excluded set', async ({ page }) => {
+test('the sidebar shows exactly the real staff features plus Analytics and QR Codes -- nothing from the mockup\'s excluded set', async ({ page }) => {
   await loginAsStaff(page)
   // Only the default (Photo Queue) tab body is mounted at this point, so
-  // this only matches the 6 sidebar items -- not the Animal Photos tab's own
+  // this only matches the 7 sidebar items -- not the Animal Photos tab's own
   // internal role="tab" animal picker, which isn't in the DOM yet.
   const labels = (await page.getByRole('tab').allTextContents()).map((t) => t.replace(/\d+$/, '').trim())
   expect(labels.sort()).toEqual(
-    ['Analytics', 'Animal Photos', 'Announcements', 'Attractions', 'Contact Requests', 'Photo Queue'].sort(),
+    ['Analytics', 'Animal Photos', 'Announcements', 'Attractions', 'Contact Requests', 'Photo Queue', 'QR Codes'].sort(),
   )
   for (const excluded of ['Dashboard', 'Reports', 'Settings', 'Quick Actions', 'Food Trucks']) {
     await expect(page.getByRole('tab', { name: excluded })).toHaveCount(0)

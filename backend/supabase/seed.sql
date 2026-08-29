@@ -204,12 +204,16 @@ insert into puzzles (name, rules_text, map_node_id) values
     )
 on conflict (name) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, c.label, c.sort_order, c.solution_type, c.description, c.hint_tier_1, c.hint_tier_2, c.hint_tier_3
+-- slug is the QR-routable identifier for /puzzles/:challengeSlug (migration
+-- 032) -- derived from `puzzle name + label` since label alone repeats
+-- across puzzles.
+insert into puzzle_challenges (puzzle_id, label, slug, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, c.label, c.slug, c.sort_order, c.solution_type, c.description, c.hint_tier_1, c.hint_tier_2, c.hint_tier_3
 from puzzles p,
 (values
     (
         'Challenge 1',
+        'pyramid-puzzler-challenge-1',
         1,
         'exact',
         'Get to the top.',
@@ -219,6 +223,7 @@ from puzzles p,
     ),
     (
         'Challenge 2',
+        'pyramid-puzzler-challenge-2',
         2,
         'exact',
         'Get to the top, then leave from the starting block.',
@@ -228,6 +233,7 @@ from puzzles p,
     ),
     (
         'Challenge 3',
+        'pyramid-puzzler-challenge-3',
         3,
         'exact',
         'Visit all four corners and the centre, then leave from the starting block.',
@@ -276,12 +282,12 @@ from puzzles p,
 → (6,3) facing E [red]
 → EXIT via Start block (facing S) — COMPLETE'
     )
-) as c(label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+) as c(label, slug, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
 where p.name = 'Pyramid Puzzler'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, 'Standard', 1, 'exact',
+insert into puzzle_challenges (puzzle_id, label, slug, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, 'Standard', 'math-maze-standard', 1, 'exact',
     'Navigate from the start square to the finish square, moving in a straight line the number of tiles marked on your current tile.',
     'You can move in any of the 4 directions from a tile, not just where its arrow happens to point.',
     'The first move is up 1, then left 1.',
@@ -290,12 +296,13 @@ from puzzles p
 where p.name = 'Math Maze'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, c.label, c.sort_order, 'strategy', c.description, c.hint_tier_1, c.hint_tier_2, c.hint_tier_3
+insert into puzzle_challenges (puzzle_id, label, slug, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, c.label, c.slug, c.sort_order, 'strategy', c.description, c.hint_tier_1, c.hint_tier_2, c.hint_tier_3
 from puzzles p,
 (values
     (
         'Challenge 1',
+        'hop-dots-challenge-1',
         1,
         'Start on any corner red dot, reach the red dot in the opposite corner, then return to start.',
         'Remember the order — red, blue, yellow, always cycling.',
@@ -304,18 +311,19 @@ from puzzles p,
     ),
     (
         'Challenge 2',
+        'hop-dots-challenge-2',
         2,
         'Start on any corner red dot, visit all other corner dots clockwise or counter-clockwise, then return to start.',
         'Remember the order — red, blue, yellow, always cycling.',
         'Pick one rotational direction (clockwise or counter-clockwise) and stick with it all the way around the corners before heading back.',
         'Many valid solutions exist — the key constraint is the color cycle, not the exact tiles. Starting from any red corner, work your way around the other corners in one consistent rotational direction, keeping every hop on the red-blue-yellow cycle, then return to start the same way.'
     )
-) as c(label, sort_order, description, hint_tier_1, hint_tier_2, hint_tier_3)
+) as c(label, slug, sort_order, description, hint_tier_1, hint_tier_2, hint_tier_3)
 where p.name = 'Hop Dots'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, 'Standard', 1, 'strategy',
+insert into puzzle_challenges (puzzle_id, label, slug, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, 'Standard', 'right-turn-only-standard', 1, 'strategy',
     'Get to the centre of the maze without taking any left turns.',
     'This works like every no-left-turn maze — try right first, then straight, and only go left if nothing else is open.',
     'At every junction, check your options in this order: right turn, then straight, then left — take the first one that''s actually open. This "keep a hand on the right-hand wall" approach solves any maze without shortcuts, including this one.',
@@ -324,8 +332,8 @@ from puzzles p
 where p.name = 'Right Turn Only'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
-select p.id, 'Standard', 1, 'strategy',
+insert into puzzle_challenges (puzzle_id, label, slug, sort_order, solution_type, description, hint_tier_1, hint_tier_2, hint_tier_3)
+select p.id, 'Standard', 'red-white-and-blue-standard', 1, 'strategy',
     'Enter on the red tile at the bottom, exit on the blue tile at the top, alternating between red and blue tiles along the way.',
     'You can''t hit two reds or two blues back to back.',
     'The board''s own hint is the real secret — a straight run through won''t work.',
@@ -334,8 +342,8 @@ from puzzles p
 where p.name = 'Red White and Blue'
 on conflict (puzzle_id, label) do nothing;
 
-insert into puzzle_challenges (puzzle_id, label, sort_order, solution_type, description)
-select p.id, 'Standard', 1, 'none', 'Find your way through the maze to the centre.'
+insert into puzzle_challenges (puzzle_id, label, slug, sort_order, solution_type, description)
+select p.id, 'Standard', 'big-mystery-maze-standard', 1, 'none', 'Find your way through the maze to the centre.'
 from puzzles p
 where p.name = 'Big Mystery Maze'
 on conflict (puzzle_id, label) do nothing;
@@ -344,9 +352,12 @@ on conflict (puzzle_id, label) do nothing;
 -- scoring_games / game_score_events (Scoring Sheet, plan 2.2)
 -- Mini Golf and Archery deliberately excluded — no confirmed rules yet.
 -- ---------------------------------------------------------------------------
-insert into scoring_games (name, rules_text, win_condition_text, win_condition_type, win_threshold, throws_per_round) values
+-- slug is the QR-routable identifier for /scoring/:gameSlug (migration 032)
+-- -- derived from `name`, which is already unique above.
+insert into scoring_games (name, slug, rules_text, win_condition_text, win_condition_type, win_threshold, throws_per_round) values
     (
         'Farm Toss',
+        'farm-toss',
         'Ring toss at animal targets around the farm.',
         'First to 21 wins.',
         'first_to',
@@ -355,6 +366,7 @@ insert into scoring_games (name, rules_text, win_condition_text, win_condition_t
     ),
     (
         'Horse Hoops',
+        'horse-hoops',
         'Team play. Toss a hoop onto the horse or around its neck.',
         'First to 10 wins. If teams are tied at or above 10, play continues in a bonus round until one team pulls ahead.',
         'first_to_bonus_round',
@@ -363,6 +375,7 @@ insert into scoring_games (name, rules_text, win_condition_text, win_condition_t
     ),
     (
         'Cornhole',
+        'cornhole',
         'Innings-based -- each player pitches all 4 bags per inning.',
         'First to 21 wins.',
         'first_to',
@@ -371,6 +384,7 @@ insert into scoring_games (name, rules_text, win_condition_text, win_condition_t
     ),
     (
         'Cornhole Extreme',
+        'cornhole-extreme',
         'Three-hole variant of Cornhole -- each player pitches all 4 bags per inning.',
         'First to 21 wins.',
         'first_to',
@@ -379,6 +393,7 @@ insert into scoring_games (name, rules_text, win_condition_text, win_condition_t
     ),
     (
         'Tiki Toss / Ring & Hook',
+        'tiki-toss-ring-hook',
         '10 throws per round.',
         'First to 100 wins. If multiple players reach 100 in the same round, the highest score wins. A tie for highest continues into further rounds until someone wins a round outright.',
         'first_to_round_tiebreak',

@@ -1,9 +1,16 @@
 import type { ReactNode } from 'react'
 import { BrandLogo } from './BrandLogo'
-import { BarChartIcon, BinocularsIcon, CameraIcon, MapPinIcon, MegaphoneIcon, MessageIcon } from './NavIcons'
+import { BarChartIcon, BinocularsIcon, CameraIcon, MapPinIcon, MegaphoneIcon, MessageIcon, QrCodeIcon } from './NavIcons'
 import './StaffSidebar.css'
 
-export type StaffTab = 'photos' | 'requests' | 'announcements' | 'attractions' | 'animal-photos' | 'analytics'
+export type StaffTab =
+  | 'photos'
+  | 'requests'
+  | 'announcements'
+  | 'attractions'
+  | 'animal-photos'
+  | 'analytics'
+  | 'qr-codes'
 
 interface StaffSidebarProps {
   tab: StaffTab
@@ -31,6 +38,7 @@ export function StaffSidebar({ tab, onSelectTab, pendingPhotosCount, openRequest
     { key: 'attractions', label: 'Attractions', icon: <MapPinIcon /> },
     { key: 'animal-photos', label: 'Animal Photos', icon: <BinocularsIcon /> },
     { key: 'analytics', label: 'Analytics', icon: <BarChartIcon /> },
+    { key: 'qr-codes', label: 'QR Codes', icon: <QrCodeIcon /> },
   ]
 
   return (

@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from app.errors import NotFoundError
-from app.models import CoinSourceType, HuntCharacter, HuntChallenge
+from app.models import CoinSourceType, HuntCharacter, HuntCharacterScanCode, HuntChallenge
 from app.services import coins as coins_service
 from app.supabase_client import get_supabase_client
 
@@ -92,6 +92,25 @@ def list_characters(session_id: UUID) -> list[HuntCharacter]:
             progress_by_character.get(c["id"]),
         )
         for c in char_rows
+    ]
+
+
+def list_character_scan_codes() -> list[HuntCharacterScanCode]:
+    """Staff-only (Staff Page QR Code Directory): each Hunt character paired
+    with its scannable_codes.code. Nothing else in the app returns this
+    pairing -- list_characters()/get_character() are guest-facing and don't
+    carry the code, and scan.py only ever looks it up the other direction
+    (code -> character)."""
+    client = get_supabase_client()
+    char_rows = client.table("hunt_characters").select("id, name").order("sort_order").execute().data
+    code_rows = client.table("scannable_codes").select("code, hunt_character_id").execute().data
+
+    code_by_character = {r["hunt_character_id"]: r["code"] for r in code_rows if r["hunt_character_id"]}
+
+    return [
+        HuntCharacterScanCode(id=c["id"], name=c["name"], code=code_by_character[c["id"]])
+        for c in char_rows
+        if c["id"] in code_by_character
     ]
 
 

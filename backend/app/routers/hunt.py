@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.device_session import get_or_create_session
 from app.errors import NotFoundError
-from app.models import DeviceSession, HuntCharacter
+from app.models import DeviceSession, HuntCharacter, HuntCharacterScanCode
 from app.services import hunt as hunt_service
+from app.staff_auth import require_staff
 
 router = APIRouter(prefix="/hunt", tags=["hunt"])
 
@@ -13,6 +14,11 @@ router = APIRouter(prefix="/hunt", tags=["hunt"])
 @router.get("/characters", response_model=list[HuntCharacter])
 def list_characters(session: DeviceSession = Depends(get_or_create_session)) -> list[HuntCharacter]:
     return hunt_service.list_characters(session.id)
+
+
+@router.get("/scan-codes", response_model=list[HuntCharacterScanCode], dependencies=[Depends(require_staff)])
+def list_scan_codes() -> list[HuntCharacterScanCode]:
+    return hunt_service.list_character_scan_codes()
 
 
 @router.post("/challenges/{challenge_id}/complete", response_model=HuntCharacter)

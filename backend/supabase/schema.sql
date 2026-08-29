@@ -151,6 +151,10 @@ create table if not exists puzzle_challenges (
     -- e.g. "Reach the Top" for multi-challenge puzzles, or "Default" for the
     -- 4 puzzles that only have one objective.
     label                text not null,
+    -- QR-routable identifier for /puzzles/:challengeSlug (migration 032) --
+    -- derived from `puzzle name + label`, not label alone, since label is
+    -- only unique per-puzzle and several repeat verbatim across puzzles.
+    slug                 text not null unique,
     sort_order           integer not null default 0,
     -- Not all challenges have an official target time yet (Plan.md 2.3 open
     -- item) -- nullable rather than a placeholder 0/-1.
@@ -188,6 +192,8 @@ create index if not exists puzzle_attempts_challenge_id_idx on puzzle_attempts(c
 create table if not exists scoring_games (
     id                  uuid primary key default gen_random_uuid(),
     name                text not null unique,
+    -- QR-routable identifier for /scoring/:gameSlug (migration 032).
+    slug                text not null unique,
     rules_text          text not null default '',
     win_condition_text  text not null default '',
     -- Machine-readable win condition, since automatic detection needs exact

@@ -24,6 +24,7 @@ def _row_to_challenge(row: dict) -> PuzzleChallenge:
         id=row["id"],
         puzzle_id=row["puzzle_id"],
         label=row["label"],
+        slug=row["slug"],
         description=row["description"],
         staff_time_seconds=row["staff_time_seconds"],
         solution_type=row["solution_type"],

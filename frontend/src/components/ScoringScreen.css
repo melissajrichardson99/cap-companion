@@ -208,3 +208,8 @@
   box-shadow: var(--cap-shadow-pop);
   transform: translate(-1px, -1px);
 }
+
+.scoring-not-found {
+  color: var(--cap-color-body-text);
+  padding: 12px 0;
+}

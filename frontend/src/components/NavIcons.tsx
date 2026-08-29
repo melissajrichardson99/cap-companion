@@ -352,3 +352,23 @@ export function BarChartIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+// Two corner finder squares + a scattered data grid -- a simplified QR code
+// glyph for the Staff Page sidebar's QR Codes item. Nothing else in the app
+// covers this shape.
+export function QrCodeIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <rect x="2.5" y="2.5" width="5.5" height="5.5" rx="0.8" />
+      <rect x="12" y="2.5" width="5.5" height="5.5" rx="0.8" />
+      <rect x="2.5" y="12" width="5.5" height="5.5" rx="0.8" />
+      <rect x="4.6" y="4.6" width="1.3" height="1.3" fill="currentColor" stroke="none" />
+      <rect x="14.1" y="4.6" width="1.3" height="1.3" fill="currentColor" stroke="none" />
+      <rect x="4.6" y="14.1" width="1.3" height="1.3" fill="currentColor" stroke="none" />
+      <rect x="12" y="12" width="2.4" height="2.4" />
+      <rect x="15.1" y="12" width="2.4" height="2.4" />
+      <rect x="12" y="15.1" width="2.4" height="2.4" />
+      <rect x="15.1" y="15.1" width="2.4" height="2.4" />
+    </svg>
+  )
+}

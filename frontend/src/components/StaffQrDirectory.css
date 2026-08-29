@@ -1,0 +1,42 @@
+.staff-qr-directory {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cap-space-4);
+}
+
+.staff-qr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.staff-qr-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+}
+
+.staff-qr-row-main {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.staff-qr-row-name {
+  color: var(--cap-color-ink);
+  font-weight: 700;
+}
+
+.staff-qr-row-url {
+  color: var(--cap-color-body-text);
+  font-size: 13px;
+  word-break: break-all;
+}

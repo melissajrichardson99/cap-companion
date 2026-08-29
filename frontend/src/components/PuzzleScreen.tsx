@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Puzzle, PuzzleChallenge } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { PuzzleChallengeModal } from './PuzzleChallengeModal'
@@ -10,6 +10,11 @@ interface PuzzleScreenProps {
   error: string | null
   onReload: () => void
   onCoinsChanged: () => void
+  // Set only when landing via a QR deep link (/puzzles/:challengeSlug) --
+  // matched against the loaded puzzles' challenges to auto-open that
+  // challenge's popup, same pattern as ScoringScreen's gameSlug.
+  challengeSlug?: string
+  onBrowsePuzzles?: () => void
 }
 
 export function formatSeconds(totalSeconds: number): string {
@@ -18,8 +23,27 @@ export function formatSeconds(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function PuzzleScreen({ puzzles, error, onReload, onCoinsChanged }: PuzzleScreenProps) {
+function findChallengeBySlug(
+  puzzles: Puzzle[],
+  slug: string,
+): { puzzle: Puzzle; challenge: PuzzleChallenge } | null {
+  for (const puzzle of puzzles) {
+    const challenge = puzzle.challenges.find((c) => c.slug === slug)
+    if (challenge) return { puzzle, challenge }
+  }
+  return null
+}
+
+export function PuzzleScreen({ puzzles, error, onReload, onCoinsChanged, challengeSlug, onBrowsePuzzles }: PuzzleScreenProps) {
   const [active, setActive] = useState<{ puzzle: Puzzle; challenge: PuzzleChallenge } | null>(null)
+
+  // Runs once per distinct (challengeSlug, puzzles) pair, not on every
+  // render -- see ScoringScreen's matching effect for why.
+  useEffect(() => {
+    if (!challengeSlug || !puzzles) return
+    const match = findChallengeBySlug(puzzles, challengeSlug)
+    if (match) setActive(match)
+  }, [challengeSlug, puzzles])
 
   if (error) {
     return (
@@ -34,6 +58,24 @@ export function PuzzleScreen({ puzzles, error, onReload, onCoinsChanged }: Puzzl
 
   if (!puzzles) {
     return <div className="puzzle-screen puzzle-loading">Loading puzzles…</div>
+  }
+
+  if (challengeSlug && !findChallengeBySlug(puzzles, challengeSlug)) {
+    return (
+      <div className="puzzle-screen">
+        <h1 className="cap-sign-board">
+          <PuzzlePieceIcon className="cap-sign-board-icon" />
+          Floor Puzzles
+        </h1>
+        <p className="puzzle-not-found">
+          We couldn't find that puzzle challenge ("{challengeSlug}"). It may have moved or the sign's QR code is out
+          of date.
+        </p>
+        <button type="button" className="btn btn-primary" onClick={onBrowsePuzzles}>
+          Browse Puzzles
+        </button>
+      </div>
+    )
   }
 
   return (

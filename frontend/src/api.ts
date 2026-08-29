@@ -113,6 +113,8 @@ export interface PuzzleChallenge {
   id: string
   puzzle_id: string
   label: string
+  // QR-routable identifier for /puzzles/:challengeSlug.
+  slug: string
   description: string
   staff_time_seconds: number | null
   solution_type: SolutionType
@@ -150,6 +152,8 @@ export interface GameScoreEvent {
 export interface ScoringGame {
   id: string
   name: string
+  // QR-routable identifier for /scoring/:gameSlug.
+  slug: string
   rules_text: string
   win_condition_text: string
   win_condition_type: WinConditionType
@@ -241,6 +245,14 @@ export interface HuntCharacter {
   completed_at: string | null
   unlocked: boolean
   coins_awarded: number
+}
+
+// Staff-only (Staff Page QR Code Directory): a Hunt character paired with
+// its /scan/:code value. HuntCharacter itself doesn't carry this.
+export interface HuntCharacterScanCode {
+  id: string
+  name: string
+  code: string
 }
 
 export type EncyclopediaStatus = 'placeholder' | 'published'
@@ -547,6 +559,7 @@ export const api = {
     request<ScoreSheetSession>(`/scoring/sessions/${sessionId}/finish`, { method: 'POST' }),
   listMinigames: () => request<Minigame[]>('/bingo/minigames'),
   listHuntCharacters: () => request<HuntCharacter[]>('/hunt/characters'),
+  listHuntScanCodes: () => staffRequest<HuntCharacterScanCode[]>('/hunt/scan-codes'),
   completeHuntChallenge: (challengeId: string) =>
     request<HuntCharacter>(`/hunt/challenges/${challengeId}/complete`, { method: 'POST' }),
   unlockHuntCharacter: (characterId: string) =>

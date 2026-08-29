@@ -653,9 +653,31 @@ function GuestShell(props: GuestShellProps) {
             }
           />
           <Route
+            path="puzzles/:challengeSlug"
+            element={
+              <PuzzleRoute
+                puzzles={props.puzzles}
+                error={props.puzzlesError}
+                onReload={props.reloadPuzzles}
+                onCoinsChanged={props.reloadCoins}
+              />
+            }
+          />
+          <Route
             path="scoring"
             element={
               <ScoringScreen
+                games={props.scoringGames}
+                error={props.scoringGamesError}
+                onReload={props.reloadScoringGames}
+                onCoinsChanged={props.reloadCoins}
+              />
+            }
+          />
+          <Route
+            path="scoring/:gameSlug"
+            element={
+              <ScoringRoute
                 games={props.scoringGames}
                 error={props.scoringGamesError}
                 onReload={props.reloadScoringGames}
@@ -774,6 +796,39 @@ function MapRoute({ nodes, error, onReload, onVisitResult }: MapRouteProps) {
 function FaqRoute() {
   const navigate = useNavigate()
   return <FaqScreen onOpenMapKeySpot={(key) => navigate('/map', { state: { keySpot: key } })} />
+}
+
+interface ScoringRouteProps {
+  games: ScoringGame[] | null
+  error: string | null
+  onReload: () => void
+  onCoinsChanged: () => void
+}
+
+// The Scoring Sheet QR deep-link entry point (/scoring/:gameSlug) -- must
+// work as a hard cold-load deep link, same as ScanRoute above and Our
+// Animals' /animals/:slug. ScoringScreen itself does the slug matching
+// (against the already-loaded games list) and the auto-open/not-found
+// behavior; this wrapper's only job is pulling the param off the route.
+function ScoringRoute(props: ScoringRouteProps) {
+  const { gameSlug = '' } = useParams<{ gameSlug: string }>()
+  const navigate = useNavigate()
+  return <ScoringScreen {...props} gameSlug={gameSlug} onBrowseGames={() => navigate('/scoring')} />
+}
+
+interface PuzzleRouteProps {
+  puzzles: Puzzle[] | null
+  error: string | null
+  onReload: () => void
+  onCoinsChanged: () => void
+}
+
+// The Puzzle Timer QR deep-link entry point (/puzzles/:challengeSlug) --
+// same shape as ScoringRoute above.
+function PuzzleRoute(props: PuzzleRouteProps) {
+  const { challengeSlug = '' } = useParams<{ challengeSlug: string }>()
+  const navigate = useNavigate()
+  return <PuzzleScreen {...props} challengeSlug={challengeSlug} onBrowsePuzzles={() => navigate('/puzzles')} />
 }
 
 export default App

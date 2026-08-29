@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ScoringGame } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { ScoringSessionModal } from './ScoringSessionModal'
@@ -10,10 +10,24 @@ interface ScoringScreenProps {
   error: string | null
   onReload: () => void
   onCoinsChanged: () => void
+  // Set only when landing via a QR deep link (/scoring/:gameSlug) -- matched
+  // against the loaded games list to auto-open that game's popup, same
+  // "real URL param, cold-load-safe" pattern as Our Animals' /animals/:slug.
+  gameSlug?: string
+  onBrowseGames?: () => void
 }
 
-export function ScoringScreen({ games, error, onReload, onCoinsChanged }: ScoringScreenProps) {
+export function ScoringScreen({ games, error, onReload, onCoinsChanged, gameSlug, onBrowseGames }: ScoringScreenProps) {
   const [activeGame, setActiveGame] = useState<ScoringGame | null>(null)
+
+  // Runs once per distinct (gameSlug, games) pair, not on every render -- so
+  // manually closing the auto-opened modal afterward (setActiveGame(null))
+  // doesn't immediately reopen it.
+  useEffect(() => {
+    if (!gameSlug || !games) return
+    const match = games.find((g) => g.slug === gameSlug)
+    if (match) setActiveGame(match)
+  }, [gameSlug, games])
 
   if (error) {
     return (
@@ -28,6 +42,23 @@ export function ScoringScreen({ games, error, onReload, onCoinsChanged }: Scorin
 
   if (!games) {
     return <div className="scoring-screen scoring-loading">Loading games…</div>
+  }
+
+  if (gameSlug && !games.some((g) => g.slug === gameSlug)) {
+    return (
+      <div className="scoring-screen">
+        <h1 className="cap-sign-board">
+          <ClipboardIcon className="cap-sign-board-icon" />
+          Scoring Sheet
+        </h1>
+        <p className="scoring-not-found">
+          We couldn't find that game ("{gameSlug}"). It may have moved or the sign's QR code is out of date.
+        </p>
+        <button type="button" className="btn btn-primary" onClick={onBrowseGames}>
+          Browse Scoring Games
+        </button>
+      </div>
+    )
   }
 
   return (
