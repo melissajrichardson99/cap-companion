@@ -105,6 +105,8 @@ session system entirely and check a signed staff token instead.
 
 ## Engineering highlights
 
+For more engineering deep-dives, see [ENGINEERING_NOTES.md](docs/ENGINEERING_NOTES.md).
+
 ### 1. The per-device session migration
 
 The app originally had **one global shared session** for almost everything
