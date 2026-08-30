@@ -1,0 +1,80 @@
+/* Same wood-grain frame recipe as ClearShortlistModal/ResetSessionModal. */
+.staff-name-modal-frame {
+  border-radius: var(--cap-radius-md);
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 2px,
+      rgba(0, 0, 0, 0.04) 2px,
+      rgba(0, 0, 0, 0.04) 4px
+    ),
+    linear-gradient(155deg, #a9773f 0%, #8a5a2f 35%, #6e4523 65%, #7c4f28 100%);
+  padding: 8px;
+  box-shadow:
+    var(--cap-shadow-pop),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+}
+
+.staff-name-modal-inner {
+  background: var(--cap-color-parchment);
+  border: 2px solid var(--cap-color-outline);
+  border-radius: calc(var(--cap-radius-md) - 4px);
+  padding: var(--cap-space-4);
+  font-family: var(--cap-font-body);
+  display: flex;
+  flex-direction: column;
+}
+
+.staff-name-modal-title {
+  font-family: var(--cap-font-display);
+  font-size: 19px;
+  color: var(--cap-color-ink);
+  margin: 0 0 12px;
+}
+
+.staff-name-modal-body {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--cap-color-body-text);
+}
+
+.staff-name-modal-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cap-color-ink);
+  margin-bottom: 6px;
+}
+
+.staff-name-modal-input {
+  font-family: var(--cap-font-body);
+  font-size: 15px;
+  padding: 10px 12px;
+  border-radius: var(--cap-radius-sm);
+  border: 2px solid var(--cap-color-outline);
+  background: #fff;
+  color: var(--cap-color-ink);
+  margin-bottom: 18px;
+}
+
+.staff-name-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.staff-name-modal-inner .btn {
+  font-family: var(--cap-font-body);
+  font-weight: 700;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  box-shadow: var(--cap-shadow-pop-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.staff-name-modal-inner .btn:hover:not(:disabled) {
+  box-shadow: var(--cap-shadow-pop);
+  transform: translate(-1px, -1px);
+}

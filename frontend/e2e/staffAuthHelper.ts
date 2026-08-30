@@ -22,8 +22,16 @@ export function readStaffPassword(): string {
 
 // Navigates to /staff and logs in, leaving the page on the loaded staff
 // view. Safe to call on a fresh page/context with no prior staff session.
+//
+// Also seeds a staff display name (localStorage, set before the login
+// button is clicked so it's already there when StaffPageContent first
+// mounts) so the one-time StaffNameModal prompt doesn't block the rest of
+// the page for every spec that just needs to be logged in -- specs that
+// specifically cover that prompt/attribution flow log in manually instead
+// (see staff-page.spec.ts) so the modal actually shows.
 export async function loginAsStaff(page: Page): Promise<void> {
   await page.goto('/staff')
+  await page.evaluate(() => localStorage.setItem('cap-staff-display-name', 'Test Staff'))
   await page.getByLabel('Password').fill(readStaffPassword())
   await page.getByRole('button', { name: 'Log In' }).click()
   await page.getByRole('tab', { name: 'Photo Queue' }).waitFor()

@@ -7,6 +7,7 @@ be set in the environment (see .env.example) before login works.
 
 import hmac
 import os
+from urllib.parse import unquote
 
 from fastapi import Header, HTTPException
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -52,3 +53,17 @@ def require_staff(authorization: str | None = Header(default=None)) -> None:
     token = authorization.removeprefix("Bearer ")
     if not verify_staff_token(token):
         raise HTTPException(status_code=401, detail="Invalid or expired staff session token")
+
+
+# Shared "who is this staff member" dependency (lightweight -- self-reported
+# display name, not a second auth mechanism; see frontend/src/staffName.ts).
+# Any staff-only endpoint can add `staff_name: str | None = Depends(get_staff_name)`
+# to attribute an action, with no frontend changes needed -- api.ts's
+# staffRequest() already sends this header on every staff-authenticated call.
+# Optional everywhere: a staff member who hasn't set a name yet can still act,
+# just without attribution.
+def get_staff_name(x_staff_name: str | None = Header(default=None, alias="X-Staff-Name")) -> str | None:
+    if not x_staff_name:
+        return None
+    trimmed = unquote(x_staff_name).strip()
+    return trimmed or None

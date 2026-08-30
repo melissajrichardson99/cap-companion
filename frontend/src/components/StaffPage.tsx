@@ -2,10 +2,12 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api, type AnimalPhoto, type Announcement, type MapNode, type PhotoSubmission, type StaffRequest } from '../api'
 import { ANIMALS } from '../animalContent'
 import { clearStaffToken, getStaffToken } from '../staffAuth'
+import { getStaffName } from '../staffName'
 import { ClearShortlistModal } from './ClearShortlistModal'
 import { ClipboardIcon } from './NavIcons'
 import { StaffAnalytics } from './StaffAnalytics'
 import { StaffLoginScreen } from './StaffLoginScreen'
+import { StaffNameModal } from './StaffNameModal'
 import { StaffQrDirectory } from './StaffQrDirectory'
 import { StaffSidebar, type StaffTab } from './StaffSidebar'
 import './StaffPage.css'
@@ -69,6 +71,12 @@ export function StaffPage() {
 
 function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [tab, setTab] = useState<Tab>('photos')
+
+  // Prompted once per device -- see StaffNameModal.tsx. Lazily initialized
+  // from localStorage so a fresh session (no name stored yet) opens straight
+  // into the prompt instead of flashing the rest of the page first.
+  const [staffName, setStaffNameState] = useState<string | null>(() => getStaffName())
+  const [nameModalOpen, setNameModalOpen] = useState(() => !getStaffName())
 
   const [requests, setRequests] = useState<StaffRequest[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -329,6 +337,12 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
           Staff Mode
         </span>
         <div className="staff-page-header-actions">
+          <span className="staff-name-badge">
+            <span className="staff-name-badge-label">{staffName ?? 'No name set'}</span>
+            <button type="button" className="btn btn-secondary staff-name-edit-btn" onClick={() => setNameModalOpen(true)}>
+              {staffName ? 'Change' : 'Set Name'}
+            </button>
+          </span>
           <button
             type="button"
             className="btn btn-secondary"
@@ -498,6 +512,10 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                       </span>
                     </div>
                     {r.description && <p className="staff-request-description">{r.description}</p>}
+                    {r.acknowledged_by && (
+                      <p className="staff-request-attribution">Acknowledged by {r.acknowledged_by}</p>
+                    )}
+                    {r.resolved_by && <p className="staff-request-attribution">Resolved by {r.resolved_by}</p>}
                   </div>
                   <div className="staff-request-actions">
                     {r.status === 'open' && (
@@ -751,6 +769,17 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
       {tab === 'qr-codes' && <StaffQrDirectory />}
         </div>
       </div>
+
+      {nameModalOpen && (
+        <StaffNameModal
+          currentName={staffName}
+          onClose={() => setNameModalOpen(false)}
+          onSaved={(name) => {
+            setStaffNameState(name)
+            setNameModalOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }

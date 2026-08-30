@@ -2,6 +2,7 @@
 
 import { getDeviceSessionId } from './deviceSession'
 import { getStaffToken } from './staffAuth'
+import { getStaffName } from './staffName'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
@@ -292,6 +293,10 @@ export interface StaffRequest {
   status: StaffRequestStatus
   created_at: string
   resolved_at: string | null
+  // Self-reported staff display name (staffName.ts) attached at the moment
+  // of the action -- null if that staff member hadn't set a name yet.
+  acknowledged_by: string | null
+  resolved_by: string | null
 }
 
 // Keep in sync with backend/app/models.py's CreateStaffRequestRequest --
@@ -522,13 +527,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 // Staff-only endpoints require this Authorization header (validated
 // server-side by app/staff_auth.require_staff -- the client-side /staff
 // login gate alone is not the real enforcement).
+// The X-Staff-Name header rides along on every staff-authenticated request,
+// not just Contact Staff's acknowledge/resolve -- this is the "reusable
+// mechanism" for staff attribution (see staffName.ts). An endpoint opts in
+// to attribution purely on the backend (reading the header via a
+// dependency); nothing here needs to change to extend it to a new feature.
+// URI-encoded since raw HTTP header values aren't reliably UTF-8-safe (a
+// name with accented characters could otherwise get silently mangled) --
+// decoded server-side in app/staff_auth.py's get_staff_name.
 function staffRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getStaffToken()
+  const staffName = getStaffName()
   return request<T>(path, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(staffName ? { 'X-Staff-Name': encodeURIComponent(staffName) } : {}),
     },
   })
 }

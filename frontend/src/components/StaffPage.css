@@ -147,6 +147,20 @@
   flex-shrink: 0;
 }
 
+.staff-name-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cap-color-ink);
+}
+
+.staff-name-edit-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 /* Sidebar + content layout (replaces the old horizontal .staff-page-tabs
    row) -- see StaffSidebar.css for the sidebar itself. The sidebar is
    position:fixed (pinned to the true viewport edge, not laid out here), so
@@ -258,6 +272,13 @@
   color: var(--cap-color-ink);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.staff-request-attribution {
+  margin: 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--cap-color-body-text);
 }
 
 .staff-request-status-badge {

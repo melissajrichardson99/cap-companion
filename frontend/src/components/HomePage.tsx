@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, type Announcement, type PhotoSubmission } from '../api'
+import { getClosingStatusText } from '../closingCountdown'
 import {
   ANIMAL_SHOW_TIMES,
   GOOGLE_REVIEW_URL,
@@ -21,7 +22,7 @@ interface HomePageProps {
   announcements: Announcement[] | null
   // Scan QR opens a shared modal (lifted in App.tsx/GuestShell, not a route)
   // rather than navigating, same as NavMenu's own Scan QR action -- every
-  // other Quick Links button below navigates directly via useNavigate.
+  // other Choose Your Adventure button below navigates directly via useNavigate.
   onScanQr: () => void
 }
 
@@ -56,7 +57,16 @@ export function HomePage({ announcements, onScanQr }: HomePageProps) {
       .catch(() => setPhotoFailed(true))
   }, [])
 
-  const isOpenToday = PARK_OPEN_DAYS.includes(new Date().getDay())
+  // Ticks once a minute so the closing countdown below stays live without a
+  // full page reload -- open/closed status only needs this same granularity.
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const isOpenToday = PARK_OPEN_DAYS.includes(now.getDay())
+  const closingStatusText = getClosingStatusText(now, isOpenToday)
 
   return (
     <div className="home-page">
@@ -73,6 +83,33 @@ export function HomePage({ announcements, onScanQr }: HomePageProps) {
         </span>
       </h1>
       <p className="cap-page-subheader">{PAGE_SUBHEADERS.home}</p>
+
+      <section className="home-card cap-parchment-card">
+        <h2 className="home-section-title">Choose Your Adventure</h2>
+        <div className="home-quicknav-grid">
+          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/map')}>
+            <MapPinIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Map</span>
+          </button>
+          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/bingo')}>
+            <GridIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Bingo Card</span>
+          </button>
+          <button type="button" className="home-quicknav-btn" onClick={onScanQr}>
+            <CameraIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Scan QR</span>
+          </button>
+          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/scoring')}>
+            <ClipboardIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Scoring Sheet</span>
+          </button>
+          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/collectibles')}>
+            <PawIcon className="home-quicknav-btn-icon" />
+            <span className="home-quicknav-btn-label">Collectibles</span>
+          </button>
+        </div>
+        <p className="home-quicknav-note">Looking for something else? Check the menu in the top-right corner.</p>
+      </section>
 
       <section className="home-card cap-parchment-card">
         <h2 className="home-section-title">Today at Cobb's</h2>
@@ -94,6 +131,7 @@ export function HomePage({ announcements, onScanQr }: HomePageProps) {
             <span className="home-weather-loading">Loading weather…</span>
           )}
         </div>
+        {closingStatusText && <div className="home-closing-countdown">{closingStatusText}</div>}
       </section>
 
       <section className="home-card cap-parchment-card">
@@ -257,33 +295,6 @@ export function HomePage({ announcements, onScanQr }: HomePageProps) {
             </div>
           </li>
         </ol>
-      </section>
-
-      <section className="home-card cap-parchment-card">
-        <h2 className="home-section-title">Quick Links</h2>
-        <div className="home-quicknav-grid">
-          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/map')}>
-            <MapPinIcon className="home-quicknav-btn-icon" />
-            <span className="home-quicknav-btn-label">Map</span>
-          </button>
-          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/bingo')}>
-            <GridIcon className="home-quicknav-btn-icon" />
-            <span className="home-quicknav-btn-label">Bingo Card</span>
-          </button>
-          <button type="button" className="home-quicknav-btn" onClick={onScanQr}>
-            <CameraIcon className="home-quicknav-btn-icon" />
-            <span className="home-quicknav-btn-label">Scan QR</span>
-          </button>
-          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/scoring')}>
-            <ClipboardIcon className="home-quicknav-btn-icon" />
-            <span className="home-quicknav-btn-label">Scoring Sheet</span>
-          </button>
-          <button type="button" className="home-quicknav-btn" onClick={() => navigate('/collectibles')}>
-            <PawIcon className="home-quicknav-btn-icon" />
-            <span className="home-quicknav-btn-label">Collectibles</span>
-          </button>
-        </div>
-        <p className="home-quicknav-note">Looking for something else? Check the menu in the top-right corner.</p>
       </section>
 
       {lightboxOpen && photoOfTheDay && (

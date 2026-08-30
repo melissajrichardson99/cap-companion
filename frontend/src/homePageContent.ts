@@ -34,6 +34,14 @@ export const PARK_HOURS_TEXT = 'Wednesday – Sunday, 11:00 AM – 5:00 PM'
 // Closed Monday (1) and Tuesday (2).
 export const PARK_OPEN_DAYS: number[] = [0, 3, 4, 5, 6]
 
+// Machine-readable open/close times backing the Home page's closing-time
+// countdown (closingCountdown.ts). A single fixed daily schedule -- hours
+// don't vary by day of week, only which days are open (PARK_OPEN_DAYS above)
+// -- so these two are the only times needed. Keep in sync with
+// PARK_HOURS_TEXT above if the schedule ever changes.
+export const PARK_OPEN_TIME = { hour: 11, minute: 0 }
+export const PARK_CLOSE_TIME = { hour: 17, minute: 0 }
+
 // Announcements are staff-managed and live (Staff Page "Announcements" tab,
 // backend/app/routers/announcements.py) -- see api.ts's Announcement type
 // and HomePage.tsx, not this file.

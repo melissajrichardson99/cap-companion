@@ -439,6 +439,11 @@ class StaffRequest(BaseModel):
     status: StaffRequestStatus = StaffRequestStatus.OPEN
     created_at: datetime
     resolved_at: datetime | None = None
+    # Self-reported staff display name (see app/staff_auth.py's
+    # get_staff_name), attached at the moment of the acknowledge/resolve
+    # transition -- null if that staff member hadn't set a name yet.
+    acknowledged_by: str | None = None
+    resolved_by: str | None = None
 
 
 class CreateStaffRequestRequest(BaseModel):

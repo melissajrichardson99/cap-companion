@@ -380,7 +380,13 @@ create table if not exists staff_requests (
     -- app/services/staff_requests.py's _transition for the allowed-from checks.
     status            text not null default 'open' check (status in ('open', 'acknowledged', 'resolved', 'cancelled')),
     created_at        timestamptz not null default now(),
-    resolved_at       timestamptz
+    resolved_at       timestamptz,
+    -- Self-reported staff display name (frontend/src/staffName.ts) attached
+    -- at the moment of the action -- migration 034. Optional: still no
+    -- per-staff accounts, just a lightweight attribution layer on top of the
+    -- one shared staff login.
+    acknowledged_by   text,
+    resolved_by       text
 );
 
 create index if not exists staff_requests_status_idx on staff_requests(status);

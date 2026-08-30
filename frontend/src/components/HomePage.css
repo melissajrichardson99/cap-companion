@@ -253,6 +253,13 @@
   font-style: italic;
 }
 
+.home-closing-countdown {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cap-color-ink);
+}
+
 .home-schedule-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

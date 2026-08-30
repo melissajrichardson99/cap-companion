@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
 import {
   ANIMAL_SHOW_TIMES,
@@ -8,6 +8,11 @@ import {
   TRACTOR_RIDE_TIMES_EAST,
   TRACTOR_RIDE_TIMES_WEST,
 } from '../src/homePageContent'
+
+// Wed Sep 2 2026 -- a PARK_OPEN_DAYS day, used by the closing-countdown
+// tests below to pin the three states (before/during/after) without racing
+// whatever the real wall-clock time happens to be when the suite runs.
+const OPEN_WEEKDAY_DATE = [2026, 8, 2] as const // months are 0-indexed (8 = September)
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -89,6 +94,30 @@ test('weather fetch failure degrades gracefully without blocking the rest of the
   await expect(scheduleChips(page, 'Animal Shows')).toHaveText(ANIMAL_SHOW_TIMES)
 })
 
+test.describe('closing-time countdown', () => {
+  test('before opening on an open day shows the opening time, not a countdown', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(...OPEN_WEEKDAY_DATE, 9, 30))
+    await page.goto('/')
+    // Regex (not an exact string) -- ICU may render the AM/PM separator as a
+    // narrow no-break space rather than a plain one, and \s matches either.
+    await expect(page.getByText(/Opens at 11:00\s*AM/)).toBeVisible()
+    await expect(page.getByText(/Closes in/)).toHaveCount(0)
+  })
+
+  test('currently open shows a live countdown to close', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(...OPEN_WEEKDAY_DATE, 14, 45))
+    await page.goto('/')
+    await expect(page.getByText('Closes in 2h 15m')).toBeVisible()
+  })
+
+  test('after closing on an open day shows "Closed for today", not a negative countdown', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(...OPEN_WEEKDAY_DATE, 18, 0))
+    await page.goto('/')
+    await expect(page.getByText('Closed for today')).toBeVisible()
+    await expect(page.getByText(/Closes in/)).toHaveCount(0)
+  })
+})
+
 test('review card CTA opens the Google review link in a new tab without navigating away', async ({ page, context }) => {
   await page.goto('/')
   const reviewLink = page.getByRole('link', { name: /Leave a Google Review/ })
@@ -118,33 +147,43 @@ test('navbar logo returns to Home from another screen', async ({ page }) => {
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
 })
 
-test('How It Works card renders between Announcements/Reviews and Quick Links', async ({ page }) => {
+// DOCUMENT_POSITION_FOLLOWING (4) means the reference node comes after the
+// node compareDocumentPosition was called on -- i.e. `a` precedes `b` in
+// page order.
+async function isBefore(a: Locator, b: Locator): Promise<boolean> {
+  return a.evaluate(
+    (el, target) => !!(el.compareDocumentPosition(target as Node) & Node.DOCUMENT_POSITION_FOLLOWING),
+    await b.elementHandle(),
+  )
+}
+
+test('How It Works card renders between Announcements/Reviews and the end of the page', async ({ page }) => {
   await page.goto('/')
   const howto = page.getByRole('heading', { name: 'How It Works' })
   await expect(howto).toBeVisible()
   await expect(page.locator('.home-howto-list .home-howto-step')).toHaveCount(5)
 
-  // DOCUMENT_POSITION_FOLLOWING (4) means the reference node comes after the
-  // node compareDocumentPosition was called on -- i.e. review card precedes
-  // howto, and howto precedes Quick Links, in page order.
   const reviewCard = page.getByRole('heading', { name: 'Leave a Review, Get a Treat!' }).locator('..')
   const howtoCard = howto.locator('..')
-  const quickLinksCard = page.getByRole('heading', { name: 'Quick Links' }).locator('..')
 
-  const reviewBeforeHowto = await reviewCard.evaluate(
-    (el, target) => !!(el.compareDocumentPosition(target as Node) & Node.DOCUMENT_POSITION_FOLLOWING),
-    await howtoCard.elementHandle(),
-  )
-  const howtoBeforeQuickLinks = await howtoCard.evaluate(
-    (el, target) => !!(el.compareDocumentPosition(target as Node) & Node.DOCUMENT_POSITION_FOLLOWING),
-    await quickLinksCard.elementHandle(),
-  )
-
-  expect(reviewBeforeHowto).toBe(true)
-  expect(howtoBeforeQuickLinks).toBe(true)
+  expect(await isBefore(reviewCard, howtoCard)).toBe(true)
 })
 
-test('Quick Links quick-nav card links to the right destinations', async ({ page }) => {
+test('Choose Your Adventure renders first on the page, above the weather/hours card, How It Works, and Announcements/Reviews', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const adventureCard = page.getByRole('heading', { name: 'Choose Your Adventure' }).locator('..')
+  const todayCard = page.getByRole('heading', { name: "Today at Cobb's" }).locator('..')
+  const howtoCard = page.getByRole('heading', { name: 'How It Works' }).locator('..')
+  const reviewCard = page.getByRole('heading', { name: 'Leave a Review, Get a Treat!' }).locator('..')
+
+  expect(await isBefore(adventureCard, todayCard)).toBe(true)
+  expect(await isBefore(adventureCard, howtoCard)).toBe(true)
+  expect(await isBefore(adventureCard, reviewCard)).toBe(true)
+})
+
+test('Choose Your Adventure quick-nav card links to the right destinations', async ({ page }) => {
   await page.goto('/')
   const quicknav = page.locator('.home-quicknav-grid')
   await expect(quicknav.getByRole('button', { name: 'Map' })).toBeVisible()

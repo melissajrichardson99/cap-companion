@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect, type Page } from '@playwright/test'
-import { loginAsStaff } from './staffAuthHelper'
+import { loginAsStaff, readStaffPassword } from './staffAuthHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -210,4 +210,64 @@ test('an emergency request sorts above an earlier question; Mark Resolved remove
   await expect(resolvedRow.getByText('Resolved', { exact: true })).toBeVisible()
 
   await emergencyContext.close()
+})
+
+test('a staff session with no display name yet is prompted once; the name then attributes Acknowledge/Resolve and can be changed', async ({
+  page,
+  browser,
+}) => {
+  const dialog = await openContactStaff(page)
+  await dialog.getByRole('button', { name: 'I have a question' }).click()
+  await dialog.getByRole('button', { name: 'Rope Maze', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Submit Question' }).click()
+  await expect(dialog.getByText('Question sent')).toBeVisible()
+
+  // A genuinely fresh browser context -- no staff session, no staff display
+  // name stored yet -- logged in by hand (not loginAsStaff, which seeds a
+  // name precisely so this prompt doesn't show for every other spec).
+  const staffContext = await browser.newContext()
+  const staffPage = await staffContext.newPage()
+  await staffPage.goto('/staff')
+  await staffPage.getByLabel('Password').fill(readStaffPassword())
+  await staffPage.getByRole('button', { name: 'Log In' }).click()
+
+  const namePrompt = staffPage.getByRole('heading', { name: /What.s your name\?/ })
+  await expect(namePrompt).toBeVisible()
+  await staffPage.getByLabel('Your name', { exact: true }).fill('Priya')
+  await staffPage.getByRole('button', { name: 'Save' }).click()
+  await expect(namePrompt).toHaveCount(0)
+
+  // Persists across reload, and is visible in the header badge.
+  await staffPage.reload()
+  await expect(staffPage.getByRole('tab', { name: 'Photo Queue' })).toBeVisible()
+  await expect(namePrompt).toHaveCount(0)
+  await expect(staffPage.locator('.staff-name-badge-label')).toHaveText('Priya')
+
+  await staffPage.getByRole('tab', { name: 'Contact Requests' }).click()
+  const row = staffPage.locator('.staff-request-row', { hasText: 'Rope Maze' })
+  await expect(row).toBeVisible()
+  await row.getByRole('button', { name: 'Acknowledge' }).click()
+  await expect(row.getByText('Acknowledged by Priya')).toBeVisible()
+
+  await row.getByRole('button', { name: 'Mark Resolved' }).click()
+  // Wait for the resolve's own reload to land (row drops off the default
+  // open+acknowledged view) before toggling Show Resolved -- otherwise that
+  // toggle's reload (include_closed=true) can race the resolve's own reload
+  // (include_closed=false) and lose, same gotcha the emergency-sort test
+  // above avoids the same way.
+  await expect(staffPage.locator('.staff-request-row', { hasText: 'Rope Maze' })).toHaveCount(0)
+  await staffPage.getByRole('checkbox', { name: 'Show Resolved' }).check()
+  const resolvedRow = staffPage.locator('.staff-request-row', { hasText: 'Rope Maze' })
+  await expect(resolvedRow.getByText('Resolved by Priya')).toBeVisible()
+
+  // The "Change" control reopens the prompt pre-filled with the current
+  // name, and saving it updates the badge going forward.
+  await staffPage.getByRole('button', { name: 'Change' }).click()
+  const nameInput = staffPage.getByLabel('Your name', { exact: true })
+  await expect(nameInput).toHaveValue('Priya')
+  await nameInput.fill('Priya B')
+  await staffPage.getByRole('button', { name: 'Save' }).click()
+  await expect(staffPage.locator('.staff-name-badge-label')).toHaveText('Priya B')
+
+  await staffContext.close()
 })

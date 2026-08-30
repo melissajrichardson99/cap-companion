@@ -56,9 +56,10 @@ test.beforeEach(async ({ page }) => {
 async function openScanEntry(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByRole('button', { name: 'Open menu' }).click()
-  // Scoped to the nav panel -- Home's Quick Links section (HomePage.tsx) has
-  // its own "Scan QR" quicknav button with the same accessible name, so an
-  // unscoped getByRole here is ambiguous whenever Home is the landing screen.
+  // Scoped to the nav panel -- Home's Choose Your Adventure section
+  // (HomePage.tsx) has its own "Scan QR" quicknav button with the same
+  // accessible name, so an unscoped getByRole here is ambiguous whenever
+  // Home is the landing screen.
   await page.locator('#nav-menu-panel').getByRole('button', { name: 'Scan QR' }).click()
 }
 

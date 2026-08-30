@@ -35,6 +35,8 @@ def _row_to_request(row: dict) -> StaffRequest:
         status=row["status"],
         created_at=_parse_timestamptz(row["created_at"]),
         resolved_at=_parse_timestamptz(row["resolved_at"]) if row["resolved_at"] else None,
+        acknowledged_by=row.get("acknowledged_by"),
+        resolved_by=row.get("resolved_by"),
     )
 
 
@@ -135,7 +137,12 @@ def list_requests(include_closed: bool = False) -> list[StaffRequest]:
     return [_row_to_request(r) for r in rows]
 
 
-def _transition(request_id: UUID, new_status: StaffRequestStatus, allowed_from: set[StaffRequestStatus]) -> StaffRequest:
+def _transition(
+    request_id: UUID,
+    new_status: StaffRequestStatus,
+    allowed_from: set[StaffRequestStatus],
+    staff_name: str | None = None,
+) -> StaffRequest:
     client = get_supabase_client()
     rows = client.table("staff_requests").select("status").eq("id", str(request_id)).execute().data
     if not rows:
@@ -145,17 +152,24 @@ def _transition(request_id: UUID, new_status: StaffRequestStatus, allowed_from: 
         raise ConflictError(f'Staff request {request_id} is "{current}", cannot mark {new_status}')
 
     update: dict = {"status": new_status.value}
+    if new_status == StaffRequestStatus.ACKNOWLEDGED and staff_name:
+        update["acknowledged_by"] = staff_name
     if new_status == StaffRequestStatus.RESOLVED:
         update["resolved_at"] = datetime.now(timezone.utc).isoformat()
+        if staff_name:
+            update["resolved_by"] = staff_name
     client.table("staff_requests").update(update).eq("id", str(request_id)).execute()
     return get_request(request_id)
 
 
-def acknowledge_request(request_id: UUID) -> StaffRequest:
-    return _transition(request_id, StaffRequestStatus.ACKNOWLEDGED, {StaffRequestStatus.OPEN})
+def acknowledge_request(request_id: UUID, staff_name: str | None = None) -> StaffRequest:
+    return _transition(request_id, StaffRequestStatus.ACKNOWLEDGED, {StaffRequestStatus.OPEN}, staff_name)
 
 
-def resolve_request(request_id: UUID) -> StaffRequest:
+def resolve_request(request_id: UUID, staff_name: str | None = None) -> StaffRequest:
     return _transition(
-        request_id, StaffRequestStatus.RESOLVED, {StaffRequestStatus.OPEN, StaffRequestStatus.ACKNOWLEDGED}
+        request_id,
+        StaffRequestStatus.RESOLVED,
+        {StaffRequestStatus.OPEN, StaffRequestStatus.ACKNOWLEDGED},
+        staff_name,
     )
