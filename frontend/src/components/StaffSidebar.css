@@ -31,10 +31,14 @@
 .staff-sidebar {
   position: absolute;
   top: 0;
-  /* +1px to sit past #root's own 1px border-inline, same reasoning as
-     before -- but now relative to the anchor's edge, which always
-     coincides with #root's real edge instead of an estimate of it. */
-  left: 1px;
+  /* Flush with the anchor's own edge. The anchor (above) already resolves
+     to #root's real edge directly via the same width/margin recipe #root
+     itself uses -- unlike the old calc(100vw...)-based left, there's no
+     remaining estimate to compensate for. A leftover +1px fudge factor
+     here (carried over from that old calc, meant to clear #root's 1px
+     border-inline) left a 1px sliver of .staff-page's tan background
+     visible between the anchor's edge and the rail -- removed. */
+  left: 0;
   bottom: 0;
   width: 88px;
   pointer-events: auto;

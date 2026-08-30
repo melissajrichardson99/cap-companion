@@ -46,7 +46,37 @@
   overflow: hidden;
 }
 
+/* Rendered height of .app-header's border box: --cap-space-3 (12px) top/
+   bottom padding + 48px brand-logo (the tallest of its two children) +
+   --cap-outline-width (3px) border-bottom = 75px. One source of truth so
+   .app-main's compensating top padding below can't drift out of sync with
+   the header's own box model. */
+:root {
+  --app-header-height: 75px;
+}
+
+/* position:fixed, not sticky -- #app-root (below) is overflow:hidden for an
+   unrelated reason (clipping screens' own decorative accents, see its
+   comment) but that also makes it a scroll container, which silently
+   defeats position:sticky on any descendant even though #app-root itself
+   never actually scrolls (confirmed empirically: a sticky header here just
+   scrolled away with the page). Fixed positioning escapes that ancestor
+   entirely. left/right:0 + width:100%/max-width/margin:auto reproduces the
+   exact centered-900px-column width #app-root itself uses, so the header's
+   rendered box is pixel-identical to before, just no longer removable by
+   scrolling -- box-sizing:border-box makes that max-width apply to the
+   header's own outer edge (including its padding) instead of its content
+   box, matching the width the old in-flow flex-stretch layout produced. */
 .app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
   background: var(--cap-color-header-green);
   border-bottom: var(--cap-outline-width) solid var(--cap-color-outline);
   padding: var(--cap-space-3) var(--cap-space-5);
@@ -65,11 +95,15 @@
      content -- see the #app-root comment above. A non-flexed block child
      (every screen except .map-screen, which opts in via its own flex:1)
      renders identically to before inside a flex column, so this doesn't
-     change any other tab's layout. */
+     change any other tab's layout.
+     Top padding adds --app-header-height on top of the usual --cap-space-5
+     -- .app-header is position:fixed (see its comment) so it no longer
+     occupies space in #app-root's flow; without this, page content would
+     render underneath it instead of below it. */
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: var(--cap-space-5) var(--cap-space-5) 60px;
+  padding: calc(var(--app-header-height) + var(--cap-space-5)) var(--cap-space-5) 60px;
 }
 
 .brand-logo {
