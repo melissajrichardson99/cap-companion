@@ -4,20 +4,36 @@ Wires the pure logic in milestone.py and minigame_draw.py up to Supabase,
 and implements the map-node visit / bingo interconnectivity flow from tech
 spec section 4.3. This is the only layer that talks to the database — the
 milestone math and the random draw stay pure and independently testable.
+
+Guest Accounts Phase 3 (bingo_map_reset_at column, no other schema change):
+list_map_nodes/get_bingo_card/complete_tile/visit_node/
+_check_map_exploration_bonus all take an optional guest_id now, same
+"span every linked session when given, else current-session-only" fork as
+app/services/coins.py's get_total -- see _resolve_session_ids. Writes are
+unaffected everywhere: a completion/visit is always tagged to the actual
+calling session_id, exactly as before. get_guest_bingo_map_status and
+start_fresh_bingo_map back the two new guest-only /account/bingo-map
+endpoints (app/routers/account.py); session_reset.py's reset_session
+preserves this data for a linked guest the same way it already does for
+Coins/Collectibles.
 """
 
 from __future__ import annotations
 
 import random
+from datetime import datetime, timezone
 from uuid import UUID
 
+from app.device_session import list_guest_session_ids
 from app.errors import NotFoundError
 from app.models import (
     BingoCard,
     BingoCardSummary,
+    BingoMapStartFreshResult,
     BingoTile,
     ChildNode,
     CoinSourceType,
+    GuestBingoMapStatus,
     LinkedTile,
     MapNode,
     MilestoneEvent,
@@ -76,20 +92,36 @@ def _row_to_bingo_tile(row: dict, completed_at: str | None) -> BingoTile:
     )
 
 
-def _session_tile_completions(
-    client, session_id: UUID, tile_ids: list[str] | None = None
-) -> dict[str, str]:
-    """tile_id -> completed_at for the given session (Per-Device Sessions Phase 6a).
+def _resolve_session_ids(session_id: UUID, guest_id: UUID | None) -> list[str]:
+    """Guest Accounts Phase 3: the set of session_ids a guest-aware read
+    should span -- every device session ever linked to the guest
+    (app/device_session.py's list_guest_session_ids) when guest_id is given,
+    or just the calling session otherwise. Same fork as app/services/
+    coins.py's get_total/app/services/collectibles.py's list_cards, applied
+    here to Bingo tile completions and Map node visits.
+    """
+    return list_guest_session_ids(guest_id) if guest_id is not None else [str(session_id)]
+
+
+def _session_tile_completions(client, session_ids: list[str], tile_ids: list[str] | None = None) -> dict[str, str]:
+    """tile_id -> completed_at across the given session_ids (Per-Device
+    Sessions Phase 6a; guest-wide as of Guest Accounts Phase 3 -- see
+    _resolve_session_ids).
 
     Single source of truth for "has this session completed this tile" --
     every read site (card view, map-node linked-tile status, milestone
     detection) goes through this instead of a stored bingo_tiles.completed
-    column, which no longer exists.
+    column, which no longer exists. When two of a guest's linked sessions
+    both completed the same tile, the later completed_at simply wins --
+    only ever used for a boolean "is it completed" check downstream, so
+    which of the two timestamps shows through doesn't matter.
     """
+    if not session_ids:
+        return {}
     query = (
         client.table("session_tile_completions")
         .select("tile_id,completed_at")
-        .eq("session_id", str(session_id))
+        .in_("session_id", session_ids)
     )
     if tile_ids is not None:
         query = query.in_("tile_id", tile_ids)
@@ -97,23 +129,30 @@ def _session_tile_completions(
     return {r["tile_id"]: r["completed_at"] for r in rows}
 
 
-def list_map_nodes(session_id: UUID) -> list[MapNode]:
-    """List every map node, with `visited` resolved per the calling session.
+def list_map_nodes(session_id: UUID, guest_id: UUID | None = None) -> list[MapNode]:
+    """List every map node, with `visited` resolved per the calling session
+    (or, as of Guest Accounts Phase 3, across every session linked to the
+    calling guest -- see _resolve_session_ids).
 
     session_id is the resolved device session (Per-Device Sessions Phase 3)
-    -- visited-status is looked up in node_visits scoped to this session, not
-    globally, so two guests viewing the same node see their own independent
-    progress.
+    -- visited-status is looked up in node_visits scoped to this session (or
+    guest), not globally, so two guests viewing the same node see their own
+    independent progress.
     """
     client = get_supabase_client()
+    session_ids = _resolve_session_ids(session_id, guest_id)
     nodes = client.table("map_nodes").select("*").execute().data
     all_tiles = client.table("bingo_tiles").select("id,label,linked_map_node_id").execute().data
-    visited_rows = client.table("node_visits").select("node_id").eq("session_id", str(session_id)).execute().data
+    visited_rows = (
+        client.table("node_visits").select("node_id").in_("session_id", session_ids).execute().data
+        if session_ids
+        else []
+    )
     visited_node_ids = {r["node_id"] for r in visited_rows}
     # Per-Device Sessions Phase 6a: a tile's completed status for this popup
-    # flow is this session's own session_tile_completions row, not a global
-    # bingo_tiles.completed column (which no longer exists).
-    completed_tile_ids = set(_session_tile_completions(client, session_id))
+    # flow is this session's (or guest's) own session_tile_completions rows,
+    # not a global bingo_tiles.completed column (which no longer exists).
+    completed_tile_ids = set(_session_tile_completions(client, session_ids))
 
     tiles_by_node: dict[str, list[LinkedTile]] = {}
     for t in all_tiles:
@@ -154,15 +193,19 @@ def list_bingo_cards() -> list[BingoCardSummary]:
     return [BingoCardSummary(id=r["id"], owner_label=r["owner_label"]) for r in rows]
 
 
-def get_bingo_card(card_id: UUID, session_id: UUID) -> BingoCard:
-    """The shared card layout with this session's own completion/milestone status.
+def get_bingo_card(card_id: UUID, session_id: UUID, guest_id: UUID | None = None) -> BingoCard:
+    """The shared card layout with this session's (or guest's, Phase 3) own
+    completion/milestone status.
 
     session_id (Per-Device Sessions Phase 6a) resolves both the per-tile
     `completed` flags and milestones_achieved from session_tile_completions
     -- two families viewing the same card see their own independent progress
-    on it, same as MapNode.visited since Phase 3.
+    on it, same as MapNode.visited since Phase 3. guest_id, when given,
+    widens that to every session linked to the guest (_resolve_session_ids)
+    -- a returning guest sees their carried-forward progress automatically.
     """
     client = get_supabase_client()
+    session_ids = _resolve_session_ids(session_id, guest_id)
     card_rows = client.table("bingo_cards").select("*").eq("id", str(card_id)).execute().data
     if not card_rows:
         raise NotFoundError(f"Bingo card {card_id} not found")
@@ -177,7 +220,7 @@ def get_bingo_card(card_id: UUID, session_id: UUID) -> BingoCard:
         .execute()
         .data
     )
-    completions = _session_tile_completions(client, session_id, [r["id"] for r in tile_rows])
+    completions = _session_tile_completions(client, session_ids, [r["id"] for r in tile_rows])
     completed_indices = {
         r["row_index"] * 5 + r["col_index"] for r in tile_rows if r["id"] in completions
     }
@@ -212,7 +255,7 @@ def list_minigames() -> list[Minigame]:
     return _minigame_pool()
 
 
-def complete_tile(tile_id: UUID, session_id: UUID) -> TileCompletionResult:
+def complete_tile(tile_id: UUID, session_id: UUID, guest_id: UUID | None = None) -> TileCompletionResult:
     """Mark one bingo tile completed *for this session* and run everything it
     triggers (4.1 + 4.2, now per-device -- Per-Device Sessions Phase 6a).
 
@@ -226,9 +269,18 @@ def complete_tile(tile_id: UUID, session_id: UUID) -> TileCompletionResult:
     added it for -- two families completing tiles on the same shared layout
     get fully independent completion/milestone state and bonus-minigame
     triggers, each computed from that session's own completed-tile set only.
+
+    guest_id (Guest Accounts Phase 3): when given, the *read* side (prior
+    completions/milestones already achieved) spans every session linked to
+    the guest via _resolve_session_ids -- so a milestone already achieved on
+    one of the guest's other devices/visits is correctly recognized as
+    "already achieved" here too, and isn't re-paid. The write (the new
+    completion row itself) is still always tagged to this one calling
+    session_id, same as every other guest-aware write in this app.
     """
     global _last_played_minigame_id
     client = get_supabase_client()
+    session_ids = _resolve_session_ids(session_id, guest_id)
 
     tile_rows = client.table("bingo_tiles").select("*").eq("id", str(tile_id)).execute().data
     if not tile_rows:
@@ -243,7 +295,7 @@ def complete_tile(tile_id: UUID, session_id: UUID) -> TileCompletionResult:
         .data
     )
     index_to_tile_id = {r["row_index"] * 5 + r["col_index"]: r["id"] for r in all_tiles}
-    prior_completions = _session_tile_completions(client, session_id, [r["id"] for r in all_tiles])
+    prior_completions = _session_tile_completions(client, session_ids, [r["id"] for r in all_tiles])
     prior_indices = {
         r["row_index"] * 5 + r["col_index"] for r in all_tiles if r["id"] in prior_completions
     }
@@ -328,9 +380,21 @@ def complete_tile(tile_id: UUID, session_id: UUID) -> TileCompletionResult:
     )
 
 
-def _check_map_exploration_bonus(client, node_id: UUID, session_id: UUID) -> int:
+def _guest_bingo_map_reset_at(client, guest_id: UUID) -> str | None:
+    """Guest Accounts Phase 3: the timestamp of this guest's last explicit
+    Start Fresh action (start_fresh_bingo_map below), or None if they've
+    never done one. Consulted only by _check_map_exploration_bonus's
+    already-awarded guard -- see that function's docstring for why a plain
+    "does an award exist" check isn't enough for a guest.
+    """
+    rows = client.table("guests").select("bingo_map_reset_at").eq("id", str(guest_id)).execute().data
+    return rows[0]["bingo_map_reset_at"] if rows else None
+
+
+def _check_map_exploration_bonus(client, node_id: UUID, session_id: UUID, guest_id: UUID | None = None) -> int:
     """Award the one-time 50-coin Map Exploration bonus once the calling
-    session has visited every currently-open top-level node.
+    session (or, as of Guest Accounts Phase 3, the calling guest across
+    every linked session) has visited every currently-open top-level node.
 
     Scoped to parent_node_id IS NULL: children (the Arcade Pad/Ground Games
     sub-nodes) render no pin/card of their own in MapScreen.tsx and are never
@@ -347,7 +411,23 @@ def _check_map_exploration_bonus(client, node_id: UUID, session_id: UUID) -> int
     the map, since the completeness condition was still global then). A
     session that has visited nothing itself can no longer receive this
     bonus no matter what any other session has done.
+
+    Guest Accounts Phase 3: guest_id, when given, widens both halves to
+    every session linked to the guest (_resolve_session_ids), same as
+    Bingo's completion checks. The already-awarded guard needs one extra
+    wrinkle for a guest that Bingo's milestone guard doesn't: unlike
+    achieved_milestones (derived live from session_tile_completions, which
+    Start Fresh genuinely deletes), this guard checks coin_awards directly,
+    and coin_awards is an append-only ledger that Start Fresh never deletes
+    from (see start_fresh_bingo_map/session_reset.py) -- deleting a guest's
+    own earn history there would both violate that ledger's append-only
+    invariant and claw back coins they already spent/kept. So the guard
+    additionally requires the award to have landed after the guest's last
+    Start Fresh (guests.bingo_map_reset_at, set by start_fresh_bingo_map) --
+    that column is what actually makes the bonus re-earnable post-Start-
+    Fresh, not the node_visits delete alone.
     """
+    session_ids = _resolve_session_ids(session_id, guest_id)
     all_nodes = client.table("map_nodes").select("id,is_open,parent_node_id").execute().data
     top_level_open_ids = {n["id"] for n in all_nodes if n["is_open"] and n["parent_node_id"] is None}
     if not top_level_open_ids:
@@ -356,23 +436,28 @@ def _check_map_exploration_bonus(client, node_id: UUID, session_id: UUID) -> int
     visited_rows = (
         client.table("node_visits")
         .select("node_id")
-        .eq("session_id", str(session_id))
+        .in_("session_id", session_ids)
         .in_("node_id", list(top_level_open_ids))
         .execute()
         .data
+        if session_ids
+        else []
     )
     visited_node_ids = {r["node_id"] for r in visited_rows}
     if not top_level_open_ids <= visited_node_ids:
         return 0
 
-    already_awarded = (
+    already_awarded_query = (
         client.table("coin_awards")
         .select("id")
         .eq("source_type", CoinSourceType.MAP_EXPLORATION.value)
-        .eq("session_id", str(session_id))
-        .execute()
-        .data
+        .in_("session_id", session_ids)
     )
+    if guest_id is not None:
+        reset_at = _guest_bingo_map_reset_at(client, guest_id)
+        if reset_at is not None:
+            already_awarded_query = already_awarded_query.gte("created_at", reset_at)
+    already_awarded = already_awarded_query.execute().data
     if already_awarded:
         return 0
 
@@ -382,7 +467,9 @@ def _check_map_exploration_bonus(client, node_id: UUID, session_id: UUID) -> int
     return coins_service.MAP_EXPLORATION_AMOUNT
 
 
-def visit_node(node_id: UUID, completed_tile_ids: list[UUID], session_id: UUID) -> VisitNodeResponse:
+def visit_node(
+    node_id: UUID, completed_tile_ids: list[UUID], session_id: UUID, guest_id: UUID | None = None
+) -> VisitNodeResponse:
     """Mark a node visited, completing any confirmed linked tiles first (4.3).
 
     completed_tile_ids are the tiles the guest answered "Yes" to on the
@@ -395,9 +482,14 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID], session_id: UUID) 
     session_id attributes any coin awards (tile milestones, the Map
     Exploration bonus) to the calling device, and (Per-Device Sessions
     Phase 3) is also the session whose visited-status actually gets written
-    -- node visit state is per-device now, not global.
+    -- node visit state is per-device now, not global. guest_id (Guest
+    Accounts Phase 3) widens every *read* this triggers (prior tile
+    completions, the exploration-bonus completeness/already-awarded checks)
+    to the guest's full linked-session set -- see complete_tile and
+    _check_map_exploration_bonus.
     """
     client = get_supabase_client()
+    session_ids = _resolve_session_ids(session_id, guest_id)
 
     node_rows = client.table("map_nodes").select("*").eq("id", str(node_id)).execute().data
     if not node_rows:
@@ -422,7 +514,7 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID], session_id: UUID) 
     linked_ids = {r["id"] for r in linked_tile_rows}
 
     tile_completions = [
-        complete_tile(tile_id, session_id) for tile_id in completed_tile_ids if str(tile_id) in linked_ids
+        complete_tile(tile_id, session_id, guest_id) for tile_id in completed_tile_ids if str(tile_id) in linked_ids
     ]
 
     # Upsert, not insert: re-visiting an already-visited node must not violate
@@ -441,7 +533,7 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID], session_id: UUID) 
         default_to_null=False,
     ).execute()
 
-    map_exploration_bonus = _check_map_exploration_bonus(client, node_id, session_id)
+    map_exploration_bonus = _check_map_exploration_bonus(client, node_id, session_id, guest_id)
 
     tiles = (
         client.table("bingo_tiles")
@@ -451,8 +543,9 @@ def visit_node(node_id: UUID, completed_tile_ids: list[UUID], session_id: UUID) 
         .data
     )
     # Per-Device Sessions Phase 6a: completed status for this response is
-    # this session's own session_tile_completions, not a global column.
-    session_completions = _session_tile_completions(client, session_id, [t["id"] for t in tiles])
+    # this session's (or guest's, Phase 3) own session_tile_completions rows,
+    # not a global column.
+    session_completions = _session_tile_completions(client, session_ids, [t["id"] for t in tiles])
     linked_tiles = [LinkedTile(id=t["id"], label=t["label"], completed=t["id"] in session_completions) for t in tiles]
     children = [ChildNode(id=c["id"], name=c["name"]) for c in child_rows]
 
@@ -502,3 +595,70 @@ def set_node_open_status(node_id: UUID, is_open: bool) -> MapNode:
     children = [ChildNode(id=c["id"], name=c["name"]) for c in child_rows]
 
     return _row_to_map_node(updated_node_row, linked_tiles, children)
+
+
+def get_guest_bingo_map_status(guest_id: UUID) -> GuestBingoMapStatus:
+    """Guest Accounts Phase 3: backs GET /account/bingo-map/status, called
+    right after login so the frontend can decide whether the "Welcome back"
+    continue-or-start-fresh prompt should appear at all (has_progress) and,
+    if so, what numbers to show alongside it.
+
+    tiles_completed/nodes_visited span every session ever linked to the
+    guest (list_guest_session_ids), same join as every other guest-lifetime
+    read in this app. tiles_completed dedupes by tile_id (via a set) rather
+    than counting rows -- two of the guest's linked sessions independently
+    completing the same tile must still count as 1, not 2.
+    """
+    client = get_supabase_client()
+    session_ids = list_guest_session_ids(guest_id)
+    tiles_total = len(client.table("bingo_tiles").select("id").execute().data)
+
+    if not session_ids:
+        return GuestBingoMapStatus(has_progress=False, tiles_completed=0, tiles_total=tiles_total, nodes_visited=0)
+
+    tile_rows = client.table("session_tile_completions").select("tile_id").in_("session_id", session_ids).execute().data
+    tiles_completed = len({r["tile_id"] for r in tile_rows})
+
+    node_rows = client.table("node_visits").select("node_id").in_("session_id", session_ids).execute().data
+    nodes_visited = len({r["node_id"] for r in node_rows})
+
+    return GuestBingoMapStatus(
+        has_progress=tiles_completed > 0 or nodes_visited > 0,
+        tiles_completed=tiles_completed,
+        tiles_total=tiles_total,
+        nodes_visited=nodes_visited,
+    )
+
+
+def start_fresh_bingo_map(guest_id: UUID) -> BingoMapStartFreshResult:
+    """Guest Accounts Phase 3: backs POST /account/bingo-map/start-fresh --
+    the one deliberate, guest-initiated wipe of this guest's Bingo/Map
+    progress across every device session ever linked to them. Never
+    triggered automatically and never bundled into Reset Session (see
+    app/services/session_reset.py's docstring).
+
+    Also stamps guests.bingo_map_reset_at = now(), which is what actually
+    makes the Map Exploration bonus re-earnable afterward -- unlike Bingo
+    milestones (recomputed live off session_tile_completions, so deleting
+    those rows alone is enough), the Map Exploration bonus's idempotency
+    guard checks the append-only coin_awards ledger directly and never
+    deletes from it, so it needs this explicit boundary to know a fresh
+    attempt has started. See _check_map_exploration_bonus's docstring for
+    the full reasoning.
+    """
+    client = get_supabase_client()
+    session_ids = list_guest_session_ids(guest_id)
+
+    if not session_ids:
+        return BingoMapStartFreshResult(bingo_tiles_reset=0, map_nodes_reset=0)
+
+    tile_rows = (
+        client.table("session_tile_completions").delete().in_("session_id", session_ids).execute().data
+    )
+    node_rows = client.table("node_visits").delete().in_("session_id", session_ids).execute().data
+
+    client.table("guests").update({"bingo_map_reset_at": datetime.now(timezone.utc).isoformat()}).eq(
+        "id", str(guest_id)
+    ).execute()
+
+    return BingoMapStartFreshResult(bingo_tiles_reset=len(tile_rows), map_nodes_reset=len(node_rows))

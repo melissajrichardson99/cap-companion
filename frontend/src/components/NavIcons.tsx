@@ -353,6 +353,17 @@ export function BarChartIcon({ className }: IconProps) {
   )
 }
 
+// Head + shoulders -- Guest Accounts' "Save Your Progress" nav entry and the
+// AccountModal's title badge. Nothing else in the app covers this shape.
+export function UserIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <circle cx="10" cy="6.3" r="3.3" />
+      <path d="M3.5 17v-1.2a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5V17" />
+    </svg>
+  )
+}
+
 // Two corner finder squares + a scattered data grid -- a simplified QR code
 // glyph for the Staff Page sidebar's QR Codes item. Nothing else in the app
 // covers this shape.

@@ -17,7 +17,8 @@ genuinely session-scoped here, table by table:
     map_nodes.state was dropped entirely in migration 026, so Map
     visited-status is fully, cleanly per-session. (map_nodes.is_open is
     untouched by Reset Session either way -- it's staff-managed operational
-    status, not guest visit progress.)
+    status, not guest visit progress.) As of Guest Accounts Phase 3 below,
+    this is skipped entirely for a session linked to a guest.
   - photo_votes (Phase 5, migration 028) is likewise scoped to the calling
     session: this call clears only *the caller's own* Favorite Photo vote
     row(s), so the caller can vote again. This is a deliberate departure
@@ -41,7 +42,9 @@ genuinely session-scoped here, table by table:
     completions (and, since milestone status is now computed live off that
     same table -- see app/services/milestone.py's achieved_milestones -- its
     milestone progress along with it). bingo_cards/bingo_tiles (the shared
-    layout) are untouched, same as map_nodes.is_open above.
+    layout) are untouched, same as map_nodes.is_open above. As of Guest
+    Accounts Phase 3 below, this is skipped entirely for a session linked to
+    a guest, same exception as node_visits.
   - hunt_progress (Phase 6b, migration 030 -- the last table migrated) is
     likewise scoped to the calling session: this call clears only *the
     caller's own* Scavenger Hunt found/unlocked and challenge-completion
@@ -73,6 +76,40 @@ Announcements and Attraction open/closed status (map_nodes.is_open) were
 never part of Reset Session's scope at any point in this migration -- both
 are genuinely global, staff-managed content with no per-guest progress
 concept, not features this migration ever touched.
+
+Guest Accounts Phase 1 (migration 036) adds one more fork, specifically for
+Coins/Collectibles: if the calling session is linked to a guest
+(device_sessions.guest_id is set), coin_awards/collectible_redemptions rows
+for *this* session are deliberately left alone rather than deleted --
+they're the guest's permanent lifetime history, reachable forever through
+this (now-retired) session's still-set guest_id, and Coins/Collectibles'
+lifetime read joins through that column (see app/services/coins.py's
+get_total).
+
+Guest Accounts Phase 3 extends that same exception to Bingo tile completions
+(session_tile_completions) and Map node visits (node_visits): for a linked
+session these are now also left alone here, since a returning guest's Bingo
+card/map progress is meant to carry forward exactly like their Coins balance
+(app/services/map_bingo.py's list_map_nodes/get_bingo_card, guest-aware as of
+this phase). The only way a guest's Bingo/Map progress is ever cleared is the
+explicit, guest-initiated POST /account/bingo-map/start-fresh (app/services/
+map_bingo.py's start_fresh_bingo_map) -- never this endpoint. Hunt
+(hunt_progress) is a separate, not-yet-built phase (Phase 2) and still resets
+normally below for a linked session, same as puzzle/scoring/photo votes --
+none of those are guest-lifetime-scoped yet, so there's nothing to preserve
+for them. A linked session also has its
+guest_auth_tokens row for *this device* deleted (identified by the request's
+X-Guest-Auth header -- the only reliable way to know which of the guest's
+possibly-several device tokens belongs to this one device), logging the
+guest out here without touching their other logged-in devices. The frontend
+then rotates to a fresh, unlinked X-Device-Session token for whoever uses
+this device next (see deviceSession.ts's rotateDeviceSessionId) -- this
+session_id is retired, not reused, which is what keeps its guest_id (and the
+lifetime history reachable through it) intact rather than being nulled back
+off. See migration 036's header for the full reasoning. guest_logged_out on
+the result tells the frontend whether this happened, since it can't infer it
+from the (correctly zero, nothing-was-deleted) coins_reset/
+collectible_cards_reset counts alone.
 """
 
 from __future__ import annotations
@@ -83,24 +120,37 @@ from app.models import ResetSessionResult
 from app.supabase_client import get_supabase_client
 
 
-def reset_session(session_id: UUID) -> ResetSessionResult:
+def reset_session(session_id: UUID, guest_auth_token: str | None = None) -> ResetSessionResult:
     client = get_supabase_client()
 
-    tile_rows = (
-        client.table("session_tile_completions").delete().eq("session_id", str(session_id)).execute().data
-    )
-
-    node_visit_rows = client.table("node_visits").delete().eq("session_id", str(session_id)).execute().data
+    session_rows = client.table("device_sessions").select("guest_id").eq("id", str(session_id)).execute().data
+    is_linked_to_guest = bool(session_rows and session_rows[0]["guest_id"])
 
     progress_rows = (
         client.table("hunt_progress").delete().eq("session_id", str(session_id)).execute().data
     )
 
-    coin_rows = client.table("coin_awards").delete().eq("session_id", str(session_id)).execute().data
-
-    collectible_rows = (
-        client.table("collectible_redemptions").delete().eq("session_id", str(session_id)).execute().data
-    )
+    if is_linked_to_guest:
+        # Preserve this guest's lifetime Coins/Collectibles/Bingo/Map history
+        # -- see this module's docstring. The device is instead logged out
+        # below. Only the explicit POST /account/bingo-map/start-fresh (Guest
+        # Accounts Phase 3, app/services/map_bingo.py's start_fresh_bingo_map)
+        # ever clears a linked guest's Bingo/Map progress.
+        tile_rows = []
+        node_visit_rows = []
+        coin_rows = []
+        collectible_rows = []
+        if guest_auth_token and guest_auth_token.strip():
+            client.table("guest_auth_tokens").delete().eq("token", guest_auth_token).execute()
+    else:
+        tile_rows = (
+            client.table("session_tile_completions").delete().eq("session_id", str(session_id)).execute().data
+        )
+        node_visit_rows = client.table("node_visits").delete().eq("session_id", str(session_id)).execute().data
+        coin_rows = client.table("coin_awards").delete().eq("session_id", str(session_id)).execute().data
+        collectible_rows = (
+            client.table("collectible_redemptions").delete().eq("session_id", str(session_id)).execute().data
+        )
 
     puzzle_attempt_rows = client.table("puzzle_attempts").delete().eq("session_id", str(session_id)).execute().data
 
@@ -121,4 +171,5 @@ def reset_session(session_id: UUID) -> ResetSessionResult:
         puzzle_attempts_reset=len(puzzle_attempt_rows),
         scoring_sessions_reset=len(scoring_session_rows),
         photo_votes_reset=len(photo_vote_rows),
+        guest_logged_out=is_linked_to_guest,
     )

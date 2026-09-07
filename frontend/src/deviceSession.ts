@@ -16,3 +16,15 @@ export function getDeviceSessionId(): string {
   }
   return id
 }
+
+// Guest Accounts Phase 1: called after a Reset Session that logged a guest
+// out on this device (ResetSessionResult.guest_logged_out) -- the retired
+// session_id keeps its guest_id (and that guest's lifetime Coins/
+// Collectibles history) forever, per backend/app/services/session_reset.py's
+// docstring, so this device needs a brand new, unlinked identity for
+// whoever uses it next rather than continuing to send the old token.
+export function rotateDeviceSessionId(): string {
+  const id = crypto.randomUUID()
+  localStorage.setItem(STORAGE_KEY, id)
+  return id
+}

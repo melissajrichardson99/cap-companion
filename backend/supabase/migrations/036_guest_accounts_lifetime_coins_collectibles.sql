@@ -1,0 +1,43 @@
+-- CAP Companion App — migration 036: Guest Accounts Phase 1 — Cobb Coins +
+-- Collectibles as lifetime account totals
+--
+-- Adds the guest<->device-session link: device_sessions.guest_id, nullable,
+-- set the moment a guest signs up or logs in on this device (see
+-- app/services/guest_accounts.py's _link_device_session, called from within
+-- the same request as POST /account/signup and POST /account/login). This is
+-- the ONLY thing that ever sets this column -- a guest must log in again on
+-- each new device/session to link it.
+--
+-- Coins (app/services/coins.py's get_total) and Collectibles
+-- (app/services/collectibles.py's list_cards/purchase) are now guest-aware:
+-- for a session linked to a guest, the lifetime total/gallery is computed
+-- across every device_sessions row ever linked to that guest_id (a plain
+-- app-level query -- see app/device_session.py's list_guest_session_ids --
+-- not a DB view/trigger), not just the calling session. An anonymous
+-- session (guest_id null) is completely unaffected -- same current-session-
+-- only behavior as before this migration.
+--
+-- Reset Session (app/services/session_reset.py) has a deliberately different
+-- rule for a session whose guest_id is set here: it does NOT delete that
+-- session's own coin_awards/collectible_redemptions rows (unlike the normal
+-- anonymous-session reset, which does) -- those rows are the guest's
+-- permanent lifetime history, reachable forever through this now-retired
+-- session's still-set guest_id. Instead it deletes the guest_auth_tokens row
+-- for the token used on this device (the request's X-Guest-Auth header,
+-- since that's the only reliable way to know which of the guest's possibly-
+-- several device tokens belongs to *this* device) -- logging the guest out
+-- on this device only, while every other device they're logged in on keeps
+-- working. The frontend then rotates to a brand new (anonymous)
+-- X-Device-Session token for whoever uses the device next, per the project's
+-- existing "device sessions don't persist across a Reset Session" design --
+-- see deviceSession.ts's rotateDeviceSessionId. This never touches any OTHER
+-- device_sessions row's coin_awards/collectible_redemptions, guest-linked or
+-- not -- reset is still strictly scoped to the one session_id being reset.
+--
+-- Run this in the Supabase SQL editor against the live project.
+-- Safe to run more than once: the column add is guarded and the index
+-- create is idempotent.
+
+alter table device_sessions add column if not exists guest_id uuid references guests(id);
+
+create index if not exists device_sessions_guest_id_idx on device_sessions(guest_id);

@@ -301,6 +301,7 @@
   gap: 2px;
 }
 
+.nav-menu-account-link,
 .nav-menu-staff-link,
 .nav-menu-reset-link {
   font-family: var(--cap-font-body);
@@ -315,6 +316,7 @@
   text-underline-offset: 2px;
 }
 
+.nav-menu-account-link:hover,
 .nav-menu-staff-link:hover,
 .nav-menu-reset-link:hover {
   color: var(--cap-color-on-header);

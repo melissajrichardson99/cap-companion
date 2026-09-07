@@ -199,6 +199,7 @@ def generate_passport(
     content_type: str | None,
     file_bytes: bytes | None,
     device_session_id: UUID,
+    guest_id: UUID | None = None,
 ) -> PassportSession:
     client = get_supabase_client()
 
@@ -221,9 +222,26 @@ def generate_passport(
                 "family_label": family_label,
                 "photo_storage_path": storage_path,
                 "stats": stats.model_dump(mode="json"),
+                "guest_id": str(guest_id) if guest_id is not None else None,
             }
         )
         .execute()
         .data[0]
     )
     return _row_to_session(row)
+
+
+def list_guest_passports(guest_id: UUID) -> list[PassportSession]:
+    """Guest Accounts Phase 4: every passport ever generated for this guest,
+    newest first -- direct guest_id filter, not a cross-session join, since a
+    passport never changes after creation (see migration 038)."""
+    client = get_supabase_client()
+    rows = (
+        client.table("passport_sessions")
+        .select("id, family_label, photo_storage_path, generated_at, stats")
+        .eq("guest_id", str(guest_id))
+        .order("generated_at", desc=True)
+        .execute()
+        .data
+    )
+    return [_row_to_session(row) for row in rows]

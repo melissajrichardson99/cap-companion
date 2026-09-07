@@ -29,6 +29,16 @@ its own append-only ledger, collectible_redemptions, rather than negative
 rows here -- this table's `amount > 0` CHECK stays earn-only. get_total()
 below nets the two ledgers together, so it's still the one place "how many
 coins does this session have right now" is computed.
+
+Guest Accounts Phase 1 (migration 036): get_total()/get_summary() now take
+an optional guest_id. When given (the calling session is linked to a guest
+-- see app/guest_auth.py's get_optional_guest), the total is computed across
+every device session ever linked to that guest (app/device_session.py's
+list_guest_session_ids), not just the calling one -- a guest's balance is a
+lifetime total, not a per-visit one. guest_id=None (anonymous) behaves
+exactly as before this migration: current-session-only. award_coins() itself
+is unaffected -- inserts are still tagged with session_id as always; only
+the read side gained the guest-wide fork.
 """
 
 from __future__ import annotations
@@ -36,6 +46,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+from app.device_session import list_guest_session_ids
 from app.models import CoinAward, CoinsSummary, CoinSourceType
 from app.supabase_client import get_supabase_client
 
@@ -106,22 +117,20 @@ def award_coins(source_type: CoinSourceType, source_id: UUID, amount: int, sessi
     return _row_to_award(row)
 
 
-def get_total(session_id: UUID) -> int:
+def get_total(session_id: UUID, guest_id: UUID | None = None) -> int:
+    session_ids = list_guest_session_ids(guest_id) if guest_id is not None else [str(session_id)]
+    if not session_ids:
+        return 0
+
     client = get_supabase_client()
-    earned_rows = (
-        client.table("coin_awards").select("amount").eq("session_id", str(session_id)).execute().data
-    )
+    earned_rows = client.table("coin_awards").select("amount").in_("session_id", session_ids).execute().data
     spent_rows = (
-        client.table("collectible_redemptions")
-        .select("coins_spent")
-        .eq("session_id", str(session_id))
-        .execute()
-        .data
+        client.table("collectible_redemptions").select("coins_spent").in_("session_id", session_ids).execute().data
     )
     earned = sum(r["amount"] for r in earned_rows)
     spent = sum(r["coins_spent"] for r in spent_rows)
     return earned - spent
 
 
-def get_summary(session_id: UUID) -> CoinsSummary:
-    return CoinsSummary(total=get_total(session_id))
+def get_summary(session_id: UUID, guest_id: UUID | None = None) -> CoinsSummary:
+    return CoinsSummary(total=get_total(session_id, guest_id))

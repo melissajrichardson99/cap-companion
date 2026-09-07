@@ -4,7 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.device_session import get_or_create_session
 from app.errors import NotFoundError
-from app.models import DeviceSession, MapNode, SetNodeOpenStatusRequest, VisitNodeRequest, VisitNodeResponse
+from app.guest_auth import get_optional_guest
+from app.models import (
+    DeviceSession,
+    Guest,
+    MapNode,
+    SetNodeOpenStatusRequest,
+    VisitNodeRequest,
+    VisitNodeResponse,
+)
 from app.services import map_bingo
 from app.staff_auth import require_staff
 
@@ -12,16 +20,22 @@ router = APIRouter(prefix="/map", tags=["map"])
 
 
 @router.get("/nodes", response_model=list[MapNode])
-def list_nodes(session: DeviceSession = Depends(get_or_create_session)) -> list[MapNode]:
-    return map_bingo.list_map_nodes(session.id)
+def list_nodes(
+    session: DeviceSession = Depends(get_or_create_session),
+    guest: Guest | None = Depends(get_optional_guest),
+) -> list[MapNode]:
+    return map_bingo.list_map_nodes(session.id, guest.id if guest else None)
 
 
 @router.post("/nodes/{node_id}/visit", response_model=VisitNodeResponse)
 def visit_node(
-    node_id: UUID, body: VisitNodeRequest, session: DeviceSession = Depends(get_or_create_session)
+    node_id: UUID,
+    body: VisitNodeRequest,
+    session: DeviceSession = Depends(get_or_create_session),
+    guest: Guest | None = Depends(get_optional_guest),
 ) -> VisitNodeResponse:
     try:
-        return map_bingo.visit_node(node_id, body.completed_tile_ids, session.id)
+        return map_bingo.visit_node(node_id, body.completed_tile_ids, session.id, guest.id if guest else None)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

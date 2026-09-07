@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
-import { Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { api, type AnimalPhoto, type Announcement, type BingoCard, type CoinsSummary, type CollectibleCard, type CollectibleCatalogEntry, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ScoringGame, type StaffRequest, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { api, type AnimalPhoto, type Announcement, type BingoCard, type CoinsSummary, type CollectibleCard, type CollectibleCatalogEntry, type Guest, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ResetSessionResult, type ScoringGame, type StaffRequest, type TileCompletionResult, type VisitNodeResponse } from './api'
+import { AccountModal } from './components/AccountModal'
 import { AnimalsScreen } from './components/AnimalsScreen'
 import { AnnouncementPopup } from './components/AnnouncementPopup'
 import { BingoScreen } from './components/BingoScreen'
@@ -19,13 +20,16 @@ import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIco
 import { PassportModal } from './components/PassportModal'
 import { PhotoScreen } from './components/PhotoScreen'
 import { PuzzleScreen } from './components/PuzzleScreen'
+import { ResetPasswordScreen } from './components/ResetPasswordScreen'
 import { ResetSessionModal } from './components/ResetSessionModal'
 import { ScanEntryModal } from './components/ScanEntryModal'
 import { ScanScreen } from './components/ScanScreen'
 import { ScoringScreen } from './components/ScoringScreen'
 import { StaffPage } from './components/StaffPage'
 import { ToastStack, type ToastItem } from './components/ToastStack'
+import { rotateDeviceSessionId } from './deviceSession'
 import { clearDismissedAnnouncements } from './dismissedAnnouncements'
+import { clearGuestAuthToken, getGuestAuthToken, setGuestAuthToken } from './guestAuth'
 import './components/shared.css'
 import './App.css'
 
@@ -66,6 +70,12 @@ function App() {
   const [showContactStaff, setShowContactStaff] = useState(false)
   const [showPassport, setShowPassport] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showAccount, setShowAccount] = useState(false)
+
+  // Guest Accounts Phase 0 -- null whenever no guest is logged in on this
+  // device (the common case; accounts are entirely optional and don't gate
+  // anything else in the app). Hydrated from a stored token on mount below.
+  const [guest, setGuest] = useState<Guest | null>(null)
 
   const [nodes, setNodes] = useState<MapNode[] | null>(null)
   const [nodesError, setNodesError] = useState<string | null>(null)
@@ -239,6 +249,35 @@ function App() {
     api.listAnimalPhotos().then(setAnimalPhotos).catch((err) => setAnimalPhotosError(String(err)))
   }
 
+  // Guest Accounts Phase 0 -- if this device has a stored guest auth token
+  // (from a previous signup/login), confirm it's still valid via
+  // GET /account/whoami and populate `guest`; a stale/expired token is
+  // cleared rather than left around to keep failing silently on every load.
+  useEffect(() => {
+    if (!getGuestAuthToken()) return
+    api.guestWhoami().then(setGuest).catch(() => clearGuestAuthToken())
+  }, [])
+
+  // Guest Accounts Phase 1: signing up/logging in (or logging out) changes
+  // which Coins/Collectibles this device sees -- current-session-only vs.
+  // this guest's lifetime total (app/services/coins.py's get_total) -- so
+  // both need reloading here, or the nav/gallery would keep showing
+  // whatever total was fetched under the *previous* auth state until some
+  // unrelated action happened to trigger a reload.
+  const handleGuestAuthed = (nextGuest: Guest, token: string) => {
+    setGuestAuthToken(token)
+    setGuest(nextGuest)
+    reloadCoins()
+    reloadCollectibleCards()
+  }
+
+  const handleGuestLoggedOut = () => {
+    clearGuestAuthToken()
+    setGuest(null)
+    reloadCoins()
+    reloadCollectibleCards()
+  }
+
   useEffect(() => {
     reloadNodes()
     reloadPuzzles()
@@ -341,7 +380,17 @@ function App() {
     }
   }
 
-  const handleResetSession = () => {
+  const handleResetSession = (result: ResetSessionResult) => {
+    // Guest Accounts Phase 1: the backend already logged the guest out on
+    // this device (see backend/app/services/session_reset.py) -- rotate to
+    // a fresh, unlinked device session BEFORE the reloads below so they
+    // fetch this device's genuinely-fresh anonymous state, not a stale view
+    // through the now-retired (but still guest-linked, lifetime-totals-
+    // preserving) old session id.
+    if (result.guest_logged_out) {
+      rotateDeviceSessionId()
+      handleGuestLoggedOut()
+    }
     if (cardId) reloadCard(cardId)
     reloadNodes()
     reloadHuntCharacters()
@@ -439,6 +488,7 @@ function App() {
           with the guest-facing app. Gated behind a shared staff password
           (app/staff_auth.py) -- StaffPage itself handles the login screen. */}
       <Route path="/staff" element={<StaffPage />} />
+      <Route path="/reset-password" element={<ResetPasswordRoute />} />
       <Route
         path="/scan/:code"
         element={
@@ -468,6 +518,11 @@ function App() {
             setShowPassport={setShowPassport}
             showResetConfirm={showResetConfirm}
             setShowResetConfirm={setShowResetConfirm}
+            showAccount={showAccount}
+            setShowAccount={setShowAccount}
+            guest={guest}
+            onGuestAuthed={handleGuestAuthed}
+            onGuestLoggedOut={handleGuestLoggedOut}
             nodes={nodes}
             nodesError={nodesError}
             reloadNodes={reloadNodes}
@@ -520,6 +575,25 @@ function App() {
       />
     </Routes>
   )
+}
+
+// The password reset email's link destination (/reset-password?token=...) --
+// a real cold-load deep link, same spirit as ScanRoute. Missing/blank token
+// (e.g. someone navigating here directly) just bounces home rather than
+// showing a form that can never succeed.
+function ResetPasswordRoute() {
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const token = searchParams.get('token') ?? ''
+
+  useEffect(() => {
+    if (!token) navigate('/', { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
+
+  if (!token) return null
+
+  return <ResetPasswordScreen token={token} onDone={() => navigate('/')} />
 }
 
 interface ScanRouteProps {
@@ -587,6 +661,11 @@ interface GuestShellProps {
   setShowPassport: (show: boolean) => void
   showResetConfirm: boolean
   setShowResetConfirm: (show: boolean) => void
+  showAccount: boolean
+  setShowAccount: (show: boolean) => void
+  guest: Guest | null
+  onGuestAuthed: (guest: Guest, token: string) => void
+  onGuestLoggedOut: () => void
   nodes: MapNode[] | null
   nodesError: string | null
   reloadNodes: () => void
@@ -633,7 +712,7 @@ interface GuestShellProps {
   onDismissToast: (id: string) => void
   activeMinigame: Minigame | null
   onMinigameOverlayClose: () => void
-  handleResetSession: () => void
+  handleResetSession: (result: ResetSessionResult) => void
 }
 
 // Guest-facing shell: shared header/nav/toasts/modals, wrapping every
@@ -663,11 +742,13 @@ function GuestShell(props: GuestShellProps) {
             onSelectTab={selectTab}
             coinTotal={props.coinsSummary?.total ?? 0}
             contactRequestStatus={props.myRequestStatus?.status ?? null}
+            accountLabel={props.guest ? props.guest.email : 'Save Your Progress'}
             onScanQr={() => props.setShowScanEntry(true)}
             onGeneratePassport={() => props.setShowPassport(true)}
             onContactStaff={() => props.setShowContactStaff(true)}
             onResetSession={() => props.setShowResetConfirm(true)}
             onStaffNav={() => navigate('/staff')}
+            onAccount={() => props.setShowAccount(true)}
           />
         </div>
       </header>
@@ -820,7 +901,24 @@ function GuestShell(props: GuestShellProps) {
       {props.showPassport && <PassportModal onClose={() => props.setShowPassport(false)} />}
 
       {props.showResetConfirm && (
-        <ResetSessionModal onClose={() => props.setShowResetConfirm(false)} onReset={props.handleResetSession} />
+        <ResetSessionModal
+          guest={props.guest}
+          onClose={() => props.setShowResetConfirm(false)}
+          onReset={props.handleResetSession}
+        />
+      )}
+
+      {props.showAccount && (
+        <AccountModal
+          guest={props.guest}
+          onAuthed={props.onGuestAuthed}
+          onLoggedOut={props.onGuestLoggedOut}
+          onClose={() => props.setShowAccount(false)}
+          onBingoMapStartFresh={() => {
+            if (props.cardId) props.reloadCard(props.cardId)
+            props.reloadNodes()
+          }}
+        />
       )}
 
       <AnnouncementPopup announcements={props.announcements} resetSignal={props.announcementResetSignal} />

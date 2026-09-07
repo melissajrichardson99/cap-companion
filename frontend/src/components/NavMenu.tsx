@@ -21,11 +21,16 @@ interface NavMenuProps<T extends string> {
   // active request" badge, the check-anytime counterpart to the proactive
   // toast App.tsx fires on open -> acknowledged.
   contactRequestStatus: StaffRequestStatus | null
+  // Guest Accounts Phase 0 -- "Save Your Progress" when logged out, the
+  // guest's own email when logged in. Entirely optional/additive: this is
+  // the one discoverable entry point into AccountModal.
+  accountLabel: string
   onScanQr: () => void
   onGeneratePassport: () => void
   onContactStaff: () => void
   onResetSession: () => void
   onStaffNav: () => void
+  onAccount: () => void
 }
 
 // Guest-facing mobile nav: a hamburger toggle that opens a panel anchored to
@@ -39,11 +44,13 @@ export function NavMenu<T extends string>({
   onSelectTab,
   coinTotal,
   contactRequestStatus,
+  accountLabel,
   onScanQr,
   onGeneratePassport,
   onContactStaff,
   onResetSession,
   onStaffNav,
+  onAccount,
 }: NavMenuProps<T>) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -172,6 +179,9 @@ export function NavMenu<T extends string>({
             </div>
 
             <div className="nav-menu-footer">
+              <button type="button" className="nav-menu-account-link" onClick={() => runAction(onAccount)}>
+                {accountLabel}
+              </button>
               <button type="button" className="nav-menu-staff-link" onClick={() => runAction(onStaffNav)}>
                 Staff
               </button>

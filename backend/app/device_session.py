@@ -18,6 +18,7 @@ endpoint in app/routers/device_session.py.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import Header, HTTPException
 
@@ -50,3 +51,16 @@ def get_or_create_session(x_device_session: str = Header(...)) -> DeviceSession:
         .data[0]
     )
     return DeviceSession(id=row["id"], created_at=row["created_at"], last_active_at=row["last_active_at"])
+
+
+def list_guest_session_ids(guest_id: UUID) -> list[str]:
+    """Every device_sessions.id ever linked to `guest_id` (Guest Accounts
+    Phase 1, migration 036) -- the join Coins/Collectibles' lifetime totals
+    are computed through (see app/services/coins.py's get_total and
+    app/services/collectibles.py's list_cards/purchase). A guest with no
+    linked sessions yet (shouldn't happen in practice -- signup/login always
+    link the calling session in the same request) returns an empty list
+    rather than erroring."""
+    client = get_supabase_client()
+    rows = client.table("device_sessions").select("id").eq("guest_id", str(guest_id)).execute().data
+    return [row["id"] for row in rows]

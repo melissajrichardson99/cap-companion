@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.routers import (
+    account,
     analytics,
     animal_photos,
     announcements,
@@ -83,6 +84,7 @@ app.include_router(device_session.router)
 app.include_router(announcements.router)
 app.include_router(animal_photos.router)
 app.include_router(analytics.router)
+app.include_router(account.router)
 
 
 @app.get("/health")

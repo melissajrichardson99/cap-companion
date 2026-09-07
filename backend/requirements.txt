@@ -7,3 +7,5 @@ itsdangerous==2.2.0
 qrcode[pil]==8.0
 python-multipart==0.0.32
 pytest==8.3.4
+bcrypt==4.2.1
+resend==2.5.1

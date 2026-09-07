@@ -4,7 +4,10 @@ Ops reference for the live Cobb's Adventure Park Companion App. Written for a
 future redeploy, a from-scratch rebuild, or handing this off for review —
 optimized for "what do I do" and "what will trip me up," not narrative.
 
-Cross-checked against the repo state as of 2026-08-19. Anything that can only
+Cross-checked against the repo state as of 2026-09-07, including the full
+Guest Accounts project (migrations 035-038: optional guest sign-up/login with
+lifetime Coins/Collectibles/Bingo/Map/Passport-history, gated behind Phase 5's
+security review before any cutover -- see section 5). Anything that can only
 be confirmed in a dashboard (not in this repo) is marked as such below.
 
 ## 1. Architecture
@@ -39,14 +42,20 @@ Follow in order — later steps depend on earlier ones.
       itself. **No manual "create a bucket" step in the dashboard is
       needed** — schema.sql provisions them.
    2. Everything in `backend/supabase/migrations/`, in **numeric filename
-      order** (002 → 017; there is no 001, numbering starts at 002).
-      Most are idempotent (`add column if not exists`, `on conflict do
-      nothing`), but **`017_grant_service_role_privileges.sql` is not
-      optional** — a fresh Supabase project does not grant `service_role`
-      any table privileges by default, and the backend connects exclusively
-      as `service_role` (see `backend/app/supabase_client.py`). Skip 017
-      and every DB-backed route 500s with Postgres error `42501: permission
-      denied for table X`.
+      order** (002 → the latest, currently 038; there is no 001, numbering
+      starts at 002). Most are idempotent (`add column if not exists`,
+      `on conflict do nothing`), but **`017_grant_service_role_privileges.sql`
+      is not optional** — a fresh Supabase project does not grant
+      `service_role` any table privileges by default, and the backend
+      connects exclusively as `service_role` (see
+      `backend/app/supabase_client.py`). Skip 017 and every DB-backed route
+      500s with Postgres error `42501: permission denied for table X`.
+      `035_guest_accounts.sql` through `038_passport_guest_history.sql` are
+      the Guest Accounts feature (optional guest sign-up/login, tables
+      `guests`/`guest_auth_tokens`/`password_reset_tokens`, and the
+      `device_sessions.guest_id` / `passport_sessions.guest_id` link
+      columns) — same idempotent, run-in-order treatment as every other
+      migration here, no special handling needed beyond ordering.
    3. `backend/supabase/seed.sql` — inserts map nodes, minigames, puzzles,
       scoring games, hunt characters, etc.
 3. Why this order: schema.sql must exist before migrations can `alter
@@ -71,10 +80,27 @@ Follow in order — later steps depend on earlier ones.
      `/staff` admin area and sign staff session tokens; reusing dev
      credentials in prod defeats the point of them.
    - `FRONTEND_BASE_URL` — see the circular-dependency note below; deploy
-     with a placeholder first.
+     with a placeholder first. Guest Accounts' password-reset emails link to
+     `<FRONTEND_BASE_URL>/reset-password?token=...` (see
+     `backend/app/services/email.py`), so this must be finalized (2.5)
+     before password reset is usable in production, same as the QR codes.
    - `CORS_ALLOWED_ORIGINS` — same placeholder caveat. **Must include the
      full scheme** (`https://your-app.workers.dev`), not a bare domain —
      see Gotchas.
+   - `RESEND_API_KEY` — **new for Guest Accounts.** Transactional email
+     (password reset) via Resend; get this from Render's dashboard, never
+     paste the raw key into chat (same handling as every other credential
+     here). Without it, `POST /account/password-reset/request` still
+     responds normally (the enumeration-prevention generic message), but
+     the email silently fails to send — logged server-side
+     (`app/services/guest_accounts.py`'s `request_password_reset`), not
+     surfaced to the caller. Verify it's set by actually requesting a reset
+     against a real account after deploying, not just by checking the env
+     var is present.
+   - `RESEND_FROM_ADDRESS` — optional, defaults to Resend's shared testing
+     sender (`onboarding@resend.dev`, no domain verification needed). Set to
+     a verified custom-domain address before this goes anywhere near real
+     guest volume — see `app/services/email.py`.
 3. Deploy. Render builds and starts the service; note its public URL
    (`https://cap-companion-backend.onrender.com`-style).
 
@@ -216,15 +242,59 @@ Follow in order — later steps depend on earlier ones.
   Cloudflare dashboard, not represented in this repo, so they can't be
   verified here. Confirm they're still active from the dashboard directly
   rather than trusting this doc if it's been a while.
-- **This app has no per-user auth — it's a shared-kiosk session model.**
+- **The base app has no per-user auth — it's a shared-kiosk session model.**
   There is one live bingo card and one shared set of map-node states (see
   `backend/scripts/reset_demo_data.py`'s docstring: "every map_nodes row —
-  all cards share the same map"), plus a staff-facing **Reset Session**
+  all cards share the same map"), plus a guest-facing **Reset Session**
   action (`frontend/src/components/ResetSessionModal.tsx`,
-  `backend/app/routers/session.py`) that wipes progress for *everyone*
-  currently using the app. If you stand up a second environment for
-  concurrent testing/demoing, know that one tester hitting Reset Session
-  resets the whole shared state for every other concurrent user on that
-  environment — there's no per-family isolation. Don't rely on concurrent
-  testers being able to work independently against a single deployed
-  instance.
+  `backend/app/routers/session.py`) that wipes progress for *this device
+  only* (per-device scoping was completed by the Per-Device Sessions
+  migration referenced throughout the codebase; this note previously
+  described an earlier, fully-shared-state version of Reset Session that no
+  longer reflects the live code). If you stand up a second environment for
+  concurrent testing/demoing, know that per-device isolation depends on each
+  tester's browser actually holding a distinct `X-Device-Session` token —
+  there's no per-family isolation beyond that.
+- **Guest Accounts (optional, on top of the above) is a real per-user auth
+  layer** — email/password sign-up, bcrypt-hashed, bearer tokens
+  (`X-Guest-Auth`), see section 5. It does not replace the anonymous
+  per-device model; a guest opts in from the nav to make their Coins/
+  Collectibles/Bingo/Map/Passport history follow them across devices and
+  visits instead of resetting per device.
+
+## 5. Guest Accounts
+
+Optional account layer (migrations 035-038) sitting on top of the anonymous
+per-device-session model above — a guest never has to create one, and every
+existing anonymous flow is unaffected either way.
+
+- **Endpoints** (`backend/app/routers/account.py`, prefix `/account`):
+  `POST /signup`, `POST /login`, `POST /logout`, `POST /password-reset/request`,
+  `POST /password-reset/confirm`, `GET /whoami`, `GET /bingo-map/status`,
+  `POST /bingo-map/start-fresh`, `GET /passports`.
+- **Auth model**: bcrypt password hashing, a 90-day sliding-expiry bearer
+  token (`X-Guest-Auth`, stored server-side in `guest_auth_tokens` so a
+  password change can revoke every other active session), and short-lived
+  (1 hour) single-use password-reset tokens. Login and password-reset-request
+  responses are deliberately generic (never reveal whether an email has an
+  account); signup and password-reset-request/signup are all rate-limited
+  in-process (5 attempts / 15 min, keyed by normalized email —
+  `backend/app/rate_limit.py`). That limiter is per-process, in-memory state
+  — it resets on every deploy/restart and does **not** share state across
+  instances, so it only actually throttles abuse as long as this API runs as
+  a single instance (true today on Render's free tier).
+- **Device linking**: `X-Device-Session` (the existing anonymous token)
+  becomes linked to a guest the moment they sign up or log in on that device
+  (`device_sessions.guest_id`), which is what makes Coins/Collectibles/Bingo/
+  Map lifetime totals and Passport history follow the guest across devices.
+  A device already linked to one guest **rejects** (409) an attempt to sign
+  up or log in as a *different* guest on it — this was a fixed bug (Phase 5
+  security review): re-authenticating as someone else used to silently
+  overwrite the link and detach the first guest's history. A plain
+  **Log Out** only deletes that device's auth token, not the link itself —
+  only **Reset Session** actually frees a device (by rotating to a brand new,
+  unlinked token) for a different guest to log in on it next.
+- **Required env var**: `RESEND_API_KEY` (see 2.2.2 above) — password-reset
+  emails silently no-op without it (logged server-side, not surfaced to the
+  caller), so this is easy to miss until someone actually needs to reset a
+  password in production.

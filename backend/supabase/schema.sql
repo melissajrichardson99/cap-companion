@@ -35,6 +35,46 @@ create table if not exists map_nodes (
 -- the known pitfalls section applies here too).
 
 -- ---------------------------------------------------------------------------
+-- Guest Accounts Phase 0 (migration 035) -- foundational auth plumbing only,
+-- no existing feature reads/writes these tables yet. Entirely additive:
+-- device_sessions below keeps working completely unchanged whether or not a
+-- guest also has an account. See migration 035's header for the full
+-- reasoning (sliding token expiry, reset-token single-use, email
+-- normalization). Moved ahead of device_sessions (it originally lived at the
+-- end of this file) once device_sessions.guest_id below needed to reference
+-- it -- a fresh-project run requires guests to exist first.
+-- ---------------------------------------------------------------------------
+create table if not exists guests (
+    id              uuid primary key default gen_random_uuid(),
+    email           text not null unique,
+    password_hash   text not null,
+    created_at      timestamptz not null default now(),
+    updated_at      timestamptz not null default now(),
+    -- Guest Accounts Phase 3 (migration 037): timestamp of this guest's last
+    -- explicit POST /account/bingo-map/start-fresh, or null if never done.
+    -- Consulted only by app/services/map_bingo.py's
+    -- _check_map_exploration_bonus -- see that migration's header for why.
+    bingo_map_reset_at timestamptz
+);
+
+create table if not exists guest_auth_tokens (
+    id              uuid primary key default gen_random_uuid(),
+    guest_id        uuid not null references guests(id) on delete cascade,
+    token           text not null unique,
+    created_at      timestamptz not null default now(),
+    last_active_at  timestamptz not null default now()
+);
+
+create table if not exists password_reset_tokens (
+    id              uuid primary key default gen_random_uuid(),
+    guest_id        uuid not null references guests(id) on delete cascade,
+    token           text not null unique,
+    created_at      timestamptz not null default now(),
+    expires_at      timestamptz not null,
+    used_at         timestamptz
+);
+
+-- ---------------------------------------------------------------------------
 -- device_sessions (Per-Device Sessions Phase 0, migration 023)
 -- ---------------------------------------------------------------------------
 -- Backs every table below whose column FKs to device_sessions(id) --
@@ -48,8 +88,20 @@ create table if not exists device_sessions (
     id              uuid primary key default gen_random_uuid(),
     device_token    text not null unique,
     created_at      timestamptz not null default now(),
-    last_active_at  timestamptz not null default now()
+    last_active_at  timestamptz not null default now(),
+    -- Guest Accounts Phase 1 (migration 036): nullable link to the guest
+    -- account logged in on this device session, set the moment a guest
+    -- signs up or logs in (see app/services/guest_accounts.py's
+    -- _link_device_session). Coins/Collectibles' lifetime total for a linked
+    -- session is computed by joining through this column across every
+    -- session ever linked to that guest -- see migration 036's header for
+    -- the full reasoning, including why Reset Session on a linked session
+    -- leaves this column (and that session's coin_awards/
+    -- collectible_redemptions rows) alone rather than clearing it.
+    guest_id        uuid references guests(id)
 );
+
+create index if not exists device_sessions_guest_id_idx on device_sessions(guest_id);
 
 -- Per-Device Sessions Phase 3 (migration 026): a guest's visited-status for a
 -- node, one row per (session, node) pair -- replaces the old global
@@ -519,11 +571,20 @@ create table if not exists passport_sessions (
     -- other "derive, don't duplicate" spot in this schema, because a
     -- passport is a one-time end-of-visit keepsake whose numbers must not
     -- drift if the family keeps playing afterward.
-    stats               jsonb not null
+    stats               jsonb not null,
+    -- Guest Accounts Phase 4 (migration 038) -- set at generation time if the
+    -- calling session was linked to a guest, or backfilled retroactively on
+    -- login/signup (app/services/guest_accounts.py's _link_device_session).
+    -- Unlike Coins/Collectibles/Bingo/Map, GET /account/passports reads this
+    -- column directly rather than joining across every session ever linked
+    -- to the guest -- a passport never changes after creation, so tagging it
+    -- once at creation is sufficient.
+    guest_id            uuid references guests(id)
 );
 
 create index if not exists passport_sessions_generated_at_idx on passport_sessions(generated_at);
 create index if not exists passport_sessions_session_id_idx on passport_sessions(session_id);
+create index if not exists passport_sessions_guest_id_idx on passport_sessions(guest_id);
 
 insert into storage.buckets (id, name, public)
 values ('family-passport-photos', 'family-passport-photos', true)

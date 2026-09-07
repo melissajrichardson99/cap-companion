@@ -1,9 +1,9 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { api, type PassportSession } from '../api'
 import { Modal } from './Modal'
+import { PassportCard } from './PassportCard'
 import { PassportIcon } from './NavIcons'
 import { PassportReviewModal } from './PassportReviewModal'
-import { PhotoLightbox } from './PhotoLightbox'
 import './PassportModal.css'
 
 interface PassportModalProps {
@@ -31,7 +31,6 @@ export function PassportModal({ onClose }: PassportModalProps) {
   const [error, setError] = useState<string | null>(null)
   const [session, setSession] = useState<PassportSession | null>(null)
   const [reviewPromptDismissed, setReviewPromptDismissed] = useState(false)
-  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -51,70 +50,15 @@ export function PassportModal({ onClose }: PassportModalProps) {
   }
 
   if (session) {
-    const { stats } = session
-    const milestoneNote = stats.bingo_milestones.blackout
-      ? ' — Blackout!'
-      : stats.bingo_milestones.x
-        ? ' — X marks the spot!'
-        : stats.bingo_milestones.lines.length > 0
-          ? ` — ${stats.bingo_milestones.lines.length} line(s)!`
-          : ''
-
     return (
-      <>
-        <Modal onClose={onClose} labelledBy="passport-card-title" className="passport-modal-frame">
-          <div className="passport-card passport-modal-inner">
-            {session.photo_url && (
-              <img
-                src={session.photo_url}
-                alt={`${session.family_label} group photo`}
-                className="passport-card-photo"
-                role="button"
-                tabIndex={0}
-                onClick={() => setLightboxOpen(true)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    setLightboxOpen(true)
-                  }
-                }}
-              />
-            )}
-            <span className="passport-card-icon-badge" aria-hidden="true">
-              <PassportIcon />
-            </span>
-            <p className="passport-card-eyebrow">Family Passport</p>
-            <h2 id="passport-card-title" className="passport-card-title">
-              {stats.title}
-            </h2>
-            <p className="passport-card-family-label">{session.family_label}</p>
-            <ul className="passport-card-stats">
-              <li>
-                🐨 Scavenger Hunt: {stats.scavenger_hunt_characters_completed} /{' '}
-                {stats.scavenger_hunt_characters_total} characters
-              </li>
-              <li>
-                🎯 Bingo: {stats.bingo_tiles_completed} / {stats.bingo_tiles_total} tiles
-                {milestoneNote}
-              </li>
-              <li>🏆 Scoring Sheet: {stats.scoring_sheet_games_won} game(s) won</li>
-              <li>🧩 Puzzles: {stats.puzzle_challenges_completed} challenge(s) completed</li>
-              <li>🪙 Cobb Coins: {stats.total_cobb_coins}</li>
-            </ul>
-            <p className="passport-card-timestamp">Generated {new Date(session.generated_at).toLocaleString()}</p>
-            <button type="button" className="btn btn-primary passport-card-close" onClick={onClose}>
-              Close
-            </button>
-          </div>
-        </Modal>
-        {lightboxOpen && session.photo_url && (
-          <PhotoLightbox
-            photos={[{ candidates: [session.photo_url], alt: `${session.family_label} group photo` }]}
-            startIndex={0}
-            onClose={() => setLightboxOpen(false)}
-          />
-        )}
-      </>
+      <Modal onClose={onClose} labelledBy="passport-card-title" className="passport-modal-frame">
+        <div className="passport-modal-inner">
+          <PassportCard session={session} />
+          <button type="button" className="btn btn-primary passport-card-close" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </Modal>
     )
   }
 

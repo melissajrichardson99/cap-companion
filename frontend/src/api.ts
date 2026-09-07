@@ -1,6 +1,7 @@
 // Typed fetch client for the Phase 1 backend endpoints.
 
 import { getDeviceSessionId } from './deviceSession'
+import { getGuestAuthToken } from './guestAuth'
 import { getStaffToken } from './staffAuth'
 import { getStaffName } from './staffName'
 
@@ -374,6 +375,42 @@ export interface ResetSessionResult {
   puzzle_attempts_reset: number
   scoring_sessions_reset: number
   photo_votes_reset: number
+  // Guest Accounts Phase 1 -- true when this reset also logged a guest out
+  // on this device (their lifetime Coins/Collectibles are preserved, not
+  // reflected in coins_reset/collectible_cards_reset above -- see
+  // backend/app/services/session_reset.py). Always false for an anonymous
+  // session.
+  guest_logged_out: boolean
+}
+
+// Guest Accounts Phase 0 -- see backend/app/routers/account.py. Entirely
+// optional/additive: DeviceSession below keeps working unchanged whether or
+// not a guest is also logged in.
+export interface Guest {
+  id: string
+  email: string
+  created_at: string
+}
+
+export interface GuestAuthResult {
+  token: string
+  guest: Guest
+}
+
+// Guest Accounts Phase 3 -- backs GET /account/bingo-map/status, checked
+// right after login to decide whether to show the "Welcome back"
+// continue-or-start-fresh prompt at all (only when has_progress is true).
+export interface GuestBingoMapStatus {
+  has_progress: boolean
+  tiles_completed: number
+  tiles_total: number
+  nodes_visited: number
+}
+
+// Guest Accounts Phase 3 -- result of the explicit "Start Fresh" action.
+export interface BingoMapStartFreshResult {
+  bingo_tiles_reset: number
+  map_nodes_reset: number
 }
 
 // Per-Device Sessions Phase 0 -- see backend/app/routers/device_session.py.
@@ -508,11 +545,17 @@ export interface AnalyticsSummary {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const guestToken = getGuestAuthToken()
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       'X-Device-Session': getDeviceSessionId(),
+      // Optional -- rides along on every request once a guest is logged in
+      // (Guest Accounts Phase 0), same "always attach, let the backend
+      // decide if it cares" pattern as X-Device-Session above. No endpoint
+      // requires it yet except GET /account/whoami.
+      ...(guestToken ? { 'X-Guest-Auth': guestToken } : {}),
       ...init?.headers,
     },
   })
@@ -691,10 +734,17 @@ export const api = {
     body.append('family_label', familyLabel)
     if (file) body.append('file', file)
     // Not routed through request(): same multipart-vs-JSON-Content-Type
-    // reasoning as submitPhoto above.
+    // reasoning as submitPhoto above. X-Guest-Auth rides along manually here
+    // (request() would attach it automatically) so a logged-in guest's
+    // passport gets tagged with their guest_id at generation time -- see
+    // backend/app/routers/passport.py's get_optional_guest.
+    const guestToken = getGuestAuthToken()
     const res = await fetch(`${API_BASE_URL}/passport/generate`, {
       method: 'POST',
-      headers: { 'X-Device-Session': getDeviceSessionId() },
+      headers: {
+        'X-Device-Session': getDeviceSessionId(),
+        ...(guestToken ? { 'X-Guest-Auth': guestToken } : {}),
+      },
       body,
     })
     if (!res.ok) {
@@ -718,4 +768,29 @@ export const api = {
     }),
   deleteAnnouncement: (announcementId: string) =>
     staffRequest<void>(`/announcements/${announcementId}`, { method: 'DELETE' }),
+  // Guest Accounts Phase 0 -- see backend/app/routers/account.py.
+  guestSignup: (email: string, password: string) =>
+    request<GuestAuthResult>('/account/signup', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  guestLogin: (email: string, password: string) =>
+    request<GuestAuthResult>('/account/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  guestLogout: () => request<{ message: string }>('/account/logout', { method: 'POST' }),
+  requestPasswordReset: (email: string) =>
+    request<{ message: string }>('/account/password-reset/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  confirmPasswordReset: (token: string, newPassword: string) =>
+    request<{ message: string }>('/account/password-reset/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+  guestWhoami: () => request<Guest>('/account/whoami'),
+  // Guest Accounts Phase 3 -- see backend/app/routers/account.py.
+  getBingoMapStatus: () => request<GuestBingoMapStatus>('/account/bingo-map/status'),
+  startFreshBingoMap: () =>
+    request<BingoMapStartFreshResult>('/account/bingo-map/start-fresh', { method: 'POST' }),
+  // Guest Accounts Phase 4 -- see backend/app/routers/account.py. Guest-only
+  // (request() throws on the 401 an anonymous caller would get, same as
+  // guestWhoami above), ordered newest-first by the backend.
+  getGuestPassports: () => request<PassportSession[]>('/account/passports'),
 }

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
@@ -621,6 +622,15 @@ class ResetSessionResult(BaseModel):
     puzzle_attempts_reset: int = Field(ge=0)
     scoring_sessions_reset: int = Field(ge=0)
     photo_votes_reset: int = Field(ge=0)
+    # Guest Accounts Phase 1: true when the calling device session was linked
+    # to a guest account, in which case this reset also logged them out on
+    # this device (see app/services/session_reset.py's docstring) -- always
+    # false for an anonymous session. coins_reset/collectible_cards_reset are
+    # deliberately 0 in that case (their rows are preserved, not deleted) --
+    # bingo_tiles_reset/map_nodes_reset join that same exception as of Guest
+    # Accounts Phase 3 -- which is why the frontend needs this flag rather
+    # than inferring the logout from those counts.
+    guest_logged_out: bool = False
 
 
 class PassportSession(BaseModel):
@@ -634,6 +644,65 @@ class PassportSession(BaseModel):
     stats: PassportStats
 
 
+_EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+
+
+class Guest(BaseModel):
+    """Guest Accounts Phase 0 -- see app/guest_auth.py.
+
+    Deliberately excludes password_hash (never sent to the client) and
+    guest_auth_tokens/password_reset_tokens rows (internal to the service
+    layer) -- same "don't echo back what the caller doesn't need" discipline
+    as DeviceSession excluding device_token.
+    """
+
+    id: UUID
+    email: str
+    created_at: datetime
+
+
+class GuestAuthResult(BaseModel):
+    """Returned by signup and login -- the new/refreshed auth token plus the
+    guest it belongs to, so the frontend can store both in one round trip."""
+
+    token: str
+    guest: Guest
+
+
+class GuestSignupRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    # Matches app/guest_auth.py's MIN_PASSWORD_LENGTH -- kept in sync there,
+    # not duplicated as a constant here, since the service layer is what
+    # actually enforces it (this is just the earliest, cheapest rejection).
+    password: str = Field(min_length=8, max_length=200)
+
+    @field_validator("email")
+    @classmethod
+    def _email_looks_valid(cls, value: str) -> str:
+        stripped = value.strip()
+        if not re.match(_EMAIL_RE, stripped):
+            raise ValueError("must be a valid email address")
+        return stripped
+
+
+class GuestLoginRequest(BaseModel):
+    email: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+
+
+class PasswordResetRequestRequest(BaseModel):
+    email: str = Field(min_length=1)
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=200)
+
+
+class GenericMessageResponse(BaseModel):
+    message: str
+
+
 class DeviceSession(BaseModel):
     """Per-Device Sessions Phase 0 -- see app/device_session.py.
 
@@ -645,6 +714,36 @@ class DeviceSession(BaseModel):
     id: UUID
     created_at: datetime
     last_active_at: datetime
+
+
+class GuestBingoMapStatus(BaseModel):
+    """Guest Accounts Phase 3 -- backs GET /account/bingo-map/status, called
+    right after login so the frontend can decide whether to show the
+    "Welcome back" continue-or-start-fresh prompt at all (only when
+    has_progress is true) and, if so, what summary numbers to show alongside
+    it. tiles_completed/nodes_visited are computed across every device
+    session ever linked to the guest (app/device_session.py's
+    list_guest_session_ids), same join as Coins/Collectibles' lifetime
+    totals -- see app/services/map_bingo.py's get_guest_bingo_map_status.
+    """
+
+    has_progress: bool
+    tiles_completed: int = Field(ge=0)
+    tiles_total: int = Field(ge=0)
+    nodes_visited: int = Field(ge=0)
+
+
+class BingoMapStartFreshResult(BaseModel):
+    """Guest Accounts Phase 3 -- result of the explicit, guest-initiated
+    POST /account/bingo-map/start-fresh action: deletes the guest's
+    accumulated session_tile_completions/node_visits rows across every
+    device session ever linked to them. Never triggered automatically and
+    never bundled into Reset Session -- see app/services/map_bingo.py's
+    start_fresh_bingo_map.
+    """
+
+    bingo_tiles_reset: int = Field(ge=0)
+    map_nodes_reset: int = Field(ge=0)
 
 
 # ---------------------------------------------------------------------------

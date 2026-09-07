@@ -1,0 +1,40 @@
+-- CAP Companion App — migration 037: Guest Accounts Phase 3 — Bingo + Map
+-- Exploration as lifetime account totals
+--
+-- No new columns are needed to make Bingo tile completions
+-- (session_tile_completions) and Map node visits (node_visits) guest-aware
+-- reads -- device_sessions.guest_id (migration 036) and
+-- app/device_session.py's list_guest_session_ids already provide everything
+-- that join needs, exactly the same as Coins/Collectibles' lifetime totals.
+-- See app/services/map_bingo.py's list_map_nodes/get_bingo_card/
+-- complete_tile/visit_node.
+--
+-- The one genuinely new piece of state this phase needs is
+-- guests.bingo_map_reset_at: a nullable timestamp of this guest's last
+-- explicit POST /account/bingo-map/start-fresh action (app/services/
+-- map_bingo.py's start_fresh_bingo_map), or null if they've never done one.
+--
+-- Why this is needed at all: Start Fresh deletes session_tile_completions/
+-- node_visits, and Bingo milestone re-earnability falls out of that for
+-- free (achieved_milestones is computed live off session_tile_completions
+-- every time, so an empty completion set naturally means "nothing achieved
+-- yet"). The Map Exploration bonus's idempotency guard is a different
+-- shape, though: it checks coin_awards directly (does a MAP_EXPLORATION
+-- award already exist for this guest), and coin_awards is an intentionally
+-- append-only ledger (see app/services/coins.py's header) that Start Fresh
+-- must never delete from -- doing so would both violate that invariant and
+-- silently claw back coins the guest already earned/kept. Without this
+-- column, that guard would keep seeing the guest's old award forever and
+-- the bonus would never become re-earnable after Start Fresh, even though
+-- node_visits was genuinely wiped. bingo_map_reset_at is the boundary that
+-- fixes this: start_fresh_bingo_map stamps it to now(), and
+-- app/services/map_bingo.py's _check_map_exploration_bonus only counts a
+-- MAP_EXPLORATION coin_awards row as "already awarded" if it landed at or
+-- after this guest's most recent bingo_map_reset_at (or counts any prior
+-- award at all, if this is still null). Older coin_awards rows are never
+-- touched -- only the guard's willingness to fire again resets.
+--
+-- Run this in the Supabase SQL editor against the live project.
+-- Safe to run more than once: the column add is guarded.
+
+alter table guests add column if not exists bingo_map_reset_at timestamptz;
