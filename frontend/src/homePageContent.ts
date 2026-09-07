@@ -14,9 +14,10 @@ export const ANIMAL_SHOW_TIMES: string[] = ['12:00 PM', '1:00 PM', '2:00 PM', '3
 
 // Tractor Rides run from two separate locations (Home Page redesign): West
 // departs on the hour, East on the half hour, both spanning the park's
-// operating hours below (Wed-Sun, 11 AM - 5 PM) rather than a hardcoded
-// guess. West deliberately excludes the 11 AM/5 PM edge times (opening/
-// closing hour) -- interior on-the-hour departures only.
+// operating hours (11 AM - 5 PM every open day -- see parkSchedule.ts for
+// which days those are) rather than a hardcoded guess. West deliberately
+// excludes the 11 AM/5 PM edge times (opening/closing hour) -- interior
+// on-the-hour departures only.
 export const TRACTOR_RIDE_TIMES_WEST: string[] = ['12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM']
 
 export const TRACTOR_RIDE_TIMES_EAST: string[] = [
@@ -28,19 +29,10 @@ export const TRACTOR_RIDE_TIMES_EAST: string[] = [
   '4:30 PM',
 ]
 
-export const PARK_HOURS_TEXT = 'Wednesday – Sunday, 11:00 AM – 5:00 PM'
-
-// JS Date.getDay() values (0 = Sunday ... 6 = Saturday) the park is open on.
-// Closed Monday (1) and Tuesday (2).
-export const PARK_OPEN_DAYS: number[] = [0, 3, 4, 5, 6]
-
-// Machine-readable open/close times backing the Home page's closing-time
-// countdown (closingCountdown.ts). A single fixed daily schedule -- hours
-// don't vary by day of week, only which days are open (PARK_OPEN_DAYS above)
-// -- so these two are the only times needed. Keep in sync with
-// PARK_HOURS_TEXT above if the schedule ever changes.
-export const PARK_OPEN_TIME = { hour: 11, minute: 0 }
-export const PARK_CLOSE_TIME = { hour: 17, minute: 0 }
+// The park's real open days/hours are seasonal (May-Oct only, with
+// month-dependent weekday windows plus statutory-holiday exceptions) --
+// see parkSchedule.ts for the computed schedule and parkStatusText.ts for
+// the Home page's "Closes in.../Opens..." display built on top of it.
 
 // Announcements are staff-managed and live (Staff Page "Announcements" tab,
 // backend/app/routers/announcements.py) -- see api.ts's Announcement type

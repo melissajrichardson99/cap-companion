@@ -233,9 +233,10 @@
   background: var(--cap-color-contact-red);
 }
 
-.home-hours-text {
+.home-status-text {
   font-size: 14px;
-  color: var(--cap-color-body-text);
+  font-weight: 700;
+  color: var(--cap-color-ink);
 }
 
 .home-weather {
@@ -251,13 +252,6 @@
 .home-weather-loading {
   color: var(--cap-color-body-text);
   font-style: italic;
-}
-
-.home-closing-countdown {
-  margin-top: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--cap-color-ink);
 }
 
 .home-schedule-grid {

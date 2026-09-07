@@ -2,17 +2,15 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
-import {
-  ANIMAL_SHOW_TIMES,
-  PARK_HOURS_TEXT,
-  TRACTOR_RIDE_TIMES_EAST,
-  TRACTOR_RIDE_TIMES_WEST,
-} from '../src/homePageContent'
+import { ANIMAL_SHOW_TIMES, TRACTOR_RIDE_TIMES_EAST, TRACTOR_RIDE_TIMES_WEST } from '../src/homePageContent'
 
-// Wed Sep 2 2026 -- a PARK_OPEN_DAYS day, used by the closing-countdown
-// tests below to pin the three states (before/during/after) without racing
-// whatever the real wall-clock time happens to be when the suite runs.
-const OPEN_WEEKDAY_DATE = [2026, 8, 2] as const // months are 0-indexed (8 = September)
+// Fri Sep 4 2026 -- an ordinary open day under the real seasonal schedule
+// (Sept/Oct is Fri-Sun) and not a holiday, used by the status-text tests
+// below to pin the before/during/after states without racing whatever the
+// real wall-clock time happens to be when the suite runs. See
+// park-schedule.spec.ts for the schedule/holiday math itself; this file
+// only covers what the Home page renders on top of it.
+const OPEN_WEEKDAY_DATE = [2026, 8, 4] as const // months are 0-indexed (8 = September)
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -69,10 +67,18 @@ async function voteForLabel(page: Page, label: string) {
 
 // Announcements are staff-managed and live now (not config) -- covered by
 // announcements.spec.ts, not this file.
-test('root route lands on Home with schedule and hours from config', async ({ page }) => {
+//
+// Time isn't mocked here (this is a general smoke test, not schedule
+// coverage -- that's the 'park status' describe block below), so the
+// open/closed status text is asserted loosely: it must be one of the two
+// known shapes, not a specific value, since the suite can run on any date.
+test('root route lands on Home with schedule from config and a real computed status line', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
-  await expect(page.getByText(PARK_HOURS_TEXT)).toBeVisible()
+  await expect(page.locator('.home-status-text')).toHaveText(/^(Closes in|Opens)/)
+  // The old fixed "Wednesday – Sunday, 11:00 AM – 5:00 PM" text is gone --
+  // hours are only ever shown via the computed status line above.
+  await expect(page.getByText(/Wednesday.*Sunday/)).toHaveCount(0)
   await expect(scheduleChips(page, 'Animal Shows')).toHaveText(ANIMAL_SHOW_TIMES)
   await expect(scheduleChips(page, 'Tractor Rides — West')).toHaveText(TRACTOR_RIDE_TIMES_WEST)
   await expect(scheduleChips(page, 'Tractor Rides — East')).toHaveText(TRACTOR_RIDE_TIMES_EAST)
@@ -90,14 +96,22 @@ test('weather fetch failure degrades gracefully without blocking the rest of the
   await expect(page.getByText('Weather unavailable right now')).toBeVisible()
   // The rest of the page still rendered despite the blocked weather call.
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
-  await expect(page.getByText(PARK_HOURS_TEXT)).toBeVisible()
+  await expect(page.locator('.home-status-text')).toHaveText(/^(Closes in|Opens)/)
   await expect(scheduleChips(page, 'Animal Shows')).toHaveText(ANIMAL_SHOW_TIMES)
 })
 
-test.describe('closing-time countdown', () => {
-  test('before opening on an open day shows the opening time, not a countdown', async ({ page }) => {
+// Schedule/holiday date math itself (which days are open, holiday
+// computation across years, off-season next-open search) is unit-tested in
+// park-schedule.spec.ts. This describe block only covers what the Home page
+// renders on top of that: the badge, the status line's position (where the
+// old hardcoded hours text used to sit), and both countdown directions.
+test.describe('park status (open/closed) display', () => {
+  test('before opening on an open day shows the opening time and an Open Today badge, not a countdown', async ({
+    page,
+  }) => {
     await page.clock.setFixedTime(new Date(...OPEN_WEEKDAY_DATE, 9, 30))
     await page.goto('/')
+    await expect(page.getByText('Open Today')).toBeVisible()
     // Regex (not an exact string) -- ICU may render the AM/PM separator as a
     // narrow no-break space rather than a plain one, and \s matches either.
     await expect(page.getByText(/Opens at 11:00\s*AM/)).toBeVisible()
@@ -107,14 +121,45 @@ test.describe('closing-time countdown', () => {
   test('currently open shows a live countdown to close', async ({ page }) => {
     await page.clock.setFixedTime(new Date(...OPEN_WEEKDAY_DATE, 14, 45))
     await page.goto('/')
+    await expect(page.getByText('Open Today')).toBeVisible()
     await expect(page.getByText('Closes in 2h 15m')).toBeVisible()
   })
 
-  test('after closing on an open day shows "Closed for today", not a negative countdown', async ({ page }) => {
+  test('after closing on an open day still shows Open Today, plus when the park opens next (not a negative countdown)', async ({
+    page,
+  }) => {
     await page.clock.setFixedTime(new Date(...OPEN_WEEKDAY_DATE, 18, 0))
     await page.goto('/')
-    await expect(page.getByText('Closed for today')).toBeVisible()
+    // Today (a Friday) stays "Open Today" all day even after closing --
+    // that badge reflects the day's schedule, not the current instant.
+    await expect(page.getByText('Open Today')).toBeVisible()
     await expect(page.getByText(/Closes in/)).toHaveCount(0)
+    // The next open day (Saturday) is tomorrow under the real Sept schedule.
+    await expect(page.getByText(/Opens tomorrow at 11:00\s*AM/)).toBeVisible()
+  })
+
+  test('on a day the park is closed, the badge and status text read naturally together, not redundantly', async ({
+    page,
+  }) => {
+    // Monday May 11 2026 -- May is Sat/Sun only and this isn't Victoria Day,
+    // so the park is fully closed; next open day is Saturday, 5 days out.
+    await page.clock.setFixedTime(new Date(2026, 4, 11, 10, 0))
+    await page.goto('/')
+    await expect(page.getByText('Closed Today')).toBeVisible()
+    await expect(page.getByText(/Opens Saturday at 11:00\s*AM/)).toBeVisible()
+    await expect(page.getByText(/Closes in/)).toHaveCount(0)
+  })
+
+  test('deep in the off-season, shows a far-future opening date rather than a ticking countdown', async ({
+    page,
+  }) => {
+    // Nov 2 2026 -- the season's last open weekend was Oct 30-31, so this is
+    // safely into the unconditional Nov-Apr closure; next open day is the
+    // following May, months away.
+    await page.clock.setFixedTime(new Date(2026, 10, 2, 12, 0))
+    await page.goto('/')
+    await expect(page.getByText('Closed Today')).toBeVisible()
+    await expect(page.getByText('Opens May 1, 2027')).toBeVisible()
   })
 })
 

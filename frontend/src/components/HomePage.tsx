@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, type Announcement, type PhotoSubmission } from '../api'
-import { getClosingStatusText } from '../closingCountdown'
 import {
   ANIMAL_SHOW_TIMES,
   GOOGLE_REVIEW_URL,
-  PARK_HOURS_TEXT,
-  PARK_OPEN_DAYS,
   PARK_WEATHER_LOCATION,
   TODAY_CARD_PHOTO_SRC,
   TRACTOR_RIDE_TIMES_EAST,
   TRACTOR_RIDE_TIMES_WEST,
 } from '../homePageContent'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
+import { getParkStatusDisplay } from '../parkStatusText'
 import { fetchCurrentWeather, type CurrentWeather } from '../weather'
 import { CameraIcon, ClipboardIcon, GridIcon, HomeIcon, MapPinIcon, PawIcon, QuestionMarkIcon } from './NavIcons'
 import { PhotoLightbox } from './PhotoLightbox'
@@ -28,12 +26,14 @@ interface HomePageProps {
 
 // True root route (Plan.md build-priority item 4): a real landing page
 // instead of guests just falling into whichever tab happens to be default.
-// Schedule/hours are static (homePageContent.ts, edited directly in code);
-// announcements are staff-managed and live (App.tsx fetches them, same
-// lifting pattern as nodes/puzzles/etc. -- see Staff Page's Announcements
-// tab). The only other live network call on this page is the weather fetch,
-// and it's designed to fail without blocking anything else from rendering
-// (see the weatherFailed branch below).
+// Animal show/tractor ride times are static (homePageContent.ts, edited
+// directly in code); open/closed status and hours are computed from the
+// real seasonal schedule (parkSchedule.ts/parkStatusText.ts). Announcements
+// are staff-managed and live (App.tsx fetches them, same lifting pattern as
+// nodes/puzzles/etc. -- see Staff Page's Announcements tab). The only other
+// live network call on this page is the weather fetch, and it's designed to
+// fail without blocking anything else from rendering (see the weatherFailed
+// branch below).
 export function HomePage({ announcements, onScanQr }: HomePageProps) {
   const navigate = useNavigate()
   const [weather, setWeather] = useState<CurrentWeather | null>(null)
@@ -65,8 +65,7 @@ export function HomePage({ announcements, onScanQr }: HomePageProps) {
     return () => clearInterval(interval)
   }, [])
 
-  const isOpenToday = PARK_OPEN_DAYS.includes(now.getDay())
-  const closingStatusText = getClosingStatusText(now, isOpenToday)
+  const { isOpenToday, statusText } = getParkStatusDisplay(now)
 
   return (
     <div className="home-page">
@@ -118,7 +117,7 @@ export function HomePage({ announcements, onScanQr }: HomePageProps) {
           <span className={`home-open-badge ${isOpenToday ? 'home-open-badge-open' : 'home-open-badge-closed'}`}>
             {isOpenToday ? 'Open Today' : 'Closed Today'}
           </span>
-          <span className="home-hours-text">{PARK_HOURS_TEXT}</span>
+          <span className="home-status-text">{statusText}</span>
         </div>
         <div className="home-weather">
           {weatherFailed ? (
@@ -131,7 +130,6 @@ export function HomePage({ announcements, onScanQr }: HomePageProps) {
             <span className="home-weather-loading">Loading weather…</span>
           )}
         </div>
-        {closingStatusText && <div className="home-closing-countdown">{closingStatusText}</div>}
       </section>
 
       <section className="home-card cap-parchment-card">
