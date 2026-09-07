@@ -46,13 +46,13 @@ GENERIC_RESET_TOKEN_ERROR = "Invalid or expired reset token"
 # linked to me". _reject_if_linked_to_a_different_guest below is the guard:
 # re-authenticating as the SAME guest already linked to this session is still
 # a harmless no-op relink, but authenticating as anyone else is rejected
-# outright (no token issued, no row created/touched) until the guest
-# explicitly logs out or resets the session -- Reset Session is what actually
-# clears the path, since it's the only thing that mints a fresh, unlinked
-# device session token (see deviceSession.ts's rotateDeviceSessionId).
+# outright (no token issued, no row created/touched) until the guest resets
+# the session -- a plain Log Out does NOT clear the path (see above); Reset
+# Session is the only thing that mints a fresh, unlinked device session token
+# (see deviceSession.ts's rotateDeviceSessionId).
 ALREADY_LINKED_TO_ANOTHER_GUEST_ERROR = (
-    "This device is already signed in to a different account. Log out, or use "
-    "Reset Session, before signing in as someone else on this device."
+    "This device is already signed in to a different account. Use Reset Session to free it up -- "
+    "a plain Log Out is not enough."
 )
 
 logger = logging.getLogger("app")

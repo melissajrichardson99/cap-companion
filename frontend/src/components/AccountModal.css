@@ -178,6 +178,25 @@
   color: var(--cap-color-contact-red);
 }
 
+/* Guest Accounts Phase 5 follow-up -- the device-already-linked rejection's
+   explanatory block (signup/login steps), replacing the plain one-line error
+   with an explanation, a safety reassurance, and a Reset Session shortcut. */
+.account-modal-device-link-conflict {
+  margin-bottom: 14px;
+}
+
+.account-modal-device-link-conflict .screen-error {
+  margin-bottom: 8px;
+}
+
+.account-modal-device-link-conflict .account-modal-subtitle {
+  margin-bottom: 12px;
+}
+
+.account-modal-device-link-conflict .btn {
+  width: 100%;
+}
+
 /* Guest Accounts Phase 4 -- the Passport History list. */
 .account-modal-passport-list {
   list-style: none;

@@ -159,6 +159,25 @@ function App() {
     api.getBingoCard(id).then(setCard).catch((err) => setCardError(String(err)))
   }
 
+  // Guest Accounts Phase 1: unlike reloadCard, doesn't assume cardId is
+  // already populated -- on a freshly loaded page, a fast login/logout can
+  // easily complete before the mount effect's own listBingoCards() call
+  // below has resolved, which would make a plain `if (cardId) reloadCard(...)`
+  // silently skip the reload entirely (this is exactly what previously left
+  // the Bingo card showing stale, pre-login state until a manual page
+  // reload). Re-fetching the card list here instead of relying on `cardId`
+  // state makes the reload correct regardless of that race.
+  const reloadBingoCard = () => {
+    api
+      .listBingoCards()
+      .then((summaries) => {
+        if (summaries.length === 0) return
+        setCardId(summaries[0].id)
+        reloadCard(summaries[0].id)
+      })
+      .catch((err) => setCardError(String(err)))
+  }
+
   const reloadPuzzles = () => {
     setPuzzlesError(null)
     api.listPuzzles().then(setPuzzles).catch((err) => setPuzzlesError(String(err)))
@@ -259,16 +278,23 @@ function App() {
   }, [])
 
   // Guest Accounts Phase 1: signing up/logging in (or logging out) changes
-  // which Coins/Collectibles this device sees -- current-session-only vs.
-  // this guest's lifetime total (app/services/coins.py's get_total) -- so
-  // both need reloading here, or the nav/gallery would keep showing
-  // whatever total was fetched under the *previous* auth state until some
-  // unrelated action happened to trigger a reload.
+  // which guest-scoped state this device sees -- current-session-only vs.
+  // this guest's lifetime total, for every one of Coins/Collectibles/Bingo/
+  // Map (all read via the same "sessions currently linked to me" join, see
+  // app/services/coins.py's get_total) -- so all four need reloading here,
+  // or they'd keep showing whatever was fetched under the *previous* auth
+  // state until some unrelated action happened to trigger a reload. Hunt is
+  // deliberately excluded -- it resets every visit regardless of login, so
+  // it has nothing guest-scoped to reload. Passport history is fetched
+  // on-demand when AccountModal opens it, not held in App.tsx state, so it
+  // has nothing to reload here either.
   const handleGuestAuthed = (nextGuest: Guest, token: string) => {
     setGuestAuthToken(token)
     setGuest(nextGuest)
     reloadCoins()
     reloadCollectibleCards()
+    reloadNodes()
+    reloadBingoCard()
   }
 
   const handleGuestLoggedOut = () => {
@@ -276,6 +302,8 @@ function App() {
     setGuest(null)
     reloadCoins()
     reloadCollectibleCards()
+    reloadNodes()
+    reloadBingoCard()
   }
 
   useEffect(() => {
@@ -917,6 +945,10 @@ function GuestShell(props: GuestShellProps) {
           onBingoMapStartFresh={() => {
             if (props.cardId) props.reloadCard(props.cardId)
             props.reloadNodes()
+          }}
+          onOpenResetSession={() => {
+            props.setShowAccount(false)
+            props.setShowResetConfirm(true)
           }}
         />
       )}

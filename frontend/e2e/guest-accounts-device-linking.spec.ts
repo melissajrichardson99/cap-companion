@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from '@playwright/test'
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { withSession } from './deviceSessionHelper'
 
 // Guest Accounts Phase 5 (final gate) -- the critical edge case explicitly
@@ -219,5 +219,96 @@ test.describe('Guest Accounts Phase 5 -- device-link protection against a second
       data: { email: emailB, password: PASSWORD },
     })
     expect(loginAsBRes.ok()).toBe(true)
+  })
+})
+
+// Guest Accounts Phase 5 follow-up -- the API-level 409 above is correct but
+// gave a real guest no clue *why* or what to do about it (Reset Session
+// specifically, not the Log Out they'd try first). These drive the actual
+// browser flow to confirm the explanatory copy and its Reset Session
+// shortcut both show up in the rejection state, for both signup and login.
+test.describe('Guest Accounts Phase 5 follow-up -- device-link conflict messaging', () => {
+  async function openAccountModal(page: Page) {
+    await page.getByRole('button', { name: /Open menu/ }).click()
+    await page.getByRole('button', { name: 'Save Your Progress' }).click()
+  }
+
+  async function signUpAndPlainLogOut(page: Page, email: string): Promise<void> {
+    await openAccountModal(page)
+    await page.getByRole('button', { name: 'Sign Up' }).click()
+    await page.getByPlaceholder('Email').fill(email)
+    await page.getByPlaceholder('Password (8+ characters)').fill(PASSWORD)
+    await page.getByRole('button', { name: 'Sign Up' }).click()
+    await expect(page.getByRole('heading', { name: 'Sign Up' })).not.toBeVisible()
+
+    // Plain Log Out -- deliberately does NOT unlink this device, so the
+    // conflict below is genuinely reachable this way (not just via Reset).
+    await page.getByRole('button', { name: /Open menu/ }).click()
+    await page.getByRole('button', { name: email }).click()
+    await page.getByRole('button', { name: 'Log Out' }).click()
+  }
+
+  function assertConflictMessagingVisible(page: Page) {
+    return Promise.all([
+      expect(page.getByText(/currently signed in to a different account/)).toBeVisible(),
+      expect(page.getByText(/completely safe/)).toBeVisible(),
+      expect(page.getByText(/not.*delete or affect the other account/)).toBeVisible(),
+    ])
+  }
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByRole('heading', { name: /Welcome to Cobb's Adventure Park/ })).toBeVisible()
+  })
+
+  test('signing up as a new guest on an already-linked device shows the explanation and a Reset Session shortcut', async ({
+    page,
+  }) => {
+    await signUpAndPlainLogOut(page, uniqueEmail())
+
+    await openAccountModal(page)
+    await page.getByRole('button', { name: 'Sign Up' }).click()
+    await page.getByPlaceholder('Email').fill(uniqueEmail())
+    await page.getByPlaceholder('Password (8+ characters)').fill(PASSWORD)
+    await page.getByRole('button', { name: 'Sign Up' }).click()
+
+    await assertConflictMessagingVisible(page)
+
+    // The shortcut opens Reset Session directly, without hunting for it in
+    // the nav menu. Scoped to the open dialog -- the nav menu (still in the
+    // DOM behind it, just visually hidden) has its own same-named button.
+    await page.getByRole('dialog').getByRole('button', { name: 'Reset Session' }).click()
+    await expect(page.getByRole('heading', { name: 'Reset Session' })).toBeVisible()
+  })
+
+  test('logging in as a different existing guest on an already-linked device shows the explanation', async ({
+    page,
+  }) => {
+    const emailA = uniqueEmail()
+    const emailB = uniqueEmail()
+
+    // Guest B needs to already exist to be logged in as below -- create it
+    // in a separate, throwaway browser context so it doesn't touch this
+    // page's own device session.
+    const otherContext = await page.context().browser()!.newContext()
+    const otherPage = await otherContext.newPage()
+    await otherPage.goto('/')
+    await openAccountModal(otherPage)
+    await otherPage.getByRole('button', { name: 'Sign Up' }).click()
+    await otherPage.getByPlaceholder('Email').fill(emailB)
+    await otherPage.getByPlaceholder('Password (8+ characters)').fill(PASSWORD)
+    await otherPage.getByRole('button', { name: 'Sign Up' }).click()
+    await expect(otherPage.getByRole('heading', { name: 'Sign Up' })).not.toBeVisible()
+    await otherContext.close()
+
+    await signUpAndPlainLogOut(page, emailA)
+
+    await openAccountModal(page)
+    await page.getByRole('button', { name: 'Log In' }).click()
+    await page.getByPlaceholder('Email').fill(emailB)
+    await page.getByPlaceholder('Password').fill(PASSWORD)
+    await page.getByRole('button', { name: 'Log In' }).click()
+
+    await assertConflictMessagingVisible(page)
   })
 })

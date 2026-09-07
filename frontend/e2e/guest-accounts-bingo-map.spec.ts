@@ -534,6 +534,23 @@ test.describe('Guest Accounts Phase 3 -- Bingo + Map Exploration carry-forward',
     expect(cardAfterContinue.tiles[5].completed).toBe(true)
     expect(cardAfterContinue.tiles[6].completed).toBe(true)
 
+    // The UI itself must reflect this immediately, with no manual page
+    // reload -- a real regression this suite's earlier raw-API-only check
+    // above would never have caught (it can pass even while App.tsx's
+    // post-login state is stale). Both nav clicks below are React Router's
+    // client-side navigation (see routing.spec.ts's use of the same
+    // menuitemradio pattern), never a full page load.
+    await page.getByRole('button', { name: /Open menu/ }).click()
+    await page.getByRole('menuitemradio', { name: 'Bingo Card' }).click()
+    await expect(page.getByRole('heading', { name: 'Bingo Card', exact: true })).toBeVisible()
+    const tileButtons = page.locator('.bingo-tile')
+    await expect(tileButtons.nth(5)).toHaveClass(/bingo-tile-completed/)
+    await expect(tileButtons.nth(6)).toHaveClass(/bingo-tile-completed/)
+
+    await page.getByRole('button', { name: /Open menu/ }).click()
+    await page.getByRole('menuitemradio', { name: 'Map' }).click()
+    await expect(page.locator('.map-pin-visited')).toHaveCount(1)
+
     // Log out on device B, then log back in again to trigger a second
     // Welcome Back prompt -- this time exercising Start Fresh.
     await page.getByRole('button', { name: /Open menu/ }).click()

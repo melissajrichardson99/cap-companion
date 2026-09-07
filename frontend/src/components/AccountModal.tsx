@@ -26,6 +26,20 @@ interface AccountModalProps {
   // guest's Bingo/Map progress server-side, so App.tsx can reload the Bingo
   // card and Map nodes to reflect the now-blank state.
   onBingoMapStartFresh: () => void
+  // Guest Accounts Phase 5 follow-up -- the device-already-linked rejection's
+  // shortcut button. Closes this modal and opens ResetSessionModal instead of
+  // making the guest go find Reset Session in the nav menu themselves.
+  onOpenResetSession: () => void
+}
+
+// Matches app/services/guest_accounts.py's ALREADY_LINKED_TO_ANOTHER_GUEST_ERROR.
+// Detected by substring rather than an exact-string compare so trivial future
+// wording tweaks on the backend don't silently break this -- signup's other
+// 409 (duplicate email) never contains this phrase.
+const DEVICE_LINK_CONFLICT_MARKER = 'already signed in to a different account'
+
+function isDeviceLinkConflict(err: unknown): boolean {
+  return String(err).includes(DEVICE_LINK_CONFLICT_MARKER)
 }
 
 // Backend error bodies are FastAPI's standard {"detail": "..."} shape, and
@@ -50,12 +64,25 @@ function friendlyError(err: unknown): string {
 // logged-in account summary. Deliberately optional and discoverable (a
 // NavMenu entry), never a gate in front of anything that works today for an
 // anonymous device session.
-export function AccountModal({ guest, onAuthed, onLoggedOut, onClose, onBingoMapStartFresh }: AccountModalProps) {
+export function AccountModal({
+  guest,
+  onAuthed,
+  onLoggedOut,
+  onClose,
+  onBingoMapStartFresh,
+  onOpenResetSession,
+}: AccountModalProps) {
   const [step, setStep] = useState<Step>('menu')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Set instead of `error` specifically when signup/login is rejected because
+  // this device is already linked to a different guest -- rendered as its own
+  // explanatory block (with a Reset Session shortcut) rather than a plain
+  // one-line error, since the fix here is genuinely non-obvious (Log Out
+  // looks like it should work and doesn't -- see guest_accounts.py).
+  const [deviceLinkConflict, setDeviceLinkConflict] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   // Guest Accounts Phase 3 -- populated by submitLogin's status check below,
   // read by the 'welcome-back'/'welcome-back-confirm' screens.
@@ -73,12 +100,14 @@ export function AccountModal({ guest, onAuthed, onLoggedOut, onClose, onBingoMap
     setEmail('')
     setPassword('')
     setError(null)
+    setDeviceLinkConflict(false)
     setStep(next)
   }
 
   const submitLogin = () => {
     setSubmitting(true)
     setError(null)
+    setDeviceLinkConflict(false)
     api
       .guestLogin(email.trim(), password)
       .then((result) => {
@@ -97,7 +126,13 @@ export function AccountModal({ guest, onAuthed, onLoggedOut, onClose, onBingoMap
           }
         })
       })
-      .catch((err) => setError(friendlyError(err)))
+      .catch((err) => {
+        if (isDeviceLinkConflict(err)) {
+          setDeviceLinkConflict(true)
+        } else {
+          setError(friendlyError(err))
+        }
+      })
       .finally(() => setSubmitting(false))
   }
 
@@ -117,13 +152,20 @@ export function AccountModal({ guest, onAuthed, onLoggedOut, onClose, onBingoMap
   const submitSignup = () => {
     setSubmitting(true)
     setError(null)
+    setDeviceLinkConflict(false)
     api
       .guestSignup(email.trim(), password)
       .then((result) => {
         onAuthed(result.guest, result.token)
         onClose()
       })
-      .catch((err) => setError(friendlyError(err)))
+      .catch((err) => {
+        if (isDeviceLinkConflict(err)) {
+          setDeviceLinkConflict(true)
+        } else {
+          setError(friendlyError(err))
+        }
+      })
       .finally(() => setSubmitting(false))
   }
 
@@ -163,6 +205,23 @@ export function AccountModal({ guest, onAuthed, onLoggedOut, onClose, onBingoMap
         onClose()
       })
   }
+
+  const renderDeviceLinkConflict = () => (
+    <div className="account-modal-device-link-conflict">
+      <p className="screen-error">
+        This device is currently signed in to a different account. To use a different account here, tap{' '}
+        <strong>Reset Session</strong> first — your other account&rsquo;s saved progress will be completely safe.
+      </p>
+      <p className="account-modal-subtitle">
+        Reset Session only clears this device&rsquo;s current, unsaved anonymous state and frees it up. It does{' '}
+        <strong>not</strong> delete or affect the other account&rsquo;s saved data — their Cobb Coins, Collectible
+        Cards, Bingo/Map progress, and Passports stay exactly as they are, safe until they log back in.
+      </p>
+      <button type="button" className="btn btn-primary" onClick={onOpenResetSession}>
+        Reset Session
+      </button>
+    </div>
+  )
 
   const renderTitle = (text: string) => (
     <h2 id="account-modal-title" className="account-modal-title">
@@ -289,7 +348,7 @@ export function AccountModal({ guest, onAuthed, onLoggedOut, onClose, onBingoMap
       <Modal onClose={onClose} labelledBy="account-modal-title" className="account-modal-frame">
         <div className="account-modal-inner">
           {renderTitle('Log In')}
-          {error && <p className="screen-error">{error}</p>}
+          {deviceLinkConflict ? renderDeviceLinkConflict() : error && <p className="screen-error">{error}</p>}
           <div className="account-modal-field">
             <input
               type="email"
@@ -341,7 +400,7 @@ export function AccountModal({ guest, onAuthed, onLoggedOut, onClose, onBingoMap
       <Modal onClose={onClose} labelledBy="account-modal-title" className="account-modal-frame">
         <div className="account-modal-inner">
           {renderTitle('Sign Up')}
-          {error && <p className="screen-error">{error}</p>}
+          {deviceLinkConflict ? renderDeviceLinkConflict() : error && <p className="screen-error">{error}</p>}
           <div className="account-modal-field">
             <input
               type="email"
@@ -445,7 +504,12 @@ export function AccountModal({ guest, onAuthed, onLoggedOut, onClose, onBingoMap
         <div className="account-modal-inner">
           {renderTitle('Welcome Back')}
           <p className="account-modal-subtitle">
-            We found saved Bingo and Map progress on your account. Continue where you left off, or start fresh?
+            Your Cobb Coins, Collectible Cards, Passports, and other progress carry over on this account every time
+            you log in — and we found saved Bingo and Map progress here too. Continuing makes it easier to reach 100%
+            on your existing Bingo card and map exploration. Starting fresh clears that Bingo/Map progress and gives
+            you a new chance to earn Cobb Coins from scratch — either way, your Coins, Collectibles, and Passports
+            are safe. One thing carryover never covers: the Scavenger Hunt always resets every visit, no matter which
+            you choose.
           </p>
           {bingoMapStatus && (
             <p className="account-modal-progress-summary">
@@ -457,7 +521,7 @@ export function AccountModal({ guest, onAuthed, onLoggedOut, onClose, onBingoMap
             <button type="button" className="btn btn-primary" onClick={onClose}>
               Continue
             </button>
-            <button type="button" className="btn btn-secondary" onClick={() => setStep('welcome-back-confirm')}>
+            <button type="button" className="btn btn-primary" onClick={() => setStep('welcome-back-confirm')}>
               Start Fresh
             </button>
           </div>
