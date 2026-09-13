@@ -102,6 +102,12 @@
   margin-top: 10px;
 }
 
+/* The 'menu' step's single Privacy Policy link (not a pair, so it centers
+   instead of justify-between spreading it to one edge). */
+.account-modal-link-row-centered {
+  justify-content: center;
+}
+
 .account-modal-link {
   background: none;
   border: none;

@@ -364,6 +364,17 @@ export function UserIcon({ className }: IconProps) {
   )
 }
 
+// Shield outline -- the Privacy Policy page's sign-board title icon. Nothing
+// else in the app covers this shape.
+export function ShieldIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M10 2.5l6.5 2.6v4.8c0 4.6-2.8 7.9-6.5 9.6-3.7-1.7-6.5-5-6.5-9.6V5.1z" />
+      <path d="M7 10l2.2 2.2L13.3 8" />
+    </svg>
+  )
+}
+
 // Two corner finder squares + a scattered data grid -- a simplified QR code
 // glyph for the Staff Page sidebar's QR Codes item. Nothing else in the app
 // covers this shape.

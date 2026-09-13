@@ -22,6 +22,9 @@ interface AccountModalProps {
   onAuthed: (guest: Guest, token: string) => void
   onLoggedOut: () => void
   onClose: () => void
+  // Opens the Privacy Policy page (see PrivacyScreen.tsx) -- surfaced here
+  // since account creation is where data collection matters most to a guest.
+  onOpenPrivacy: () => void
   // Guest Accounts Phase 3 -- called once Start Fresh actually clears the
   // guest's Bingo/Map progress server-side, so App.tsx can reload the Bingo
   // card and Map nodes to reflect the now-blank state.
@@ -71,6 +74,7 @@ export function AccountModal({
   onClose,
   onBingoMapStartFresh,
   onOpenResetSession,
+  onOpenPrivacy,
 }: AccountModalProps) {
   const [step, setStep] = useState<Step>('menu')
   const [email, setEmail] = useState('')
@@ -336,6 +340,11 @@ export function AccountModal({
             </button>
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Not Now
+            </button>
+          </div>
+          <div className="account-modal-link-row account-modal-link-row-centered">
+            <button type="button" className="account-modal-link" onClick={onOpenPrivacy}>
+              Privacy Policy
             </button>
           </div>
         </div>

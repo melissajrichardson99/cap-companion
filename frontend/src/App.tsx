@@ -19,6 +19,7 @@ import { NavMenu } from './components/NavMenu'
 import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, QuestionMarkIcon, SearchIcon, TruckIcon } from './components/NavIcons'
 import { PassportModal } from './components/PassportModal'
 import { PhotoScreen } from './components/PhotoScreen'
+import { PrivacyScreen } from './components/PrivacyScreen'
 import { PuzzleScreen } from './components/PuzzleScreen'
 import { ResetPasswordScreen } from './components/ResetPasswordScreen'
 import { ResetSessionModal } from './components/ResetSessionModal'
@@ -777,6 +778,7 @@ function GuestShell(props: GuestShellProps) {
             onResetSession={() => props.setShowResetConfirm(true)}
             onStaffNav={() => navigate('/staff')}
             onAccount={() => props.setShowAccount(true)}
+            onPrivacy={() => navigate('/privacy')}
           />
         </div>
       </header>
@@ -900,6 +902,7 @@ function GuestShell(props: GuestShellProps) {
           />
           <Route path="food-trucks" element={<FoodTruckScreen />} />
           <Route path="faq" element={<FaqRoute />} />
+          <Route path="privacy" element={<PrivacyScreen />} />
         </Routes>
       </main>
 
@@ -949,6 +952,10 @@ function GuestShell(props: GuestShellProps) {
           onOpenResetSession={() => {
             props.setShowAccount(false)
             props.setShowResetConfirm(true)
+          }}
+          onOpenPrivacy={() => {
+            props.setShowAccount(false)
+            navigate('/privacy')
           }}
         />
       )}

@@ -633,6 +633,28 @@ class ResetSessionResult(BaseModel):
     guest_logged_out: bool = False
 
 
+class SessionCleanupResult(BaseModel):
+    """Result of one run of the scheduled anonymous-session housekeeping job
+    (app/services/session_cleanup.py, POST /internal/session-cleanup). Unlike
+    ResetSessionResult above (one caller's own device), this sweeps every
+    anonymous (guest_id IS NULL) device session idle for 14+ days, across all
+    guests/devices, in batches -- see that module's docstring for the full
+    per-table picture and the guest-linked-session safety guarantee.
+    """
+
+    sessions_cleaned: int = Field(ge=0)
+    staff_requests_detached: int = Field(ge=0)
+    passport_sessions_deleted: int = Field(ge=0)
+    coin_awards_deleted: int = Field(ge=0)
+    collectible_redemptions_deleted: int = Field(ge=0)
+    puzzle_attempts_deleted: int = Field(ge=0)
+    score_sheet_sessions_deleted: int = Field(ge=0)
+    node_visits_deleted: int = Field(ge=0)
+    session_tile_completions_deleted: int = Field(ge=0)
+    photo_votes_deleted: int = Field(ge=0)
+    hunt_progress_deleted: int = Field(ge=0)
+
+
 class PassportSession(BaseModel):
     id: UUID
     family_label: str

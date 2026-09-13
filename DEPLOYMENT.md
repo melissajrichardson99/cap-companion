@@ -101,6 +101,11 @@ Follow in order — later steps depend on earlier ones.
      sender (`onboarding@resend.dev`, no domain verification needed). Set to
      a verified custom-domain address before this goes anywhere near real
      guest volume — see `app/services/email.py`.
+   - `INTERNAL_CLEANUP_SECRET` — **new for session cleanup.** Generate a
+     fresh long random string; this must also be set as the
+     `INTERNAL_CLEANUP_SECRET` GitHub Actions repo secret (see section 6) —
+     the two must match exactly, or the scheduled cleanup workflow gets a
+     401 on every run.
 3. Deploy. Render builds and starts the service; note its public URL
    (`https://cap-companion-backend.onrender.com`-style).
 
@@ -298,3 +303,36 @@ existing anonymous flow is unaffected either way.
   emails silently no-op without it (logged server-side, not surfaced to the
   caller), so this is easy to miss until someone actually needs to reset a
   password in production.
+
+## 6. Session cleanup housekeeping
+
+Anonymous (guest_id IS NULL) `device_sessions` rows accumulate forever with
+no expiry otherwise — a scheduled job purges ones idle 14+ days, and
+everything tied to them, via `POST /internal/session-cleanup`
+(`backend/app/routers/internal.py`, logic in
+`backend/app/services/session_cleanup.py`). **Guest-linked sessions are never
+touched, regardless of age** — that's a guest's permanent history. See that
+module's docstring for the full per-table policy and the safety reasoning.
+
+- **Scheduling: GitHub Actions, not Render Cron Jobs.** This backend runs on
+  Render's free web-service plan (`render.yaml`); Render's Cron Job is a
+  separate, billed service type, which would add a new cost surface to a
+  project that has otherwise deliberately stayed free everywhere
+  (Cloudflare Workers, Supabase, R2). A scheduled GitHub Actions workflow
+  (`.github/workflows/session-cleanup.yml`) costs nothing and needs no new
+  infrastructure — it just calls the existing backend over HTTPS.
+- **Setup** (one-time, in the GitHub repo's Settings > Secrets and variables
+  > Actions):
+  1. Secret `INTERNAL_CLEANUP_SECRET` — must exactly match the backend's own
+     env var of the same name (2.2.2 above).
+  2. Variable `BACKEND_URL` — the deployed backend's base URL (not a
+     secret — it's already public in this doc), e.g.
+     `https://cap-companion-backend.onrender.com`.
+- The workflow also has a `workflow_dispatch` trigger for an on-demand
+  manual run from the Actions tab, in addition to its daily schedule.
+- **Cold-start note**: the workflow's `curl` uses `--max-time 90`, not the
+  default — Render's free tier cold-starts after 15 minutes idle (see the
+  hibernate-wake-error gotcha above), and a cold request can take 30-60s.
+- Manual/dev-DB verification lives in
+  `backend/scripts/verify_session_cleanup.py` (run against the real dev
+  Supabase project, same as `reset_demo_data.py` — see its docstring).

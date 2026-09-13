@@ -1,0 +1,90 @@
+.privacy-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--cap-font-body);
+}
+
+.privacy-last-updated {
+  text-align: center;
+  font-family: var(--cap-font-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+  margin: -8px 0 12px;
+}
+
+/* Long-form text reads better as one flowing document than FaqScreen's
+   stack of separate parchment cards -- a single card here, with a
+   readability-capped line length (~68ch) centered inside it, rather than
+   letting body copy stretch edge-to-edge on wide desktop viewports. */
+.privacy-content {
+  padding: var(--cap-space-5) var(--cap-space-4);
+}
+
+.privacy-section {
+  max-width: 68ch;
+  margin: 0 auto;
+}
+
+.privacy-section + .privacy-section {
+  margin-top: var(--cap-space-6);
+  padding-top: var(--cap-space-5);
+  border-top: 2px solid rgba(0, 0, 0, 0.08);
+}
+
+.privacy-heading {
+  font-family: var(--cap-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cap-color-header-green);
+  margin: 0 0 var(--cap-space-3);
+}
+
+.privacy-subsection + .privacy-subsection,
+.privacy-heading + .privacy-subsection {
+  margin-top: var(--cap-space-4);
+}
+
+.privacy-subheading {
+  font-family: var(--cap-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--cap-color-ink);
+  margin: 0 0 6px;
+}
+
+.privacy-section p,
+.privacy-list {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--cap-color-body-text);
+  margin: 0 0 12px;
+}
+
+.privacy-section p:last-child,
+.privacy-list:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-list {
+  padding-left: 22px;
+}
+
+.privacy-list li {
+  margin-bottom: 6px;
+}
+
+.privacy-list li:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-section strong {
+  color: var(--cap-color-ink);
+}
+
+@media (max-width: 640px) {
+  .privacy-content {
+    padding: var(--cap-space-4) var(--cap-space-3);
+  }
+}

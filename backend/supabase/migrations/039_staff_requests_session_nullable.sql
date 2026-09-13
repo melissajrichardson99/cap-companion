@@ -1,0 +1,22 @@
+-- CAP Companion App — migration 039: Session cleanup — staff_requests.session_id
+-- becomes nullable
+--
+-- The new scheduled anonymous-session housekeeping job (app/services/
+-- session_cleanup.py) purges device_sessions rows idle 14+ days (and never
+-- guest-linked ones -- see that module's docstring). staff_requests is the
+-- one exception to "delete everything tied to the session": a guest's
+-- question/complaint content must survive indefinitely so staff can still
+-- see and reference it, even after the originating session is long gone.
+-- This column has to be nullable for the cleanup job to detach the row
+-- (session_id set to null) instead of deleting it.
+--
+-- staff_requests.session_id is never read from the API response model
+-- (app/models.py's StaffRequest has no session_id field -- it's only used
+-- internally to scope get_active_request/cancel_active_request to the
+-- calling device), so this has no frontend impact.
+--
+-- Run this in the Supabase SQL editor against the live project.
+-- Safe to run more than once: dropping a constraint that's already dropped
+-- is a no-op in Postgres.
+
+alter table staff_requests alter column session_id drop not null;

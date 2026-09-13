@@ -1,0 +1,36 @@
+name: Session cleanup
+
+# Purges abandoned anonymous device sessions (see backend/app/services/
+# session_cleanup.py) by calling the backend's protected internal endpoint
+# on a schedule. Render's own Cron Job feature is a separate billed service
+# type -- this backend runs on Render's free web-service plan (render.yaml),
+# and GitHub Actions costs nothing and needs no new infrastructure, so this
+# is the cheapest option (see DEPLOYMENT.md).
+#
+# Requires two repo settings (Settings > Secrets and variables > Actions):
+#   - Secret  INTERNAL_CLEANUP_SECRET -- must match the backend's own
+#     INTERNAL_CLEANUP_SECRET env var (set in Render's dashboard).
+#   - Variable BACKEND_URL -- the deployed backend's base URL, e.g.
+#     https://cap-companion-backend.onrender.com (no trailing slash).
+on:
+  schedule:
+    # 09:00 UTC daily -- arbitrary off-peak time, adjust as needed.
+    - cron: "0 9 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call session-cleanup endpoint
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+          INTERNAL_CLEANUP_SECRET: ${{ secrets.INTERNAL_CLEANUP_SECRET }}
+        run: |
+          # --max-time 90: Render's free tier cold-starts after 15min idle
+          # (DEPLOYMENT.md's hibernate-wake-error note) -- a cold request can
+          # take 30-60s, well past curl's 30s default.
+          curl --fail --max-time 90 --show-error \
+            -X POST \
+            -H "X-Internal-Secret: ${INTERNAL_CLEANUP_SECRET}" \
+            "${BACKEND_URL}/internal/session-cleanup"

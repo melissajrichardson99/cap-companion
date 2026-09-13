@@ -17,6 +17,8 @@ services:
         sync: false
       - key: STAFF_SESSION_SECRET
         sync: false
+      - key: INTERNAL_CLEANUP_SECRET
+        sync: false
       - key: FRONTEND_BASE_URL
         sync: false
       - key: CORS_ALLOWED_ORIGINS
