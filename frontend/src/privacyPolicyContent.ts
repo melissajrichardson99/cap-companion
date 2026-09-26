@@ -11,7 +11,7 @@
 // - The Contact Us email was corrected from the draft's info@cobbsadventurepark.ca
 //   to the actual domain, info@cobbsadventurepark.com, per Melissa.
 
-export const PRIVACY_POLICY_LAST_UPDATED = 'September 13, 2026'
+export const PRIVACY_POLICY_LAST_UPDATED = 'September 26, 2026'
 export const PRIVACY_POLICY_CONTACT_EMAIL = 'info@cobbsadventurepark.com'
 
 export type PrivacyBlock =
@@ -77,6 +77,10 @@ export const PRIVACY_POLICY_SECTIONS: PrivacySection[] = [
           },
           {
             type: 'paragraph',
+            text: "You may also optionally provide your email address when submitting a photo. This is visible only to Cobb's staff reviewing submissions — it is never shown publicly in the App, never shared outside Cobb's Adventure Park, and is not used for marketing or added to any mailing list.",
+          },
+          {
+            type: 'paragraph',
             text: "**A note for parents and guardians:** if you submit a photo that includes your child, you're confirming you have the right and permission to share that image through the App. We rely on staff review before any photo is shown publicly, but we encourage families to think carefully before submitting any photo of a minor.",
           },
         ],
@@ -96,15 +100,6 @@ export const PRIVACY_POLICY_SECTIONS: PrivacySection[] = [
           {
             type: 'paragraph',
             text: "We collect aggregate, internal statistics about how the App is used — for example, how many people used a given feature, how far guests typically get through the Scavenger Hunt, or which map locations are visited most often. This information is used by Cobb's staff and management to understand engagement and improve the park experience. It is reported in aggregate and is not shared outside of Cobb's Adventure Park.",
-          },
-        ],
-      },
-      {
-        heading: 'Information we do not currently collect',
-        blocks: [
-          {
-            type: 'paragraph',
-            text: "We do not currently collect your email address in connection with photo submissions, and we do not run any contest requiring your contact information. If that ever changes, we will update this policy first and clearly explain what's being collected and why before asking for it.",
           },
         ],
       },
