@@ -16,7 +16,7 @@ import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
 import { NavMenu } from './components/NavMenu'
-import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, QuestionMarkIcon, SearchIcon, TruckIcon } from './components/NavIcons'
+import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, QuestionMarkIcon, SearchIcon, ShieldIcon, TruckIcon } from './components/NavIcons'
 import { PassportModal } from './components/PassportModal'
 import { PhotoScreen } from './components/PhotoScreen'
 import { PrivacyScreen } from './components/PrivacyScreen'
@@ -59,6 +59,11 @@ const TABS: { key: string; label: string; icon: ReactNode }[] = [
   { key: '/photos', label: 'Favorite Photo', icon: <CameraIcon /> },
   { key: '/food-trucks', label: 'Food Truck Menus', icon: <TruckIcon /> },
   { key: '/faq', label: 'FAQ', icon: <QuestionMarkIcon /> },
+  // PIPA "Openness" -- the Privacy Policy must be genuinely, easily
+  // discoverable to any guest, not just one who happens into the account
+  // flow -- so it gets the same primary-tab tier as FAQ, not the low-emphasis
+  // footer treatment (see NavMenu.css's nav-menu-footer comment).
+  { key: '/privacy', label: 'Privacy Policy', icon: <ShieldIcon /> },
 ]
 
 function App() {
@@ -778,7 +783,6 @@ function GuestShell(props: GuestShellProps) {
             onResetSession={() => props.setShowResetConfirm(true)}
             onStaffNav={() => navigate('/staff')}
             onAccount={() => props.setShowAccount(true)}
-            onPrivacy={() => navigate('/privacy')}
           />
         </div>
       </header>

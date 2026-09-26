@@ -3,8 +3,11 @@ import { PRIVACY_POLICY_CONTACT_EMAIL, PRIVACY_POLICY_LAST_UPDATED, PRIVACY_POLI
 
 // Covers the Privacy Policy page (PrivacyScreen.tsx): a real, hard-reload-safe
 // /privacy route rendering privacyPolicyContent.ts verbatim, plus its two
-// discoverable entry points -- the nav menu's footer link (every guest page)
-// and the Save Your Progress / account menu (the signup/login area).
+// discoverable entry points -- the main nav menu's primary tab list, same
+// tier as FAQ (PIPA "Openness": reachable from every guest page, not nested
+// in a specific feature's flow), and the Save Your Progress / account menu
+// (the signup/login area, contextually useful right where personal
+// information is being collected).
 
 async function openNavMenu(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Open menu' }).click()
@@ -17,12 +20,29 @@ test.describe('Privacy Policy page', () => {
     await expect(page.getByText(`Last updated: ${PRIVACY_POLICY_LAST_UPDATED}`)).toBeVisible()
   })
 
-  test('reachable via the nav menu footer link', async ({ page }) => {
+  test('reachable via the main nav menu, same tier as FAQ', async ({ page }) => {
     await page.goto('/')
     await openNavMenu(page)
-    await page.getByRole('button', { name: 'Privacy Policy' }).click()
+    // Privacy Policy is a primary tab (role="menuitemradio", same as FAQ and
+    // every other primary page) -- not the old low-emphasis footer link --
+    // so it's genuinely discoverable from any guest page, per PIPA
+    // "Openness", not just reachable if you already know to look inside the
+    // account flow.
+    await page.getByRole('menuitemradio', { name: 'Privacy Policy' }).click()
     await expect(page.getByRole('heading', { name: 'Privacy Policy', exact: true })).toBeVisible()
     expect(new URL(page.url()).pathname).toBe('/privacy')
+  })
+
+  test('Privacy Policy tab is present on every guest screen, not nested in a specific flow', async ({ page }) => {
+    for (const path of ['/', '/map', '/bingo', '/faq']) {
+      await page.goto(path)
+      await openNavMenu(page)
+      await expect(page.getByRole('menuitemradio', { name: 'Privacy Policy' })).toBeVisible()
+      // Close the menu before navigating to the next path so it doesn't
+      // stay open across page.goto (a fresh load remounts it closed anyway,
+      // but this keeps each iteration's state explicit).
+      await page.keyboard.press('Escape')
+    }
   })
 
   test('reachable via the Save Your Progress account menu', async ({ page }) => {
@@ -31,7 +51,7 @@ test.describe('Privacy Policy page', () => {
     await page.getByRole('button', { name: 'Save Your Progress' }).click()
     const heading = page.getByRole('heading', { name: 'Save Your Progress', exact: true })
     await expect(heading).toBeVisible()
-    // NavMenu's own panel (with its own "Privacy Policy" footer link) stays
+    // NavMenu's own panel (with its own "Privacy Policy" primary tab) stays
     // mounted behind the modal even while closed -- scope to the modal
     // dialog so this doesn't match both.
     const modal = page.getByRole('dialog')

@@ -31,7 +31,6 @@ interface NavMenuProps<T extends string> {
   onResetSession: () => void
   onStaffNav: () => void
   onAccount: () => void
-  onPrivacy: () => void
 }
 
 // Guest-facing mobile nav: a hamburger toggle that opens a panel anchored to
@@ -52,7 +51,6 @@ export function NavMenu<T extends string>({
   onResetSession,
   onStaffNav,
   onAccount,
-  onPrivacy,
 }: NavMenuProps<T>) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -189,9 +187,6 @@ export function NavMenu<T extends string>({
               </button>
               <button type="button" className="nav-menu-reset-link" onClick={() => runAction(onResetSession)}>
                 Reset Session
-              </button>
-              <button type="button" className="nav-menu-privacy-link" onClick={() => runAction(onPrivacy)}>
-                Privacy Policy
               </button>
             </div>
           </div>

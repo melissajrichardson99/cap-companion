@@ -303,8 +303,7 @@
 
 .nav-menu-account-link,
 .nav-menu-staff-link,
-.nav-menu-reset-link,
-.nav-menu-privacy-link {
+.nav-menu-reset-link {
   font-family: var(--cap-font-body);
   font-size: 12.5px;
   font-weight: 600;
@@ -319,7 +318,6 @@
 
 .nav-menu-account-link:hover,
 .nav-menu-staff-link:hover,
-.nav-menu-reset-link:hover,
-.nav-menu-privacy-link:hover {
+.nav-menu-reset-link:hover {
   color: var(--cap-color-on-header);
 }
