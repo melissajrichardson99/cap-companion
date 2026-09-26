@@ -339,6 +339,11 @@ export type PhotoStatus = 'pending_review' | 'shortlisted' | 'rejected'
 export interface PhotoSubmission {
   id: string
   guest_label: string | null
+  // Staff-reference only -- only ever populated on the staff-facing
+  // pending/shortlisted responses (require_staff-gated), never on gallery/
+  // of-the-day/vote, so a guest-facing screen never has this to render even
+  // by mistake.
+  email: string | null
   photo_url: string
   submitted_at: string
   status: PhotoStatus
@@ -676,10 +681,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ animal_slug: animalSlug, guest_name: guestName }),
     }),
-  submitPhoto: async (file: File, guestLabel: string | null) => {
+  submitPhoto: async (file: File, guestLabel: string | null, email: string | null) => {
     const body = new FormData()
     body.append('file', file)
     if (guestLabel) body.append('guest_label', guestLabel)
+    if (email) body.append('email', email)
     // Not routed through request(): that helper always sets a JSON
     // Content-Type header, which would stop the browser from adding the
     // multipart boundary this upload needs.

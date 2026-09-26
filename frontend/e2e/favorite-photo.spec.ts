@@ -68,6 +68,49 @@ async function findSubmissionId(request: APIRequestContext, token: string, guest
   return gallery.find((p) => p.guest_label === guestLabel)!.id
 }
 
+test('the submission form shows the email consent line with a working /privacy link', async ({ page }) => {
+  await openFavoritePhoto(page)
+  await expect(page.getByPlaceholder('Email (optional)')).toBeVisible()
+  const consent = page.locator('.photo-email-consent')
+  await expect(consent).toContainText("Your email is only visible to park staff and won't be shared")
+  const privacyLink = consent.getByRole('link', { name: 'Privacy Policy' })
+  await expect(privacyLink).toHaveAttribute('href', '/privacy')
+  await privacyLink.click()
+  await expect(page).toHaveURL(/\/privacy$/)
+})
+
+test('a submitted email never appears on the guest-facing gallery, even after the photo is shortlisted', async ({
+  page,
+  context,
+}) => {
+  const guestLabel = `E2E Guest EmailPrivacy ${Date.now()}`
+  const submittedEmail = `e2e-privacy-${Date.now()}@example.com`
+
+  await openFavoritePhoto(page)
+  await page.locator('.photo-submit-form input[type="file"]').setInputFiles(FIXTURE_PHOTO)
+  await page.getByPlaceholder('Your name (optional)').fill(guestLabel)
+  await page.getByPlaceholder('Email (optional)').fill(submittedEmail)
+  await page.getByRole('button', { name: 'Submit Photo' }).click()
+  await expect(page.getByText('Thanks! Your photo is in for staff review.')).toBeVisible()
+
+  const staffPage = await context.newPage()
+  staffPage.on('dialog', (dialog) => dialog.accept())
+  await loginAsStaff(staffPage)
+  const staffRow = staffPage.locator('.staff-photo-row', { hasText: guestLabel })
+  await expect(staffRow.locator('.staff-photo-email')).toHaveText(submittedEmail)
+  await staffRow.getByRole('button', { name: 'Approve' }).click()
+
+  await page.goto('/')
+  await openFavoritePhoto(page)
+  const galleryCard = page.locator('.photo-card', { hasText: guestLabel })
+  await expect(galleryCard).toBeVisible()
+  await expect(galleryCard).not.toContainText(submittedEmail)
+  const galleryHtml = await page.content()
+  expect(galleryHtml).not.toContain(submittedEmail)
+
+  await removeFromShortlist(staffPage, guestLabel)
+})
+
 test('submit -> staff shortlist -> gallery -> vote -> duplicate vote rejected', async ({ page, context, request }) => {
   const guestLabel = `E2E Guest ${Date.now()}`
 

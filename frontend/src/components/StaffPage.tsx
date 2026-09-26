@@ -392,7 +392,10 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                     alt={photo.guest_label ?? 'Guest submitted photo'}
                     className="staff-photo-thumb"
                   />
-                  <span className="staff-photo-label">{photo.guest_label ?? 'A guest'}</span>
+                  <div className="staff-photo-identity">
+                    <span className="staff-photo-label">{photo.guest_label ?? 'A guest'}</span>
+                    {photo.email && <span className="staff-photo-email">{photo.email}</span>}
+                  </div>
                   <div className="staff-photo-actions">
                     <button
                       type="button"

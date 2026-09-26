@@ -437,10 +437,33 @@
   border: 1.5px solid var(--cap-color-outline);
 }
 
+.staff-photo-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* flex: 1 here (not just on .staff-photo-identity) so the shortlisted-row
+   and animal-photos-row usages of this class -- which render it bare, with
+   no .staff-photo-identity wrapper -- keep filling the row exactly as
+   before this change. */
 .staff-photo-label {
   font-weight: 700;
   color: var(--cap-color-ink);
   flex: 1;
+}
+
+/* Secondary line, staff-reference only -- the row omits this element
+   entirely when a submission has no email (see StaffPage.tsx), rather than
+   rendering an empty "Email:" label with nothing after it. */
+.staff-photo-email {
+  font-size: 12.5px;
+  color: var(--cap-color-body-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .staff-photo-actions {

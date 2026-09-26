@@ -1,0 +1,24 @@
+-- CAP Companion App — migration 040: Photo Submissions optional email
+--
+-- Adds an optional email column to photo_submissions so a guest can leave an
+-- email alongside their name when submitting a Favorite Photo entry. Staff-
+-- reference only: this is never returned by /photos/gallery or /photos/
+-- of-the-day (the guest-facing endpoints) -- only /photos/pending and
+-- /photos/shortlisted (both dependencies=[Depends(require_staff)]) include
+-- it in their PhotoSubmission response, same require_staff gate as the rest
+-- of the Photo Queue. No verification/confirmation flow and no outbound
+-- email wiring -- storage + staff-display only, per the ticket's scope.
+--
+-- Nullable, no length cap or NOT NULL default -- same "optional, no backend
+-- length check beyond format" shape as staff_requests.name (migration 020).
+-- Basic email-shape validation happens in CreateStaffRequest-equivalent
+-- request handling (app/services/photos.py's submit_photo, reusing
+-- app/models.py's EMAIL_RE), not as a DB check constraint -- consistent with
+-- guest_accounts.email (migration 035), which also validates in the service
+-- layer rather than a DB-level regex check.
+--
+-- Run this in the Supabase SQL editor against the live project (per the
+-- project's standing gotcha, seed.sql/schema.sql edits alone never reach the
+-- live DB). Safe to run more than once: the column add is guarded.
+
+alter table photo_submissions add column if not exists email text;

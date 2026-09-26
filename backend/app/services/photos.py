@@ -10,11 +10,12 @@ only ever sees a moderated shortlist, never raw guest uploads (Plan.md
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from app.errors import ConflictError, NotFoundError
-from app.models import PhotoStatus, PhotoSubmission
+from app.errors import ConflictError, NotFoundError, ValidationError
+from app.models import EMAIL_RE, PhotoStatus, PhotoSubmission
 from app.supabase_client import get_supabase_client
 
 BUCKET = "favorite-photos"
@@ -29,11 +30,17 @@ def _photo_url(storage_path: str) -> str:
     return client.storage.from_(BUCKET).get_public_url(storage_path)
 
 
-def _row_to_submission(row: dict, session_id: UUID | None = None) -> PhotoSubmission:
+def _row_to_submission(row: dict, session_id: UUID | None = None, include_email: bool = False) -> PhotoSubmission:
+    # include_email defaults False so every guest-facing caller (gallery,
+    # of-the-day, vote, the submitting guest's own receipt) is safe by
+    # default -- only the require_staff-gated pending/shortlisted staff views
+    # opt in. Never gate on session_id being None/not-None for this: get_
+    # photo_of_the_day() also calls list_gallery(None) and is guest-facing.
     votes = row.get("photo_votes") or []
     return PhotoSubmission(
         id=row["id"],
         guest_label=row.get("guest_label"),
+        email=row.get("email") if include_email else None,
         photo_url=_photo_url(row["storage_path"]),
         submitted_at=_parse_timestamptz(row["submitted_at"]),
         status=row["status"],
@@ -42,7 +49,13 @@ def _row_to_submission(row: dict, session_id: UUID | None = None) -> PhotoSubmis
     )
 
 
-def submit_photo(guest_label: str | None, filename: str, content_type: str, file_bytes: bytes) -> PhotoSubmission:
+def submit_photo(
+    guest_label: str | None, email: str | None, filename: str, content_type: str, file_bytes: bytes
+) -> PhotoSubmission:
+    stripped_email = email.strip() if email else None
+    if stripped_email and not re.match(EMAIL_RE, stripped_email):
+        raise ValidationError("email must be a valid email address")
+
     client = get_supabase_client()
     submission_id = uuid4()
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
@@ -50,7 +63,14 @@ def submit_photo(guest_label: str | None, filename: str, content_type: str, file
     client.storage.from_(BUCKET).upload(storage_path, file_bytes, {"content-type": content_type})
     row = (
         client.table("photo_submissions")
-        .insert({"id": str(submission_id), "guest_label": guest_label, "storage_path": storage_path})
+        .insert(
+            {
+                "id": str(submission_id),
+                "guest_label": guest_label,
+                "email": stripped_email,
+                "storage_path": storage_path,
+            }
+        )
         .execute()
         .data[0]
     )
@@ -67,7 +87,7 @@ def list_pending() -> list[PhotoSubmission]:
         .execute()
         .data
     )
-    return [_row_to_submission(r) for r in rows]
+    return [_row_to_submission(r, include_email=True) for r in rows]
 
 
 def _get_row(submission_id: UUID) -> dict:
@@ -141,7 +161,7 @@ def delete_all_shortlisted() -> int:
     return len(rows)
 
 
-def list_gallery(session_id: UUID | None) -> list[PhotoSubmission]:
+def list_gallery(session_id: UUID | None, include_email: bool = False) -> list[PhotoSubmission]:
     client = get_supabase_client()
     rows = (
         client.table("photo_submissions")
@@ -151,7 +171,7 @@ def list_gallery(session_id: UUID | None) -> list[PhotoSubmission]:
         .execute()
         .data
     )
-    return [_row_to_submission(r, session_id) for r in rows]
+    return [_row_to_submission(r, session_id, include_email) for r in rows]
 
 
 def get_photo_of_the_day() -> PhotoSubmission | None:

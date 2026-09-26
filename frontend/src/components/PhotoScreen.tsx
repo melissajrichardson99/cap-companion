@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { api, type PhotoSubmission } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { CameraIcon } from './NavIcons'
@@ -20,6 +21,7 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [guestLabel, setGuestLabel] = useState('')
+  const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [justSubmitted, setJustSubmitted] = useState(false)
@@ -33,11 +35,12 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
     setSubmitting(true)
     setSubmitError(null)
     api
-      .submitPhoto(file, guestLabel.trim() || null)
+      .submitPhoto(file, guestLabel.trim() || null, email.trim() || null)
       .then(() => {
         setJustSubmitted(true)
         setFile(null)
         setGuestLabel('')
+        setEmail('')
         if (fileInputRef.current) fileInputRef.current.value = ''
       })
       .catch((err) => setSubmitError(String(err)))
@@ -92,6 +95,19 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
             disabled={submitting}
             maxLength={80}
           />
+          <input
+            type="email"
+            className="photo-guest-label-input"
+            placeholder="Email (optional)"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={submitting}
+            maxLength={254}
+          />
+          <p className="photo-email-consent">
+            Your email is only visible to park staff and won't be shared or used for anything else. See our{' '}
+            <Link to="/privacy">Privacy Policy</Link> for details.
+          </p>
           <button type="submit" className="btn btn-primary" disabled={!file || submitting}>
             {submitting ? 'Uploading…' : 'Submit Photo'}
           </button>

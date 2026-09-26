@@ -513,6 +513,10 @@ create index if not exists collectible_redemptions_created_at_idx on collectible
 create table if not exists photo_submissions (
     id            uuid primary key default gen_random_uuid(),
     guest_label   text,
+    -- Optional (migration 040) -- staff-reference only, never returned by the
+    -- guest-facing /photos/gallery or /photos/of-the-day endpoints. Format
+    -- validated in app/services/photos.py's submit_photo, not here.
+    email         text,
     -- Supabase Storage object key in the 'favorite-photos' bucket -- the
     -- actual image bytes live in Storage, not the DB. photo_url is derived
     -- at read time from this path (app/services/photos.py), never stored,

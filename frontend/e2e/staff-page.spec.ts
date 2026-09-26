@@ -29,9 +29,10 @@ async function openFavoritePhoto(page: Page) {
   await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
 }
 
-async function submitPhoto(page: Page, label: string) {
+async function submitPhoto(page: Page, label: string, email?: string) {
   await page.locator('.photo-submit-form input[type="file"]').setInputFiles(FIXTURE_PHOTO)
   await page.getByPlaceholder('Your name (optional)').fill(label)
+  if (email) await page.getByPlaceholder('Email (optional)').fill(email)
   await page.getByRole('button', { name: 'Submit Photo' }).click()
   await expect(page.getByText('Thanks! Your photo is in for staff review.')).toBeVisible()
 }
@@ -147,6 +148,41 @@ test('Approve promotes a photo into the gallery; Reject and Delete both remove i
     return res.status
   }, deleteId)
   expect(deleteAgainStatus).toBe(404)
+})
+
+test('a photo submitted with an email shows name and email as separate elements in the Photo Queue; one submitted without an email shows name only', async ({
+  page,
+  context,
+}) => {
+  const withEmailLabel = `E2E StaffPage WithEmail ${Date.now()}`
+  const withoutEmailLabel = `E2E StaffPage NoEmail ${Date.now()}`
+  const submittedEmail = `e2e-photo-${Date.now()}@example.com`
+
+  await page.goto('/')
+  await openFavoritePhoto(page)
+  await submitPhoto(page, withEmailLabel, submittedEmail)
+  await submitPhoto(page, withoutEmailLabel)
+
+  const staffPage = await context.newPage()
+  staffPage.on('dialog', (dialog) => dialog.accept())
+  await loginAsStaff(staffPage)
+
+  // Name and email render as distinct elements (not concatenated into one
+  // string) -- the bold primary label and a separate secondary email line.
+  const withEmailRow = staffPage.locator('.staff-photo-row', { hasText: withEmailLabel })
+  await expect(withEmailRow).toBeVisible()
+  await expect(withEmailRow.locator('.staff-photo-label')).toHaveText(withEmailLabel)
+  await expect(withEmailRow.locator('.staff-photo-email')).toHaveText(submittedEmail)
+
+  // No email submitted -> the row shows the name only, with no dangling
+  // empty email element rendered at all.
+  const withoutEmailRow = staffPage.locator('.staff-photo-row', { hasText: withoutEmailLabel })
+  await expect(withoutEmailRow).toBeVisible()
+  await expect(withoutEmailRow.locator('.staff-photo-label')).toHaveText(withoutEmailLabel)
+  await expect(withoutEmailRow.locator('.staff-photo-email')).toHaveCount(0)
+
+  await withEmailRow.getByRole('button', { name: 'Delete' }).click()
+  await withoutEmailRow.getByRole('button', { name: 'Delete' }).click()
 })
 
 test('an emergency request sorts above an earlier question; Mark Resolved removes it from the default view; Show Resolved brings it back', async ({

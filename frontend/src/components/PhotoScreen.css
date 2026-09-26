@@ -163,6 +163,24 @@
   flex: 1 1 200px;
 }
 
+/* flex-basis: 100% forces this onto its own line below the name/email
+   inputs, regardless of how many fit per row at a given width -- the
+   consent line always needs to read as its own sentence, never wrapped
+   mid-row next to an input. */
+.photo-email-consent {
+  flex: 1 1 100%;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--cap-color-body-text);
+  margin: 0;
+}
+
+.photo-email-consent a {
+  color: var(--cap-color-header-green);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 /* Compound selector so this reliably beats shared.css's .btn regardless of
    import order (same fix Puzzles/Scoring use for their primary buttons). */
 .photo-submit-form .btn-primary {

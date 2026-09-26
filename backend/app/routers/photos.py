@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from app.device_session import get_or_create_session
-from app.errors import ConflictError, NotFoundError
+from app.errors import ConflictError, NotFoundError, ValidationError
 from app.models import DeviceSession, PhotoSubmission
 from app.services import photos as photos_service
 from app.staff_auth import require_staff
@@ -12,11 +12,18 @@ router = APIRouter(prefix="/photos", tags=["photos"])
 
 
 @router.post("/submit", response_model=PhotoSubmission)
-async def submit(file: UploadFile = File(...), guest_label: str | None = Form(default=None)) -> PhotoSubmission:
+async def submit(
+    file: UploadFile = File(...),
+    guest_label: str | None = Form(default=None),
+    email: str | None = Form(default=None),
+) -> PhotoSubmission:
     content = await file.read()
-    return photos_service.submit_photo(
-        guest_label, file.filename or "photo.jpg", file.content_type or "application/octet-stream", content
-    )
+    try:
+        return photos_service.submit_photo(
+            guest_label, email, file.filename or "photo.jpg", file.content_type or "application/octet-stream", content
+        )
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/pending", response_model=list[PhotoSubmission], dependencies=[Depends(require_staff)])
@@ -33,7 +40,10 @@ def gallery(session: DeviceSession = Depends(get_or_create_session)) -> list[Pho
 def list_shortlisted() -> list[PhotoSubmission]:
     # Staff-facing view of the same rows /gallery serves guests -- reuses
     # list_gallery so vote counts stay computed the same way in both places.
-    return photos_service.list_gallery(None)
+    # include_email=True is what's different here: this is the one
+    # list_gallery call sitting behind require_staff, so it's the only one
+    # allowed to surface email on shortlisted rows.
+    return photos_service.list_gallery(None, include_email=True)
 
 
 @router.get("/of-the-day", response_model=PhotoSubmission | None)

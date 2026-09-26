@@ -530,6 +530,10 @@ class PhotoStatus(StrEnum):
 class PhotoSubmission(BaseModel):
     id: UUID
     guest_label: str | None = None
+    # Optional, staff-reference only (migration 040) -- app/services/
+    # photos.py never includes this on the guest-facing gallery/of-the-day
+    # rows, only on the require_staff-gated pending/shortlisted ones.
+    email: str | None = None
     # Derived from storage_path via the Storage API at read time, never
     # stored -- see app/services/photos.py.
     photo_url: str
@@ -666,7 +670,10 @@ class PassportSession(BaseModel):
     stats: PassportStats
 
 
-_EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+# Simple email-shape check, not full RFC validation -- shared by
+# GuestSignupRequest below and app/services/photos.py's optional
+# photo_submissions.email (migration 040).
+EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
 
 class Guest(BaseModel):
@@ -702,7 +709,7 @@ class GuestSignupRequest(BaseModel):
     @classmethod
     def _email_looks_valid(cls, value: str) -> str:
         stripped = value.strip()
-        if not re.match(_EMAIL_RE, stripped):
+        if not re.match(EMAIL_RE, stripped):
             raise ValueError("must be a valid email address")
         return stripped
 
