@@ -12,26 +12,28 @@ import { seedDeviceSession, withSession } from './deviceSessionHelper'
 // - /staff/heatmap and its endpoint are staff-gated like every other staff
 //   screen.
 //
-// Pinned browser timezone: the page sends the browser's IANA zone as `tz`,
-// and day/hour filters are evaluated in it -- pinning it here keeps the
-// "today"/"this hour" math below independent of the machine running the
-// suite. Events accumulate across runs (the event table is never reset), so
+// Park time, not browser time: the backend buckets day/hour/date filters in
+// the park's fixed zone (America/Edmonton), so "today"/"this hour" below are
+// computed in PARK_TZ. The browser is deliberately pinned to a very
+// different zone (Asia/Tokyo, usually a different calendar day) to prove
+// the page's results don't depend on the viewer's timezone. Events accumulate across runs (the event table is never reset), so
 // the "inside the window" assertion is a before/after delta (workers: 1 in
 // playwright.config.ts keeps it exact); the "outside the window" assertions
 // use windows that are empty by construction (another weekday within a
 // today-only range, and hours later than now).
 
 const API = 'http://localhost:8000'
-const TZ = 'America/Chicago'
+const PARK_TZ = 'America/Edmonton'
+const BROWSER_TZ = 'Asia/Tokyo'
 const NODE_NAME = 'Ticket Booth' // zero linked Bingo tiles -> single-click visit, no confirmation popups
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
-test.use({ timezoneId: TZ })
+test.use({ timezoneId: BROWSER_TZ })
 
-function nowInTz(): { date: string; weekday: string; hour: number } {
+function nowInParkTime(): { date: string; weekday: string; hour: number } {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat('en-US', {
-      timeZone: TZ,
+      timeZone: PARK_TZ,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -52,7 +54,7 @@ async function nodeId(request: APIRequestContext, name: string): Promise<string>
 }
 
 async function apiHeatmapCount(request: APIRequestContext, staffToken: string, id: string, query: string): Promise<number> {
-  const res = await request.get(`${API}/staff/heatmap?${query}&tz=${encodeURIComponent(TZ)}`, {
+  const res = await request.get(`${API}/staff/heatmap?${query}`, {
     headers: { Authorization: `Bearer ${staffToken}` },
   })
   expect(res.ok()).toBe(true)
@@ -78,7 +80,7 @@ test('every Map check-in (first visit and repeats) shows on the staff heatmap in
 }) => {
   const staffToken = await apiStaffLogin(request)
   const id = await nodeId(request, NODE_NAME)
-  const now = nowInTz()
+  const now = nowInParkTime()
   // Current hour +/- 1 (clamped), so a check-in that straddles an hour
   // boundary mid-test still lands inside the window.
   const hourStart = Math.max(0, now.hour - 1)
@@ -103,6 +105,13 @@ test('every Map check-in (first visit and repeats) shows on the staff heatmap in
   await staffPage.getByRole('tab', { name: 'Analytics' }).click()
   await staffPage.getByRole('link', { name: 'Open Visit Heatmap' }).click()
   await expect(staffPage).toHaveURL(/\/staff\/heatmap$/)
+  await expect(staffPage.getByTestId('heatmap-tz-note')).toContainText('park time')
+  // The browser really is in Tokyo, and the page must not forward that zone.
+  expect(await staffPage.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe(BROWSER_TZ)
+  const heatmapRequests: URL[] = []
+  staffPage.on('request', (req) => {
+    if (req.url().includes('/staff/heatmap?')) heatmapRequests.push(new URL(req.url()))
+  })
 
   await staffPage.getByRole('button', { name: 'Custom' }).click()
   await staffPage.getByLabel('Range start').fill(now.date)
@@ -146,6 +155,9 @@ test('every Map check-in (first visit and repeats) shows on the staff heatmap in
   await expect(staffPage.getByTestId('heatmap-total')).toHaveText('0 visits in this window')
   await expect(dot(staffPage)).toHaveAttribute('data-visits', '0')
   await expect(staffPage.getByText(/Couldn't load heatmap/)).toHaveCount(0)
+
+  expect(heatmapRequests.length).toBeGreaterThan(0)
+  expect(heatmapRequests.filter((u) => u.searchParams.has('tz'))).toEqual([])
 })
 
 test('/staff/heatmap shows the staff login screen without a staff session, then the heatmap after logging in', async ({ page }) => {

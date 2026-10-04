@@ -16,9 +16,8 @@ def get_heatmap(
     day: str | None = None,
     hour_start: int | None = Query(default=None, ge=0, le=23),
     hour_end: int | None = Query(default=None, ge=1, le=24),
-    tz: str | None = None,
 ) -> HeatmapSummary:
     try:
-        return heatmap_service.get_heatmap(start, end, day=day, hour_start=hour_start, hour_end=hour_end, tz=tz)
+        return heatmap_service.get_heatmap(start, end, day=day, hour_start=hour_start, hour_end=hour_end)
     except heatmap_service.HeatmapFilterError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

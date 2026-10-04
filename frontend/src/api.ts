@@ -501,7 +501,7 @@ export interface HeatmapFilters {
   end: string
   // Lowercase English weekday name ('saturday'), or omitted for all days.
   day?: string
-  // [hourStart, hourEnd) in local time; omit both for all hours.
+  // [hourStart, hourEnd) in park time; omit both for all hours.
   hourStart?: number
   hourEnd?: number
 }
@@ -682,15 +682,13 @@ export const api = {
   // params) -- no time-of-day component from the frontend.
   getAnalyticsSummary: (start: string, end: string) =>
     staffRequest<AnalyticsSummary>(`/analytics/summary?start=${start}&end=${end}`),
-  // Day/hour filters (and the date range's day boundaries) are evaluated in
-  // the browser's own timezone -- staff use this on-site, so that's park time.
+  // Day/hour filters (and the date range's day boundaries) are evaluated by
+  // the backend in the park's fixed timezone, never the browser's.
   getHeatmap: (filters: HeatmapFilters) => {
     const params = new URLSearchParams({ start: filters.start, end: filters.end })
     if (filters.day) params.set('day', filters.day)
     if (filters.hourStart != null) params.set('hour_start', String(filters.hourStart))
     if (filters.hourEnd != null) params.set('hour_end', String(filters.hourEnd))
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    if (tz) params.set('tz', tz)
     return staffRequest<HeatmapSummary>(`/staff/heatmap?${params.toString()}`)
   },
   staffLogin: (password: string) =>

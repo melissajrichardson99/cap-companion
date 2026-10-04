@@ -31,6 +31,14 @@
   margin-bottom: 0;
 }
 
+/* Fixed-timezone note under the filters: the backend always buckets in park
+   time, so staff viewing remotely need to know the hours aren't theirs. */
+.staff-heatmap-tz-note {
+  margin: calc(-1 * var(--cap-space-2)) 0 var(--cap-space-3);
+  font-size: 13px;
+  color: var(--cap-color-body-text);
+}
+
 .staff-heatmap-filter {
   display: flex;
   align-items: center;

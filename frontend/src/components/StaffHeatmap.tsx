@@ -137,7 +137,7 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
       <section className="staff-heatmap">
         <h1 className="staff-heatmap-title">Visit Heatmap</h1>
         <p className="staff-heatmap-subtitle">
-          Every Map check-in (repeat visits included), by location. Days and hours are in this device's local time.
+          Every Map check-in (repeat visits included), by location.
         </p>
 
         <div className="staff-heatmap-filters">
@@ -176,6 +176,9 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
             </select>
           </label>
         </div>
+        <p className="staff-heatmap-tz-note" data-testid="heatmap-tz-note">
+          Dates, days and hours shown in park time (Alberta), whatever timezone this device is in.
+        </p>
 
         {hourRangeInvalid && <p className="screen-error">The "To" hour must be later than the "From" hour.</p>}
         {error && <p className="screen-error">Couldn't load heatmap: {error}</p>}

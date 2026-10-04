@@ -8,12 +8,10 @@ occurrence, never deduplicated -- grouped by source_id, within:
 - optionally an hour window [hour_start, hour_end) (end exclusive, so
   11..17 means 11:00 through 16:59).
 
-All three are interpreted in `tz` (an IANA name, e.g. "America/Chicago"),
-which the staff page sends from the browser's own timezone. A park heatmap
-asking "Saturdays 11am-5pm" means park-local wall-clock time, not UTC --
-and since this app stores no park timezone of its own, the staff member's
-device (on-site) is the source of truth, same as how the Analytics date
-pickers already read "today" from the browser. Defaults to UTC.
+All three are interpreted in PARK_TIMEZONE (the park's own wall-clock
+time), never the viewer's: "Saturdays 11am-5pm" means park hours, and the
+same data must show the same busy times to anyone viewing it from anywhere.
+The date range is park-local calendar days.
 
 The date range is narrowed in the DB query (converted to UTC bounds);
 day/hour filtering happens in Python per row, since PostgREST can't
@@ -25,7 +23,7 @@ Volume is a single seasonal park, so no pre-aggregation table.
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo
 
 from app.models import HeatmapSourceCount, HeatmapSummary
 from app.services.analytics import _fetch_paginated, _parse_timestamptz
@@ -33,21 +31,18 @@ from app.supabase_client import get_supabase_client
 
 MAP_NODE_SOURCE_TYPE = "map_node"
 
+# Cobb's Adventure Park is in Alberta (Mountain time, observes DST). The
+# frontend's parkSchedule.ts has no explicit zone -- it runs in the browser's
+# local time -- so this is the app's only stored park timezone. Resolved
+# from the pinned tzdata package, not the host OS.
+PARK_TIMEZONE = ZoneInfo("America/Edmonton")
+
 # Python's date.weekday() order (Monday == 0).
 DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 
 class HeatmapFilterError(ValueError):
     pass
-
-
-def resolve_timezone(tz: str | None) -> ZoneInfo | timezone:
-    if not tz:
-        return timezone.utc
-    try:
-        return ZoneInfo(tz)
-    except (ZoneInfoNotFoundError, ValueError) as exc:
-        raise HeatmapFilterError(f"Unknown timezone: {tz}") from exc
 
 
 def _utc_bounds(start: date, end: date, zone: ZoneInfo | timezone) -> tuple[datetime, datetime]:
@@ -79,7 +74,6 @@ def get_heatmap(
     day: str | None = None,
     hour_start: int | None = None,
     hour_end: int | None = None,
-    tz: str | None = None,
     source_type: str = MAP_NODE_SOURCE_TYPE,
 ) -> HeatmapSummary:
     if end < start:
@@ -98,8 +92,7 @@ def get_heatmap(
     if not (0 <= lo < hi <= 24):
         raise HeatmapFilterError("hour range must satisfy 0 <= hour_start < hour_end <= 24")
 
-    zone = resolve_timezone(tz)
-    start_utc, end_utc = _utc_bounds(start, end, zone)
+    start_utc, end_utc = _utc_bounds(start, end, PARK_TIMEZONE)
 
     client = get_supabase_client()
     rows = _fetch_paginated(
@@ -110,7 +103,7 @@ def get_heatmap(
         .lt("visited_at", end_utc.isoformat())
         .order("visited_at")
     )
-    counts = _count_events(rows, zone, weekday, lo, hi)
+    counts = _count_events(rows, PARK_TIMEZONE, weekday, lo, hi)
 
     return HeatmapSummary(
         source_type=source_type,
