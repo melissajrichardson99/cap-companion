@@ -14,6 +14,7 @@ from app.routers import (
     coins,
     collectibles,
     device_session,
+    heatmap,
     hunt,
     internal,
     map as map_router,
@@ -85,6 +86,7 @@ app.include_router(device_session.router)
 app.include_router(announcements.router)
 app.include_router(animal_photos.router)
 app.include_router(analytics.router)
+app.include_router(heatmap.router)
 app.include_router(account.router)
 app.include_router(internal.router)
 

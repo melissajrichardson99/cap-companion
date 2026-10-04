@@ -120,6 +120,21 @@ create table if not exists node_visits (
 create index if not exists node_visits_session_id_idx on node_visits(session_id);
 create index if not exists node_visits_node_id_idx on node_visits(node_id);
 
+-- Staff Visit Heatmap (migration 041): anonymous, never-deduplicated visit
+-- occurrence log -- one row per successful POST /map/nodes/{id}/visit, unlike
+-- node_visits above (a per-session status flag). No session/guest columns.
+-- source_type/source_id are generic so Phase 2 can log QR-scan events for
+-- other entity types here too.
+create table if not exists map_node_visit_events (
+    id          uuid primary key default gen_random_uuid(),
+    source_type text not null default 'map_node',
+    source_id   text not null,
+    visited_at  timestamptz not null default now()
+);
+
+create index if not exists map_node_visit_events_type_visited_at_idx
+    on map_node_visit_events(source_type, visited_at);
+
 -- ---------------------------------------------------------------------------
 -- bingo_cards
 -- ---------------------------------------------------------------------------

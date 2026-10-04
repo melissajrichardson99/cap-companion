@@ -162,16 +162,19 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={step === 'submitting'}>
             Close
           </button>
-          {!node.visited && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={startMarkVisited}
-              disabled={step === 'submitting'}
-            >
-              Mark Visited
-            </button>
-          )}
+          {/* Always available, not just before the first visit: every press
+              logs one raw visit occurrence for the Staff Visit Heatmap
+              (map_node_visit_events). The backend's node_visits upsert and
+              Map Exploration bonus guard already no-op on a repeat, so a
+              re-check-in never changes Bingo/Map completion state. */}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={startMarkVisited}
+            disabled={step === 'submitting'}
+          >
+            {node.visited ? 'Check In Again' : 'Mark Visited'}
+          </button>
         </div>
         {/* Only reachable here when there was nothing to confirm (queue stayed
             empty) -- startMarkVisited went straight to submit(). */}

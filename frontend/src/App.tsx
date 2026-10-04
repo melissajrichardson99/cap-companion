@@ -27,6 +27,7 @@ import { ScanEntryModal } from './components/ScanEntryModal'
 import { ScanScreen } from './components/ScanScreen'
 import { ScoringScreen } from './components/ScoringScreen'
 import { StaffPage } from './components/StaffPage'
+import { StaffHeatmapPage } from './components/StaffHeatmap'
 import { ToastStack, type ToastItem } from './components/ToastStack'
 import { rotateDeviceSessionId } from './deviceSession'
 import { clearDismissedAnnouncements } from './dismissedAnnouncements'
@@ -522,6 +523,9 @@ function App() {
           with the guest-facing app. Gated behind a shared staff password
           (app/staff_auth.py) -- StaffPage itself handles the login screen. */}
       <Route path="/staff" element={<StaffPage />} />
+      {/* Standalone staff page (not a Staff Page tab) -- same StaffAuthGate
+          login/require_staff gating as /staff. */}
+      <Route path="/staff/heatmap" element={<StaffHeatmapPage />} />
       <Route path="/reset-password" element={<ResetPasswordRoute />} />
       <Route
         path="/scan/:code"

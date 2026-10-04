@@ -1,41 +1,20 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { api, type AnalyticsSummary, type MapNodeVisitRank } from '../api'
 import { ANIMALS } from '../animalContent'
+import { StaffDateRangePicker, useStaffDateRange } from './StaffDateRangePicker'
 import { DailyLineChart, HorizontalBarList, SplitDonut } from './StaffAnalyticsCharts'
 import './StaffAnalytics.css'
-
-type RangePreset = '7d' | 'custom'
-
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
-
-const TODAY = isoDate(new Date())
-
-// 30D/90D are deferred until the app has real accumulated post-launch usage
-// data to make them meaningful -- only 7D and Custom for now.
-function presetRange(): { start: string; end: string } {
-  const end = new Date()
-  const start = new Date(end)
-  start.setDate(start.getDate() - 6)
-  return { start: isoDate(start), end: isoDate(end) }
-}
 
 function animalName(slug: string): string {
   return ANIMALS.find((a) => a.slug === slug)?.name ?? slug
 }
 
 export function StaffAnalytics() {
-  const [preset, setPreset] = useState<RangePreset>('7d')
-  const [customStart, setCustomStart] = useState(() => presetRange().start)
-  const [customEnd, setCustomEnd] = useState(TODAY)
+  const range = useStaffDateRange()
+  const { start, end } = range
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  const { start, end } = useMemo(
-    () => (preset === 'custom' ? { start: customStart, end: customEnd } : presetRange()),
-    [preset, customStart, customEnd],
-  )
 
   useEffect(() => {
     setSummary(null)
@@ -48,42 +27,7 @@ export function StaffAnalytics() {
 
   return (
     <section className="staff-analytics">
-      <div className="staff-analytics-range" role="group" aria-label="Date range">
-        <button
-          type="button"
-          className={`staff-animal-picker-btn ${preset === '7d' ? 'staff-animal-picker-btn-active' : ''}`}
-          onClick={() => setPreset('7d')}
-        >
-          7D
-        </button>
-        <button
-          type="button"
-          className={`staff-animal-picker-btn ${preset === 'custom' ? 'staff-animal-picker-btn-active' : ''}`}
-          onClick={() => setPreset('custom')}
-        >
-          Custom
-        </button>
-        {preset === 'custom' && (
-          <span className="staff-analytics-custom-range">
-            <input
-              type="date"
-              aria-label="Range start"
-              value={customStart}
-              max={customEnd}
-              onChange={(e) => setCustomStart(e.target.value)}
-            />
-            <span aria-hidden="true">–</span>
-            <input
-              type="date"
-              aria-label="Range end"
-              value={customEnd}
-              min={customStart}
-              max={TODAY}
-              onChange={(e) => setCustomEnd(e.target.value)}
-            />
-          </span>
-        )}
-      </div>
+      <StaffDateRangePicker range={range} />
 
       {error && <p className="screen-error">Couldn't load analytics: {error}</p>}
       {!error && !summary && <p className="staff-photos-loading">Loading analytics…</p>}
@@ -133,6 +77,13 @@ export function StaffAnalytics() {
             <ChartCard label="Most / Least Visited Nodes">
               <NodeRankings rankings={summary.map_exploration.node_rankings} />
             </ChartCard>
+            <div className="cap-parchment-card staff-analytics-stat-card">
+              <span className="staff-analytics-card-label">Visit Heatmap</span>
+              <span className="staff-analytics-card-caption">Every check-in by map location, filterable by day and hour</span>
+              <Link to="/staff/heatmap" className="btn btn-secondary staff-analytics-heatmap-link">
+                Open Visit Heatmap
+              </Link>
+            </div>
           </AnalyticsSection>
 
           <AnalyticsSection title="Collectibles">

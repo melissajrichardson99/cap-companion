@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api, type AnimalPhoto, type Announcement, type MapNode, type PhotoSubmission, type StaffRequest } from '../api'
 import { ANIMALS } from '../animalContent'
-import { clearStaffToken, getStaffToken } from '../staffAuth'
+import { clearStaffToken } from '../staffAuth'
 import { getStaffName } from '../staffName'
 import { ClearShortlistModal } from './ClearShortlistModal'
 import { ClipboardIcon } from './NavIcons'
 import { StaffAnalytics } from './StaffAnalytics'
-import { StaffLoginScreen } from './StaffLoginScreen'
+import { StaffAuthGate } from './StaffAuthGate'
 import { StaffNameModal } from './StaffNameModal'
 import { StaffQrDirectory } from './StaffQrDirectory'
 import { StaffSidebar, type StaffTab } from './StaffSidebar'
@@ -40,33 +40,7 @@ const NODE_CATEGORY_LABEL: Record<MapNode['category'], string> = {
 }
 
 export function StaffPage() {
-  // null while the stored token (if any) is still being validated against
-  // the server -- the client-side guard is a convenience, not the real
-  // enforcement (that's require_staff on the backend), but we still don't
-  // want to flash staff data before confirming the token is actually valid.
-  const [authed, setAuthed] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    const token = getStaffToken()
-    if (!token) {
-      setAuthed(false)
-      return
-    }
-    api.staffCheckSession().then((ok) => {
-      if (!ok) clearStaffToken()
-      setAuthed(ok)
-    })
-  }, [])
-
-  if (authed === null) {
-    return <div className="staff-page staff-page-loading">Checking session…</div>
-  }
-
-  if (!authed) {
-    return <StaffLoginScreen onLoggedIn={() => setAuthed(true)} />
-  }
-
-  return <StaffPageContent onLoggedOut={() => setAuthed(false)} />
+  return <StaffAuthGate>{(onLoggedOut) => <StaffPageContent onLoggedOut={onLoggedOut} />}</StaffAuthGate>
 }
 
 function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {

@@ -487,6 +487,25 @@ export interface AnalyticsBingo {
   avg_milestones_per_session: number
 }
 
+// GET /staff/heatmap -- raw (never deduplicated) visit-occurrence counts per
+// source_id. Only sources with >= 1 matching visit are listed; treat every
+// other node as 0. source_id is a map node id for source_type 'map_node'.
+export interface HeatmapSummary {
+  source_type: string
+  total_visits: number
+  counts: { source_id: string; visits: number }[]
+}
+
+export interface HeatmapFilters {
+  start: string
+  end: string
+  // Lowercase English weekday name ('saturday'), or omitted for all days.
+  day?: string
+  // [hourStart, hourEnd) in local time; omit both for all hours.
+  hourStart?: number
+  hourEnd?: number
+}
+
 export interface MapNodeVisitRank {
   node_id: string
   name: string
@@ -663,6 +682,17 @@ export const api = {
   // params) -- no time-of-day component from the frontend.
   getAnalyticsSummary: (start: string, end: string) =>
     staffRequest<AnalyticsSummary>(`/analytics/summary?start=${start}&end=${end}`),
+  // Day/hour filters (and the date range's day boundaries) are evaluated in
+  // the browser's own timezone -- staff use this on-site, so that's park time.
+  getHeatmap: (filters: HeatmapFilters) => {
+    const params = new URLSearchParams({ start: filters.start, end: filters.end })
+    if (filters.day) params.set('day', filters.day)
+    if (filters.hourStart != null) params.set('hour_start', String(filters.hourStart))
+    if (filters.hourEnd != null) params.set('hour_end', String(filters.hourEnd))
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (tz) params.set('tz', tz)
+    return staffRequest<HeatmapSummary>(`/staff/heatmap?${params.toString()}`)
+  },
   staffLogin: (password: string) =>
     request<{ token: string }>('/staff/login', { method: 'POST', body: JSON.stringify({ password }) }),
   staffCheckSession: async (): Promise<boolean> => {

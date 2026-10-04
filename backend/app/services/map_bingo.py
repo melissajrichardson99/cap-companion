@@ -20,6 +20,7 @@ Coins/Collectibles.
 
 from __future__ import annotations
 
+import logging
 import random
 from datetime import datetime, timezone
 from uuid import UUID
@@ -46,6 +47,8 @@ from app.services import coins as coins_service
 from app.services import milestone as milestone_service
 from app.services import minigame_draw as draw_service
 from app.supabase_client import get_supabase_client
+
+logger = logging.getLogger("app")
 
 CURRENT_MINIGAME_PHASE = 2  # All 10 minigames shipped (Phase 1 + Phase 2, per 4.1).
 
@@ -532,6 +535,17 @@ def visit_node(
         ignore_duplicates=True,
         default_to_null=False,
     ).execute()
+
+    # Staff Visit Heatmap (migration 041): unlike the node_visits upsert
+    # above, this logs *every* visit occurrence (repeat visits included) to
+    # the anonymous event log -- no session/guest id. Best-effort: a failed
+    # analytics insert must never fail the guest's actual visit.
+    try:
+        client.table("map_node_visit_events").insert(
+            {"source_type": "map_node", "source_id": str(node_id)}, default_to_null=False
+        ).execute()
+    except Exception:
+        logger.exception("Failed to log map_node_visit_events row for node %s", node_id)
 
     map_exploration_bonus = _check_map_exploration_bonus(client, node_id, session_id, guest_id)
 

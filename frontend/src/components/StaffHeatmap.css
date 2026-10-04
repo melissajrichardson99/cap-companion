@@ -1,0 +1,135 @@
+.staff-heatmap {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.staff-heatmap-title {
+  font-family: var(--cap-font-display);
+  font-size: 24px;
+  color: var(--cap-color-ink);
+  margin: 0 0 var(--cap-space-1);
+}
+
+.staff-heatmap-subtitle {
+  color: var(--cap-color-body-text);
+  margin: 0 0 var(--cap-space-4);
+}
+
+/* One row of filters above the map (wraps on narrow widths). The shared
+   date-range picker brings its own bottom margin -- zeroed here so every
+   control in the row lines up. */
+.staff-heatmap-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cap-space-3);
+  margin-bottom: var(--cap-space-3);
+}
+
+.staff-heatmap-filters .staff-analytics-range {
+  margin-bottom: 0;
+}
+
+.staff-heatmap-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--cap-color-ink);
+}
+
+.staff-heatmap-filter select {
+  font: inherit;
+  padding: 4px 6px;
+}
+
+.staff-heatmap-summary {
+  min-height: 1.5em;
+  margin-bottom: var(--cap-space-2);
+  color: var(--cap-color-ink);
+  font-weight: 600;
+}
+
+/* Static view: none of the guest map's pinch/pan gesture handling applies. */
+.staff-heatmap-viewport {
+  touch-action: auto;
+}
+
+.staff-heatmap-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  /* Surface ring so a dot stays legible over any part of the map art. */
+  box-shadow:
+    0 0 0 2px #fff,
+    0 1px 4px rgba(0, 0, 0, 0.35);
+  opacity: 0.92;
+  transition:
+    width 0.2s ease,
+    height 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.staff-heatmap-dot-zero {
+  opacity: 0.7;
+}
+
+.staff-heatmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cap-space-4);
+  margin: var(--cap-space-3) 0 var(--cap-space-4);
+  font-size: 13px;
+  color: var(--cap-color-body-text);
+}
+
+.staff-heatmap-legend-zero,
+.staff-heatmap-legend-scale {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.staff-heatmap-legend-zero-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #9a958c;
+}
+
+.staff-heatmap-legend-bar {
+  width: 160px;
+  height: 10px;
+  border-radius: 5px;
+}
+
+.staff-heatmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: var(--cap-color-ink);
+}
+
+.staff-heatmap-table caption {
+  text-align: left;
+  font-family: var(--cap-font-display);
+  font-size: 16px;
+  margin-bottom: var(--cap-space-2);
+}
+
+.staff-heatmap-table th,
+.staff-heatmap-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.staff-heatmap-table td:last-child,
+.staff-heatmap-table th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+

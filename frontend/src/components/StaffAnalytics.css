@@ -202,3 +202,11 @@
   border-radius: 3px;
   flex-shrink: 0;
 }
+
+/* Link out to the standalone /staff/heatmap page. Qualified under the card
+   so it doesn't tie shared.css's .btn on specificity (load-order gotcha). */
+.staff-analytics-stat-card .staff-analytics-heatmap-link {
+  margin-top: var(--cap-space-2);
+  align-self: flex-start;
+  text-decoration: none;
+}

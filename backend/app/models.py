@@ -846,6 +846,24 @@ class AnalyticsMapExploration(BaseModel):
     node_rankings: list[MapNodeVisitRank]
 
 
+class HeatmapSourceCount(BaseModel):
+    # Generic, not map-node-specific -- Phase 2 reuses this shape for QR-scan
+    # sources. For Phase 1, source_id is always a map_nodes.id.
+    source_id: str
+    visits: int = Field(ge=0)
+
+
+class HeatmapSummary(BaseModel):
+    """GET /staff/heatmap: raw visit-occurrence counts (never deduplicated)
+    from map_node_visit_events, per source_id, within the requested
+    date/day-of-week/hour filters. Only sources with >= 1 matching event are
+    listed -- the frontend treats every other node as 0."""
+
+    source_type: str
+    total_visits: int = Field(ge=0)
+    counts: list[HeatmapSourceCount]
+
+
 class AnimalPurchaseRank(BaseModel):
     animal_slug: str
     count: int = Field(ge=0)

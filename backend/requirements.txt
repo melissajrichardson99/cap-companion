@@ -9,3 +9,5 @@ python-multipart==0.0.32
 pytest==8.3.4
 bcrypt==4.2.1
 resend==2.5.1
+# zoneinfo needs an IANA tz database; Windows has none built in (Staff Visit Heatmap tz filter).
+tzdata==2026.5
