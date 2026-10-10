@@ -7,7 +7,7 @@ import { ScoringPlayerSetup, validatePlayerInputs } from './ScoringPlayerSetup'
 import { downloadSummary } from './scoringSummaryHtml'
 import './ScoringSessionModal.css'
 
-type ModalState = 'setup' | 'playing' | 'finished'
+type ModalState = 'loading' | 'setup' | 'playing' | 'finished'
 
 interface ScoringSessionModalProps {
   game: ScoringGame
@@ -55,7 +55,7 @@ function tieBannerText(session: ScoreSheetSession): string | null {
 }
 
 export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSessionModalProps) {
-  const [modalState, setModalState] = useState<ModalState>('setup')
+  const [modalState, setModalState] = useState<ModalState>('loading')
   const [playerInputs, setPlayerInputs] = useState<string[]>(['', ''])
   const [session, setSession] = useState<ScoreSheetSession | null>(null)
   const [setupError, setSetupError] = useState<string | null>(null)
@@ -81,6 +81,35 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
       if (advanceTimeoutRef.current !== null) window.clearTimeout(advanceTimeoutRef.current)
     }
   }, [])
+
+  // Resume: the session lives on the backend per device, but this modal
+  // used to hold its id only in React state, so a reload dropped back to
+  // player setup and orphaned the game in progress. Ask for this device's
+  // unfinished session of the game first (same lookup as stroke play).
+  // A provisional Horse Hoops win isn't completed yet, so it resumes into
+  // 'playing' with its Finish Game button, as before the reload.
+  useEffect(() => {
+    let cancelled = false
+    api
+      .getActiveScoreSheetSession(game.id)
+      .then((active) => {
+        if (cancelled) return
+        if (active) {
+          setSession(active)
+          setModalState('playing')
+        } else {
+          setModalState('setup')
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setSetupError(`Couldn't check for a game in progress: ${String(err)}`)
+        setModalState('setup')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [game.id])
 
   const startSession = async () => {
     const validated = validatePlayerInputs(playerInputs)
@@ -164,6 +193,19 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
       {game.name}
     </h2>
   )
+
+  if (modalState === 'loading') {
+    return (
+      <Modal onClose={onClose} labelledBy="scoring-modal-title" className="scoring-modal-frame">
+        <div className="scoring-modal-inner">
+          <div className="scoring-modal-scroll">
+            {title}
+            <p className="scoring-modal-rules">Checking for a game in progress…</p>
+          </div>
+        </div>
+      </Modal>
+    )
+  }
 
   if (modalState === 'setup') {
     return (
