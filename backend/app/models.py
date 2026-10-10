@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StrictInt, field_validator
 
 
 class NodeCategory(StrEnum):
@@ -56,6 +56,14 @@ class HuntChallengeType(StrEnum):
     TRUE_FALSE_SET = "true_false_set"
     IMAGE_MC = "image_mc"
     MINIGAME = "minigame"
+
+
+class ScoringMode(StrEnum):
+    """scoring_games.scoring_mode (migration 043)."""
+
+    TURN_BASED = "turn_based"
+    # Mini golf: fixed holes, 1-999 strokes per hole, lowest total wins.
+    STROKE_PLAY = "stroke_play"
 
 
 class ScoreStatus(StrEnum):
@@ -272,8 +280,13 @@ class ScoringGame(BaseModel):
     slug: str
     rules_text: str
     win_condition_text: str
-    win_condition_type: WinConditionType
-    win_threshold: int = Field(gt=0)
+    scoring_mode: ScoringMode = ScoringMode.TURN_BASED
+    # Turn-based only (null for stroke_play, migration 043).
+    win_condition_type: WinConditionType | None = None
+    win_threshold: int | None = Field(default=None, gt=0)
+    # Stroke play only: holes on the course. Data, not code -- the courses
+    # are really 9-12 holes.
+    hole_count: int | None = Field(default=None, gt=0)
     # Only set for round-based games (Tiki Toss: 10 throws/round).
     throws_per_round: int | None = Field(default=None, gt=0)
     score_events: list[GameScoreEvent] = Field(default_factory=list)
@@ -297,6 +310,12 @@ class ScoreEntry(BaseModel):
     created_at: datetime
 
 
+class HoleScore(BaseModel):
+    player_name: str
+    hole_number: int = Field(ge=1)
+    strokes: int = Field(ge=1, le=999)
+
+
 class ScoreSheetSession(BaseModel):
     id: UUID
     game_id: UUID
@@ -317,6 +336,16 @@ class ScoreSheetSession(BaseModel):
     # round_number above -- see ScoreEntry.turn_round's comment.
     current_player: str | None = None
     current_round: int | None = None
+    # Stroke play only (migration 043). current_player above is reused as
+    # the player whose score is next in the guided order.
+    hole_count: int | None = None
+    hole_scores: list[HoleScore] = Field(default_factory=list)
+    current_hole: int | None = None
+    # Lowest total over holes everyone has finished (several on a tie).
+    leaders: list[str] = Field(default_factory=list)
+    # Once complete: everyone sharing the lowest total. `winner` above holds
+    # the same names joined ("Alex & Sam").
+    winners: list[str] = Field(default_factory=list)
 
 
 class CreateSessionRequest(BaseModel):
@@ -327,6 +356,17 @@ class CreateSessionRequest(BaseModel):
 class RecordScoreEntryRequest(BaseModel):
     player_name: str
     score_event_id: UUID
+
+
+class RecordHoleScoreRequest(BaseModel):
+    """Stroke play: set (or correct) one player's strokes on one hole.
+    Strict ints, so "4", "04", 4.0 and true are all rejected rather than
+    coerced; the hole's upper bound depends on the game and is checked in
+    the service."""
+
+    player_name: str = Field(min_length=1)
+    hole_number: StrictInt = Field(ge=1)
+    strokes: StrictInt = Field(ge=1, le=999)
 
 
 class HuntChallenge(BaseModel):

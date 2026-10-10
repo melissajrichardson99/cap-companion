@@ -20,13 +20,16 @@
 -- popup lists the games underneath.
 
 -- ---------------------------------------------------------------------------
--- map_nodes — Attractions (28)
+-- map_nodes — Attractions (29)
 -- ---------------------------------------------------------------------------
 insert into map_nodes (name, category, description, x_pct, y_pct) values
     ('Arcade Pad',            'attraction', 'Coin-op arcade games.',                                            9.7,  43.7),
     ('Pedal Karts',           'attraction', 'Pedal-powered go-karts on a short track.',                         9.7,  33.4),
     ('Tractor Ride',          'attraction', 'Guided tractor ride around the park.',                             10.5, 23.1),
-    ('Mini-Golf',             'attraction', 'Themed mini-golf course.',                                         28.6, 24.2),
+    ('Blacklight Mini Golf',  'attraction', 'Blacklight mini golf course.',                                     28.6, 24.2),
+    -- Provisional position (migration 043); move with:
+    --   update map_nodes set x_pct = 76.0, y_pct = 70.0 where name = 'Cornhole Mini Golf';
+    ('Cornhole Mini Golf',    'attraction', 'Cornhole-themed mini golf course.',                                76.0, 70.0),
     ('Archery',               'attraction', 'Supervised archery range.',                                        25.5, 31.6),
     ('Tether Ball',           'attraction', 'Tether ball court.',                                                58.1, 20.5),
     ('Chicken Bowl',          'attraction', 'Chicken-themed bowling game.',                                     63.9, 22.4),
@@ -152,7 +155,7 @@ from new_card nc,
     (2, 4, 'Finish Right Turn Only in 20 turns',            'Right Turn Only'),
     (3, 0, 'Take a spin on the Tractor Ride',               'Tractor Ride'),
     (3, 1, 'Race the Pedal Karts',                          'Pedal Karts'),
-    (3, 2, 'Sink a hole-in-one at Mini-Golf',                'Mini-Golf'),
+    (3, 2, 'Sink a hole-in-one at Blacklight Mini Golf',     'Blacklight Mini Golf'),
     (3, 3, 'Hit a bullseye at Archery',                     'Archery'),
     (3, 4, 'Knock ''em down at Chicken Bowl',                'Chicken Bowl'),
     (4, 0, 'Take your best swing at Axe Throwing',          'Axe Throwing'),
@@ -350,7 +353,8 @@ on conflict (puzzle_id, label) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- scoring_games / game_score_events (Scoring Sheet, plan 2.2)
--- Mini Golf and Archery deliberately excluded — no confirmed rules yet.
+-- The 5 turn-based games; the stroke-play mini golf courses follow below.
+-- Archery deliberately excluded — no confirmed rules yet.
 -- ---------------------------------------------------------------------------
 -- slug is the QR-routable identifier for /scoring/:gameSlug (migration 032)
 -- -- derived from `name`, which is already unique above.
@@ -465,6 +469,27 @@ select g.id, 'Miss', 0, 99
 from scoring_games g
 where g.name in ('Farm Toss', 'Horse Hoops', 'Cornhole', 'Cornhole Extreme', 'Tiki Toss / Ring & Hook')
 on conflict (game_id, label) do nothing;
+
+-- Stroke-play mini golf (migration 043): no score events, hole_count instead
+-- of a win threshold. Hole count is data -- the courses are really 9-12.
+insert into scoring_games (name, slug, rules_text, win_condition_text, scoring_mode, hole_count) values
+    (
+        'Blacklight Mini Golf',
+        'blacklight-mini-golf',
+        'Stroke play under blacklight. Count every stroke on every hole.',
+        'Lowest total strokes wins. Ties are shared.',
+        'stroke_play',
+        9
+    ),
+    (
+        'Cornhole Mini Golf',
+        'cornhole-mini-golf',
+        'Stroke play on the Cornhole Mini Golf course. Count every stroke on every hole.',
+        'Lowest total strokes wins. Ties are shared.',
+        'stroke_play',
+        9
+    )
+on conflict (name) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- hunt_characters / hunt_challenges / hunt_progress (Scavenger Hunt).
@@ -668,7 +693,9 @@ from (values
     ('Horse Hoops', 'Horse Hoops'),
     ('Cornhole', 'Cornhole'),
     ('Cornhole Extreme', 'Cornhole Extreme'),
-    ('Tiki Toss / Ring & Hook', 'Tiki Toss/Ring & Hook')
+    ('Tiki Toss / Ring & Hook', 'Tiki Toss/Ring & Hook'),
+    ('Blacklight Mini Golf', 'Blacklight Mini Golf'),
+    ('Cornhole Mini Golf', 'Cornhole Mini Golf')
 ) as v(game_name, node_name)
 join map_nodes n on n.name = v.node_name
 where g.name = v.game_name and g.map_node_id is null;

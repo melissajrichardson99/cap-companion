@@ -33,14 +33,14 @@ Confirmed from official park rule sheets — scoring is **variable point-per-sho
 | **Cornhole** | First to 21 | Innings-based, each player pitches all 4 bags per inning. "Woody" (bag rests on board) = 1 pt; "Cornhole" (bag through the hole) = 3 pts |
 | **Cornhole Extreme** | First to 21 | Three-hole variant. Woody = 1 pt; first hole = 2, second hole = 3, third hole = 4 |
 | **Tiki Toss / Ring & Hook** (the "ring toss" game) | First to 100 (highest score wins if multiple reach 100 same round; tie plays until someone wins a round) | 10 throws/round. "Ting" (single hit) = 1 pt; "Nassau" (double hit same throw) = 3 pts; "Bimini" (ringer/hooked) = 5 pts |
-| **Mini Golf** | Not yet documented | Pending official rules |
+| **Blacklight Mini Golf** / **Cornhole Mini Golf** (two separate courses; "Cornhole Mini Golf" is not the Cornhole game) | Stroke play: lowest total strokes wins, ties shared | 9 holes to start (really 9-12; hole count is data, `scoring_games.hole_count`). 1-999 strokes per hole, no par. Migration 043 |
 | **Archery** | Not yet documented | Pending official rules |
 
 - Flashy animation on every score entry, tuned per game and per point-value (a Bimini ringer deserves a bigger animation than a Woody, for example) — miss = "maybe next time" with a light comedic touch, big scores = escalating celebration.
 - Win animation when a game concludes.
 - Downloadable/shareable score sheet.
 - The colorful terminology (Ting, Nassau, Bimini, Woody) is a natural source of flavor text for the score-entry animations rather than generic "hit"/"miss" labels.
-- Mini golf and archery rule sheets still needed before their scoring logic can be built — safe to build these two last within the Scoring Sheet feature, or stub them out and slot them in once the rules arrive.
+- Archery rule sheet still needed before its scoring logic can be built. Mini golf is built as a second scoring mode (stroke play), see migration 043.
 
 ### 2.3 Puzzle Solving Timer
 Confirmed from official rule signage. Important architecture note: **most of these puzzles have multiple challenge variants**, not one single objective — the timer needs to support selecting a challenge level per puzzle, not just start/stop against a single target.

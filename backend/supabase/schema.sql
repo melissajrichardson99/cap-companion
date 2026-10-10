@@ -280,13 +280,23 @@ create table if not exists scoring_games (
     -- 'first_to_round_tiebreak' (win condition only checked at
     -- throws_per_round boundaries, highest of those clearing the threshold
     -- wins, ties continue into further rounds -- Tiki Toss).
-    win_condition_type  text not null check (win_condition_type in ('first_to', 'first_to_bonus_round', 'first_to_round_tiebreak')),
-    win_threshold       integer not null check (win_threshold > 0),
+    -- Turn-based only; null for stroke play (migration 043).
+    win_condition_type  text check (win_condition_type in ('first_to', 'first_to_bonus_round', 'first_to_round_tiebreak')),
+    win_threshold       integer check (win_threshold > 0),
     throws_per_round    integer check (throws_per_round is null or throws_per_round > 0),
+    -- 'turn_based' (the 5 point-table games) or 'stroke_play' (mini golf:
+    -- fixed holes, 1-999 strokes per hole, lowest total wins). Migration 043.
+    scoring_mode        text not null default 'turn_based' constraint scoring_games_scoring_mode_check check (scoring_mode in ('turn_based', 'stroke_play')),
+    -- Stroke play only. Data, not code: the courses are really 9-12 holes.
+    hole_count          integer constraint scoring_games_hole_count_check check (hole_count is null or hole_count between 1 and 36),
     created_at          timestamptz not null default now(),
     -- Where this game's QR sign is on the map (migration 042), for the Staff
     -- Visit Heatmap's scan counts. Nullable; may be a child node.
-    map_node_id         uuid references map_nodes(id) on delete set null
+    map_node_id         uuid references map_nodes(id) on delete set null,
+    constraint scoring_games_mode_shape check (
+        (scoring_mode = 'turn_based' and win_condition_type is not null and win_threshold is not null)
+        or (scoring_mode = 'stroke_play' and hole_count is not null)
+    )
 );
 
 create table if not exists game_score_events (
@@ -341,6 +351,24 @@ create table if not exists score_entries (
 );
 
 create index if not exists score_entries_session_id_idx on score_entries(session_id);
+
+-- Stroke-play hole scores (migration 043): one row per (round, player,
+-- hole), so a correction is an upsert. Device-scoped transitively through
+-- score_sheet_sessions, same as score_entries; cascades on Reset Session.
+create table if not exists stroke_play_scores (
+    id           uuid primary key default gen_random_uuid(),
+    session_id   uuid not null references score_sheet_sessions(id) on delete cascade,
+    player_name  text not null,
+    hole_number  integer not null check (hole_number >= 1),
+    strokes      integer not null check (strokes between 1 and 999),
+    created_at   timestamptz not null default now(),
+    updated_at   timestamptz not null default now(),
+    unique (session_id, player_name, hole_number)
+);
+
+create index if not exists stroke_play_scores_session_id_idx on stroke_play_scores(session_id);
+
+grant all privileges on table stroke_play_scores to service_role;
 
 -- ---------------------------------------------------------------------------
 -- hunt_characters / hunt_challenges / hunt_progress (Scavenger Hunt)

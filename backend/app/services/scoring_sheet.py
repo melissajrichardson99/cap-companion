@@ -19,6 +19,12 @@ one score_sheet_session* reaches the threshold first -- there's no
 cross-session/cross-family competitive condition here (unlike the Map
 Exploration bonus's global guard) -- so scoping this table per-device needed
 no special-case, same as everything else in this phase.
+
+Stroke play (mini golf, migration 043) is a second scoring mode on the same
+score_sheet_sessions rows: hole scores live in stroke_play_scores instead of
+score_entries, the math is app.services.stroke_play, and _session_from_row
+dispatches on the game's scoring_mode. Because the session row is shared,
+Reset Session, session cleanup, analytics and Passport cover it unchanged.
 """
 
 from __future__ import annotations
@@ -27,10 +33,20 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import UUID
 
-from app.errors import ConflictError, NotFoundError
-from app.models import CoinSourceType, GameScoreEvent, ScoreEntry, ScoreSheetSession, ScoringGame
+from app.errors import ConflictError, NotFoundError, ValidationError
+from app.models import (
+    CoinSourceType,
+    GameScoreEvent,
+    HoleScore,
+    ScoreEntry,
+    ScoreSheetSession,
+    ScoreStatus,
+    ScoringGame,
+    ScoringMode,
+)
 from app.services import coins as coins_service
 from app.services import scoring as scoring_service
+from app.services import stroke_play as stroke_play_service
 from app.supabase_client import get_supabase_client
 
 
@@ -55,8 +71,10 @@ def _row_to_game(row: dict, events: list[GameScoreEvent]) -> ScoringGame:
         slug=row["slug"],
         rules_text=row["rules_text"],
         win_condition_text=row["win_condition_text"],
+        scoring_mode=row.get("scoring_mode") or ScoringMode.TURN_BASED,
         win_condition_type=row["win_condition_type"],
         win_threshold=row["win_threshold"],
+        hole_count=row.get("hole_count"),
         throws_per_round=row["throws_per_round"],
         score_events=events,
     )
@@ -155,6 +173,10 @@ def _session_from_row(client, session_row: dict, device_session_id: UUID) -> Sco
     read-only path (get_session) because first_to_bonus_round games are
     deliberately excluded from the auto-lock below, so a GET here isn't
     guaranteed to be free of the award side effect."""
+    game_row = _get_game_row(client, session_row["game_id"])
+    if _is_stroke_play(game_row):
+        return _stroke_session_from_row(client, session_row, game_row, device_session_id)
+
     entries = _entries_for_session(client, session_row["id"])
     players: list[str] = session_row["players"]
 
@@ -177,7 +199,6 @@ def _session_from_row(client, session_row: dict, device_session_id: UUID) -> Sco
             current_round=None,
         )
 
-    game_row = _get_game_row(client, session_row["game_id"])
     round_entries = _round_complete_entries(entries, players)
     result = scoring_service.evaluate_win(
         win_condition_type=game_row["win_condition_type"],
@@ -251,6 +272,93 @@ def _session_from_row(client, session_row: dict, device_session_id: UUID) -> Sco
         round_number=result.round_number,
         current_player=current_player,
         current_round=current_round,
+    )
+
+
+def _is_stroke_play(game_row: dict) -> bool:
+    return game_row.get("scoring_mode") == ScoringMode.STROKE_PLAY
+
+
+def _hole_scores_for_session(client, session_id: str) -> list[HoleScore]:
+    rows = (
+        client.table("stroke_play_scores")
+        .select("player_name, hole_number, strokes")
+        .eq("session_id", session_id)
+        .order("hole_number")
+        .execute()
+        .data
+    )
+    return [HoleScore(**r) for r in rows]
+
+
+def _stroke_session_from_row(
+    client,
+    session_row: dict,
+    game_row: dict,
+    device_session_id: UUID,
+    scores: list[HoleScore] | None = None,
+) -> ScoreSheetSession:
+    """Stroke-play counterpart of the turn-based body of _session_from_row.
+
+    Locks the round (completed_at + winner) the moment every cell is filled
+    and awards the usual scoring_sheet_win coin -- one award per round, the
+    same guard as the other sheets (a locked round accepts no more writes,
+    so it can never pay out twice). Stroke play is monotonically final once
+    complete, so the auto-lock is safe here, unlike first_to_bonus_round.
+    The lock is a conditional update (completed_at still null), so two
+    racing requests that both see the round complete can't both award.
+
+    `scores` lets record_hole_score pass the list it already holds (plus the
+    write it just made) instead of paying for another round trip.
+    """
+    players: list[str] = session_row["players"]
+    hole_count: int = game_row["hole_count"]
+    if scores is None:
+        scores = _hole_scores_for_session(client, session_row["id"])
+    result = stroke_play_service.evaluate(
+        [stroke_play_service.HoleScoreLike(s.player_name, s.hole_number, s.strokes) for s in scores],
+        players,
+        hole_count,
+    )
+
+    if result.status == stroke_play_service.STATUS_WON and not session_row["completed_at"]:
+        now = datetime.now(timezone.utc).isoformat()
+        locked = (
+            client.table("score_sheet_sessions")
+            .update({"completed_at": now, "winner": stroke_play_service.winner_text(result.leaders)})
+            .eq("id", session_row["id"])
+            .is_("completed_at", "null")
+            .execute()
+            .data
+        )
+        if locked:
+            session_row = locked[0]
+            coins_service.award_coins(
+                CoinSourceType.SCORING_SHEET_WIN,
+                UUID(session_row["id"]),
+                coins_service.SCORING_SHEET_WIN_AMOUNT,
+                device_session_id,
+            )
+        else:
+            session_row = _get_session_row(client, UUID(session_row["id"]), device_session_id)
+
+    complete = result.status == stroke_play_service.STATUS_WON
+    return ScoreSheetSession(
+        id=session_row["id"],
+        game_id=session_row["game_id"],
+        players=players,
+        created_at=_parse_timestamptz(session_row["created_at"]),
+        completed_at=_parse_timestamptz(session_row["completed_at"]) if session_row["completed_at"] else None,
+        winner=session_row["winner"],
+        status=ScoreStatus.WON if complete else ScoreStatus.IN_PROGRESS,
+        totals=result.totals,
+        tied_players=list(result.leaders) if complete and len(result.leaders) > 1 else [],
+        current_player=result.current_player,
+        hole_count=hole_count,
+        hole_scores=scores,
+        current_hole=result.current_hole,
+        leaders=list(result.leaders),
+        winners=list(result.leaders) if complete else [],
     )
 
 
@@ -338,3 +446,72 @@ def record_entry(session_id: UUID, player_name: str, score_event_id: UUID, devic
     ).execute()
 
     return _session_from_row(client, session_row, device_session_id)
+
+
+def record_hole_score(
+    session_id: UUID, player_name: str, hole_number: int, strokes: int, device_session_id: UUID
+) -> ScoreSheetSession:
+    """Stroke play: set one player's strokes on one hole, or correct an
+    earlier one. Only the next empty cell in guided order or an already
+    filled cell can be written; a locked (finished) round can't be changed."""
+    client = get_supabase_client()
+    session_row = _get_session_row(client, session_id, device_session_id)
+    game_row = _get_game_row(client, session_row["game_id"])
+    if not _is_stroke_play(game_row):
+        raise ConflictError("This game isn't scored by holes.")
+    if session_row["completed_at"]:
+        raise ConflictError("This round has already finished -- start a new round to keep playing.")
+
+    players: list[str] = session_row["players"]
+    if player_name not in players:
+        raise NotFoundError(f"{player_name!r} is not a player in this round")
+    try:
+        stroke_play_service.validate_strokes(strokes)
+        stroke_play_service.validate_hole(hole_number, game_row["hole_count"])
+    except ValueError as exc:
+        raise ValidationError(str(exc)) from exc
+
+    scores = _hole_scores_for_session(client, str(session_id))
+    like = [stroke_play_service.HoleScoreLike(s.player_name, s.hole_number, s.strokes) for s in scores]
+    if not stroke_play_service.can_write(like, players, game_row["hole_count"], hole_number, player_name):
+        nxt = stroke_play_service.next_cell(like, players, game_row["hole_count"])
+        waiting = f" -- waiting on {nxt[1]} for hole {nxt[0]}" if nxt else ""
+        raise ConflictError(f"Scores go in hole by hole{waiting}.")
+
+    client.table("stroke_play_scores").upsert(
+        {
+            "session_id": str(session_id),
+            "player_name": player_name,
+            "hole_number": hole_number,
+            "strokes": strokes,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+        on_conflict="session_id,player_name,hole_number",
+    ).execute()
+
+    written = HoleScore(player_name=player_name, hole_number=hole_number, strokes=strokes)
+    updated = [s for s in scores if (s.hole_number, s.player_name) != (hole_number, player_name)] + [written]
+    updated.sort(key=lambda s: s.hole_number)
+    return _stroke_session_from_row(client, session_row, game_row, device_session_id, updated)
+
+
+def get_active_session(game_id: UUID, device_session_id: UUID) -> ScoreSheetSession | None:
+    """The calling device's unfinished round of this game, if any (latest
+    first) -- what lets a sheet resume after a reload, a phone lock or an app
+    switch. Keyed by the device session, not browser storage."""
+    client = get_supabase_client()
+    _get_game_row(client, game_id)  # 404s if the game doesn't exist
+    rows = (
+        client.table("score_sheet_sessions")
+        .select("*")
+        .eq("game_id", str(game_id))
+        .eq("device_session_id", str(device_session_id))
+        .is_("completed_at", "null")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+    )
+    if not rows:
+        return None
+    return _session_from_row(client, rows[0], device_session_id)
