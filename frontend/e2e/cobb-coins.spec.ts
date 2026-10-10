@@ -140,10 +140,22 @@ async function dismissMinigameOverlay(page: Page): Promise<void> {
 // row*5+col once, up front), the first-open tile always advances through
 // grid indices 0, 1, 2, ... in order as each prior one completes and drops
 // out of `.bingo-tile-open`.
+//
+// That drop-out only happens once App's post-completion card reload lands,
+// which races the minigame overlay: dismissing the overlay quickly can beat
+// the reload, leaving the just-completed tile still `.bingo-tile-open` --
+// the next call would then re-open that same tile, the backend correctly
+// treats it as already complete (no minigame drawn), and no overlay ever
+// appears. So wait for the open count to actually drop before returning.
 async function completeFirstOpenTile(page: Page): Promise<void> {
-  await page.locator('.bingo-tile-open').first().click()
+  const openTiles = page.locator('.bingo-tile-open')
+  // count() doesn't auto-wait -- make sure the card has rendered first.
+  await expect(openTiles.first()).toBeVisible()
+  const openBefore = await openTiles.count()
+  await openTiles.first().click()
   await page.getByRole('button', { name: 'Completed Challenge' }).click()
   await dismissMinigameOverlay(page)
+  await expect(openTiles).toHaveCount(openBefore - 1)
 }
 
 const PIG_UNLOCK_CODE = 'happy-panda'
