@@ -95,12 +95,8 @@ const PEGS := [
 @onready var score_caption_label: Label = $UI/StatsBar/ScorePill/CaptionLabel
 @onready var score_value_label: Label = $UI/StatsBar/ScorePill/ValueLabel
 @onready var status_label: Label = $UI/StatusLabel
-@onready var game_over_layer: Control = $UI/GameOverLayer
-@onready var result_label: Label = $UI/GameOverLayer/ResultLabel
-@onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
-@onready var restart_button: Button = $UI/GameOverLayer/RestartButton
+@onready var end_card: EndCard = $UI/EndCard
 @onready var top_exit_button: Button = $UI/SignBar/ExitButton
-@onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 
 var throws_remaining: int = THROWS_PER_ROUND
 var score: int = 0
@@ -124,9 +120,9 @@ var round_token: int = 0
 func _ready() -> void:
 	randomize()
 	_style_ui()
-	restart_button.pressed.connect(_start_game)
+	end_card.play_again_pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
-	gameover_exit_button.pressed.connect(_on_exit_pressed)
+	end_card.exit_pressed.connect(_on_exit_pressed)
 	_start_game()
 
 func _start_game() -> void:
@@ -137,7 +133,7 @@ func _start_game() -> void:
 	is_accepting_input = false
 	drag_active = false
 	ring_visible = false
-	game_over_layer.visible = false
+	end_card.hide_card()
 	_update_labels()
 	queue_redraw()
 	await _run_ready_countdown(token)
@@ -273,23 +269,17 @@ func _end_game() -> void:
 	is_accepting_input = false
 	round_token += 1
 	var won: bool = score >= WIN_SCORE
-	result_label.text = "Ring Master!" if won else "Round Over"
-	score_result_label.text = "Score: %d" % score
-	game_over_layer.visible = true
-	_notify_host_complete()
+	end_card.show_result(
+		"Ring Master!" if won else "Game Over",
+		EndCard.OUTCOME_WIN if won else EndCard.OUTCOME_LOSE,
+		[EndCard.stat("Throws", throws_remaining), EndCard.stat("Score", score)],
+	)
 
 func _on_exit_pressed() -> void:
 	is_accepting_input = false
 	drag_active = false
 	round_token += 1
-	_notify_host_complete()
-
-func _notify_host_complete() -> void:
-	# Lets the React MinigameOverlay know the round is over (win, round-over,
-	# or a manual exit) so it can close the iframe. No-op outside a web export
-	# or when there's no parent frame listening.
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'digital_ring_toss' }, '*');")
+	EndCard.notify_host_complete("digital_ring_toss")
 
 func _update_labels() -> void:
 	throws_value_label.text = str(throws_remaining)
@@ -467,11 +457,6 @@ func _draw_parchment_pill(rect: Rect2, radius: float = 12.0) -> void:
 
 func _style_ui() -> void:
 	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
-	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
-	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
-	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
@@ -487,9 +472,6 @@ func _style_ui() -> void:
 	status_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
 	status_label.add_theme_constant_override("shadow_offset_x", 2)
 	status_label.add_theme_constant_override("shadow_offset_y", 2)
-
-	result_label.add_theme_color_override("font_color", COLOR_INK)
-	score_result_label.add_theme_color_override("font_color", COLOR_INK)
 
 func _style_round_button(btn: Button, bg: Color, border: Color, radius: int) -> void:
 	var normal := StyleBoxFlat.new()

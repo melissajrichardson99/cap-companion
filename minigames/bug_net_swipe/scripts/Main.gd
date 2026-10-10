@@ -43,8 +43,6 @@ const SIGN_RECT := Rect2(4, 4, 392, 56)
 const STATS_RECT := Rect2(4, 68, 392, 54)
 const TIME_PILL_RECT := Rect2(14, 78, 181, 34)
 const CAUGHT_PILL_RECT := Rect2(205, 78, 181, 34)
-const GAMEOVER_OUTER_RECT := Rect2(30, 195, 340, 250)
-const GAMEOVER_INNER_RECT := Rect2(44, 209, 312, 222)
 
 # --- Brand palette. Mirrors frontend/src/index.css's --cap-* tokens so this
 # game's chrome reads as the same parchment/wood UI system as the rest of
@@ -68,12 +66,8 @@ const COLOR_SUNSET_ORANGE_DEEP := Color("#bc6825")
 @onready var time_caption_label: Label = $UI/StatsBar/TimePill/CaptionLabel
 @onready var catch_caption_label: Label = $UI/StatsBar/CaughtPill/CaptionLabel
 @onready var status_label: Label = $UI/StatusLabel
-@onready var game_over_layer: Control = $UI/GameOverLayer
-@onready var result_label: Label = $UI/GameOverLayer/ResultLabel
-@onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
-@onready var restart_button: Button = $UI/GameOverLayer/RestartButton
+@onready var end_card: EndCard = $UI/EndCard
 @onready var top_exit_button: Button = $UI/SignBar/ExitButton
-@onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 
 # Each entry is a Dictionary: {spawn_pos, pos, vel, perp, amplitude, freq,
 # elapsed, radius, caught, flash_timer, wing_phase}. Bugs are plain data
@@ -97,9 +91,9 @@ func _ready() -> void:
 	randomize()
 	_style_ui()
 	spawn_timer.timeout.connect(_on_spawn_timer_timeout)
-	restart_button.pressed.connect(_start_game)
+	end_card.play_again_pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
-	gameover_exit_button.pressed.connect(_on_exit_pressed)
+	end_card.exit_pressed.connect(_on_exit_pressed)
 	_start_game()
 
 func _start_game() -> void:
@@ -111,7 +105,7 @@ func _start_game() -> void:
 	elapsed_time = 0.0
 	catch_count = 0
 	pointer_active = false
-	game_over_layer.visible = false
+	end_card.hide_card()
 	_update_labels()
 	queue_redraw()
 	await _run_ready_countdown(token)
@@ -257,33 +251,21 @@ func _end_game(won: bool) -> void:
 	round_token += 1
 	spawn_timer.stop()
 	pointer_active = false
-	if won:
-		result_label.text = "Caught 'em All!"
-	else:
-		result_label.text = "Time's Up!"
-	score_result_label.text = "Bugs caught: %d/%d" % [catch_count, TARGET_CATCHES]
-	game_over_layer.visible = true
-	# _end_game can be reached either from _process (which already queues a
-	# redraw most frames) or directly from swipe input handling, which never
-	# touches queue_redraw itself - force one here so the game-over wood
-	# panel/parchment pill (painted in _draw, gated on game_over_layer.visible)
-	# actually appears the moment the round ends either way.
-	queue_redraw()
-	_notify_host_complete()
+	end_card.show_result(
+		"Caught 'em All!" if won else "Time's Up!",
+		EndCard.OUTCOME_WIN if won else EndCard.OUTCOME_LOSE,
+		[
+			EndCard.stat("Time", ceili(max(0.0, TIME_LIMIT - elapsed_time))),
+			EndCard.stat("Caught", catch_count, "%d / %d" % [catch_count, TARGET_CATCHES]),
+		],
+	)
 
 func _on_exit_pressed() -> void:
 	is_running = false
 	round_token += 1
 	spawn_timer.stop()
 	pointer_active = false
-	_notify_host_complete()
-
-func _notify_host_complete() -> void:
-	# Lets the React MinigameOverlay know the round is over (win, loss, or a
-	# manual exit) so it can close the iframe. No-op outside a web export or
-	# when there's no parent frame listening.
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'bug_net_swipe' }, '*');")
+	EndCard.notify_host_complete("bug_net_swipe")
 
 func _update_labels() -> void:
 	time_label.text = "%d" % ceili(max(0.0, TIME_LIMIT - elapsed_time))
@@ -296,8 +278,6 @@ func _draw() -> void:
 		_draw_bug(bug)
 	_draw_sign_plank()
 	_draw_stats_bar()
-	if game_over_layer.visible:
-		_draw_game_over_panel()
 
 func _draw_page_bg() -> void:
 	var vp := get_viewport_rect().size
@@ -310,10 +290,6 @@ func _draw_stats_bar() -> void:
 	_draw_parchment_pill(STATS_RECT, 16.0)
 	_draw_parchment_pill(TIME_PILL_RECT, 10.0)
 	_draw_parchment_pill(CAUGHT_PILL_RECT, 10.0)
-
-func _draw_game_over_panel() -> void:
-	_draw_wood_panel(GAMEOVER_OUTER_RECT, 18.0)
-	_draw_parchment_pill(GAMEOVER_INNER_RECT, 14.0)
 
 # --- Shared panel drawing helpers (verbatim from card_flip_pairs/Main.gd's
 # convention, adjusted only in the rects passed to them). -------------------
@@ -365,11 +341,6 @@ func _draw_parchment_pill(rect: Rect2, radius: float = 12.0) -> void:
 
 func _style_ui() -> void:
 	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
-	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
-	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
-	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
@@ -384,9 +355,6 @@ func _style_ui() -> void:
 	status_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
 	status_label.add_theme_constant_override("shadow_offset_x", 1)
 	status_label.add_theme_constant_override("shadow_offset_y", 1)
-
-	result_label.add_theme_color_override("font_color", COLOR_INK)
-	score_result_label.add_theme_color_override("font_color", COLOR_INK)
 
 func _style_round_button(btn: Button, bg: Color, border: Color, radius: int) -> void:
 	var normal := StyleBoxFlat.new()

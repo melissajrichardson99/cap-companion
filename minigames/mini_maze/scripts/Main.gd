@@ -71,12 +71,8 @@ const EMU_TEXTURE := preload("res://assets/emu.png")
 @onready var moves_caption_label: Label = $UI/StatsBar/MovesPill/CaptionLabel
 @onready var moves_value_label: Label = $UI/StatsBar/MovesPill/ValueLabel
 @onready var title_label: Label = $UI/SignBar/TitleLabel
-@onready var game_over_layer: Control = $UI/GameOverLayer
-@onready var result_label: Label = $UI/GameOverLayer/ResultLabel
-@onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
-@onready var restart_button: Button = $UI/GameOverLayer/RestartButton
+@onready var end_card: EndCard = $UI/EndCard
 @onready var top_exit_button: Button = $UI/SignBar/ExitButton
-@onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 @onready var btn_up: Button = $UI/Controls/DPad/BtnUp
 @onready var btn_down: Button = $UI/Controls/DPad/BtnDown
 @onready var btn_left: Button = $UI/Controls/DPad/BtnLeft
@@ -101,9 +97,9 @@ func _ready() -> void:
 	btn_down.pressed.connect(func(): _try_move(DIR_S))
 	btn_left.pressed.connect(func(): _try_move(DIR_W))
 	btn_right.pressed.connect(func(): _try_move(DIR_E))
-	restart_button.pressed.connect(_start_game)
+	end_card.play_again_pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
-	gameover_exit_button.pressed.connect(_on_exit_pressed)
+	end_card.exit_pressed.connect(_on_exit_pressed)
 	_start_game()
 
 func _generate_trail_pebbles() -> void:
@@ -122,7 +118,7 @@ func _start_game() -> void:
 	moves = 0
 	time_left = ROUND_DURATION
 	is_running = true
-	game_over_layer.visible = false
+	end_card.hide_card()
 	_update_labels()
 	queue_redraw()
 
@@ -160,25 +156,15 @@ func _try_move(direction: int) -> void:
 
 func _end_game(won: bool) -> void:
 	is_running = false
-	if won:
-		result_label.text = "You Made It!"
-		score_result_label.text = "Solved in %d moves with %0.1fs left" % [moves, time_left]
-	else:
-		result_label.text = "Time's Up!"
-		score_result_label.text = "Didn't reach the finish in time"
-	game_over_layer.visible = true
-	_notify_host_complete()
+	end_card.show_result(
+		"You Made It!" if won else "Time's Up!",
+		EndCard.OUTCOME_WIN if won else EndCard.OUTCOME_LOSE,
+		[EndCard.stat("Time", ceili(time_left)), EndCard.stat("Moves", moves)],
+	)
 
 func _on_exit_pressed() -> void:
 	is_running = false
-	_notify_host_complete()
-
-func _notify_host_complete() -> void:
-	# Lets the React MinigameOverlay know the round is over (reached the
-	# finish, ran out of time, or a manual exit) so it can close the iframe.
-	# No-op outside a web export or when there's no parent frame listening.
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'mini_maze' }, '*');")
+	EndCard.notify_host_complete("mini_maze")
 
 func _update_labels() -> void:
 	time_value_label.text = str(ceili(time_left))
@@ -343,11 +329,6 @@ func _style_ui() -> void:
 	_style_dpad_button(btn_left)
 	_style_dpad_button(btn_right)
 	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
-	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
-	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
-	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
@@ -358,9 +339,6 @@ func _style_ui() -> void:
 	time_value_label.add_theme_color_override("font_color", COLOR_INK)
 	moves_caption_label.add_theme_color_override("font_color", COLOR_INK)
 	moves_value_label.add_theme_color_override("font_color", COLOR_INK)
-
-	result_label.add_theme_color_override("font_color", COLOR_INK)
-	score_result_label.add_theme_color_override("font_color", COLOR_INK)
 
 func _style_dpad_button(btn: Button) -> void:
 	_style_round_button(btn, COLOR_HEADER_GREEN, COLOR_WOOD_LIGHT, 10)

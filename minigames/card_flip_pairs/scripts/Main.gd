@@ -49,12 +49,8 @@ const ANIMAL_TEXTURES := {
 @onready var tip_label: Label = $UI/TipBar/TipLabel
 @onready var card_grid: GridContainer = $UI/CardGrid
 @onready var mismatch_timer: Timer = $MismatchTimer
-@onready var game_over_layer: Control = $UI/GameOverLayer
-@onready var result_label: Label = $UI/GameOverLayer/ResultLabel
-@onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
-@onready var restart_button: Button = $UI/GameOverLayer/RestartButton
+@onready var end_card: EndCard = $UI/EndCard
 @onready var top_exit_button: Button = $UI/SignBar/ExitButton
-@onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 
 var cards: Array[Button] = []
 var values: Array[int] = []
@@ -80,9 +76,9 @@ func _ready() -> void:
 		cards[i].expand_icon = true
 	_style_ui()
 	mismatch_timer.timeout.connect(_on_mismatch_timeout)
-	restart_button.pressed.connect(_start_game)
+	end_card.play_again_pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
-	gameover_exit_button.pressed.connect(_on_exit_pressed)
+	end_card.exit_pressed.connect(_on_exit_pressed)
 	_start_game()
 
 # ---------------------------------------------------------------------------
@@ -143,7 +139,7 @@ func _start_game() -> void:
 	pairs_found = 0
 	busy = false
 	is_running = true
-	game_over_layer.visible = false
+	end_card.hide_card()
 	mismatch_timer.stop()
 	revealed.clear()
 	matched.clear()
@@ -208,22 +204,17 @@ func _render_card(index: int) -> void:
 
 func _end_game() -> void:
 	is_running = false
-	result_label.text = "You Win!"
-	score_result_label.text = "All %d pairs found!" % PAIR_COUNT
-	game_over_layer.visible = true
-	_notify_host_complete()
+	# No way to lose, so finding every pair is a finish rather than a win.
+	end_card.show_result(
+		"All Pairs Found!",
+		EndCard.OUTCOME_FINISHED,
+		[EndCard.stat("Pairs Found", pairs_found, "%d / %d" % [pairs_found, PAIR_COUNT])],
+	)
 
 func _on_exit_pressed() -> void:
 	is_running = false
 	mismatch_timer.stop()
-	_notify_host_complete()
-
-func _notify_host_complete() -> void:
-	# Lets the React MinigameOverlay know the round is over (all pairs found or
-	# a manual exit) so it can close the iframe. No-op outside a web export or
-	# when there's no parent frame listening.
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'card_flip_pairs' }, '*');")
+	EndCard.notify_host_complete("card_flip_pairs")
 
 func _update_labels() -> void:
 	stat_value_label.text = "%d / %d" % [pairs_found, PAIR_COUNT]
@@ -322,11 +313,6 @@ func _style_ui() -> void:
 	for card in cards:
 		_style_round_button(card, COLOR_PARCHMENT, COLOR_OUTLINE, 12)
 	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
-	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
-	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
-	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
@@ -336,9 +322,6 @@ func _style_ui() -> void:
 	stat_caption_label.add_theme_color_override("font_color", COLOR_INK)
 	stat_value_label.add_theme_color_override("font_color", COLOR_INK)
 	tip_label.add_theme_color_override("font_color", COLOR_INK)
-
-	result_label.add_theme_color_override("font_color", COLOR_INK)
-	score_result_label.add_theme_color_override("font_color", COLOR_INK)
 
 func _style_round_button(btn: Button, bg: Color, border: Color, radius: int) -> void:
 	var normal := StyleBoxFlat.new()

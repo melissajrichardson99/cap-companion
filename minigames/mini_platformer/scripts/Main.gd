@@ -67,12 +67,7 @@ const KANGAROO_TEXTURE := preload("res://assets/kangaroo.png")
 @onready var play_frame: Control = $UI/PlayFrame
 @onready var controls: Control = $UI/Controls
 @onready var jump_button: Button = $UI/Controls/JumpButton
-@onready var game_over_layer: Control = $UI/GameOverLayer
-@onready var gameover_panel: Control = $UI/GameOverLayer/Panel
-@onready var result_label: Label = $UI/GameOverLayer/ResultLabel
-@onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
-@onready var restart_button: Button = $UI/GameOverLayer/RestartButton
-@onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
+@onready var end_card: EndCard = $UI/EndCard
 @onready var goal_area: Area2D = $Goal
 @onready var hazard_areas: Array = [$Hazards/Hazard0, $Hazards/Hazard1]
 
@@ -91,9 +86,9 @@ func _ready() -> void:
 	for hazard in hazard_areas:
 		hazard.body_entered.connect(_on_hazard_entered)
 	jump_button.pressed.connect(_try_jump)
-	restart_button.pressed.connect(_start_game)
+	end_card.play_again_pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
-	gameover_exit_button.pressed.connect(_on_exit_pressed)
+	end_card.exit_pressed.connect(_on_exit_pressed)
 	_style_ui()
 	_start_game()
 
@@ -104,7 +99,7 @@ func _start_game() -> void:
 	player.position = player_start_pos
 	player.velocity = Vector2.ZERO
 	elapsed_time = 0.0
-	game_over_layer.visible = false
+	end_card.hide_card()
 	_update_camera()
 	queue_redraw()
 	await _run_ready_countdown(token)
@@ -156,31 +151,22 @@ func _on_hazard_entered(body: Node) -> void:
 	if body == player:
 		_end_game(false, "Hit an obstacle!")
 
-func _end_game(won: bool, reason: String) -> void:
+func _end_game(won: bool, _reason: String) -> void:
 	if not is_running:
 		return
 	is_running = false
 	round_token += 1
-	if won:
-		result_label.text = "You Made It!"
-		score_result_label.text = "Finished in %0.1fs" % elapsed_time
-	else:
-		result_label.text = "Game Over"
-		score_result_label.text = reason
-	game_over_layer.visible = true
-	_notify_host_complete()
+	# No pill row in this game, so the card is just the title and buttons.
+	end_card.show_result(
+		"You Made It!" if won else "Game Over",
+		EndCard.OUTCOME_WIN if won else EndCard.OUTCOME_LOSE,
+		[],
+	)
 
 func _on_exit_pressed() -> void:
 	is_running = false
 	round_token += 1
-	_notify_host_complete()
-
-func _notify_host_complete() -> void:
-	# Lets the React MinigameOverlay know the round is over (win, loss, or a
-	# manual exit) so it can close the iframe. No-op outside a web export or
-	# when there's no parent frame listening.
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'mini_platformer' }, '*');")
+	EndCard.notify_host_complete("mini_platformer")
 
 func _update_camera() -> void:
 	var half_w: float = get_viewport_rect().size.x / 2.0
@@ -351,16 +337,10 @@ func _style_ui() -> void:
 	_add_panel_chrome(status_pill, 14, COLOR_PARCHMENT, COLOR_OUTLINE, 2, true, false)
 	_add_panel_chrome(play_frame, 18, Color(0, 0, 0, 0), COLOR_WOOD_DARK, 3, false, false)
 	_add_panel_chrome(controls, 16, COLOR_PARCHMENT, COLOR_OUTLINE, 2, true, false)
-	_add_panel_chrome(gameover_panel, 16, COLOR_WOOD_MID, COLOR_OUTLINE, 3, true, true)
 
 	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
 	_style_round_button(jump_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 14)
 	jump_button.add_theme_font_size_override("font_size", 22)
-	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
-	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
-	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
@@ -368,12 +348,6 @@ func _style_ui() -> void:
 	title_label.add_theme_constant_override("shadow_offset_y", 1)
 
 	status_label.add_theme_color_override("font_color", COLOR_INK)
-
-	result_label.add_theme_color_override("font_color", Color(1, 1, 1))
-	result_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
-	result_label.add_theme_constant_override("shadow_offset_x", 1)
-	result_label.add_theme_constant_override("shadow_offset_y", 1)
-	score_result_label.add_theme_color_override("font_color", COLOR_PARCHMENT)
 
 func _style_round_button(btn: Button, bg: Color, border: Color, radius: int) -> void:
 	var normal := StyleBoxFlat.new()

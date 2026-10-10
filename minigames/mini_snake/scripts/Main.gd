@@ -55,16 +55,12 @@ const COLOR_APPLE_RED := Color("#d9432e")
 @onready var length_caption_label: Label = $UI/StatsBar/LengthPill/CaptionLabel
 @onready var length_value_label: Label = $UI/StatsBar/LengthPill/ValueLabel
 @onready var countdown_label: Label = $UI/CountdownLabel
-@onready var game_over_layer: Control = $UI/GameOverLayer
-@onready var result_label: Label = $UI/GameOverLayer/ResultLabel
-@onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
+@onready var end_card: EndCard = $UI/EndCard
 @onready var btn_up: Button = $UI/Controls/DPad/BtnUp
 @onready var btn_down: Button = $UI/Controls/DPad/BtnDown
 @onready var btn_left: Button = $UI/Controls/DPad/BtnLeft
 @onready var btn_right: Button = $UI/Controls/DPad/BtnRight
-@onready var restart_button: Button = $UI/GameOverLayer/RestartButton
 @onready var top_exit_button: Button = $UI/SignBar/ExitButton
-@onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 
 var snake: Array[Vector2i] = []
 var direction: Vector2i = DIR_RIGHT
@@ -96,9 +92,9 @@ func _ready() -> void:
 	btn_down.pressed.connect(func(): set_direction(DIR_DOWN))
 	btn_left.pressed.connect(func(): set_direction(DIR_LEFT))
 	btn_right.pressed.connect(func(): set_direction(DIR_RIGHT))
-	restart_button.pressed.connect(_start_game)
+	end_card.play_again_pressed.connect(_start_game)
+	end_card.exit_pressed.connect(_on_exit_pressed)
 	top_exit_button.pressed.connect(_on_exit_pressed)
-	gameover_exit_button.pressed.connect(_on_exit_pressed)
 	_start_game()
 
 func _generate_grass_blades() -> void:
@@ -128,7 +124,7 @@ func _start_game() -> void:
 	queued_direction = DIR_RIGHT
 	score = 0
 	is_running = true
-	game_over_layer.visible = false
+	end_card.hide_card()
 	tick_timer.stop()
 	_spawn_food()
 	_update_labels()
@@ -206,23 +202,20 @@ func _end_game(won: bool) -> void:
 	is_running = false
 	round_token += 1
 	tick_timer.stop()
-	result_label.text = "You Win!" if won else "Game Over"
-	score_result_label.text = "Length reached: %d" % snake.size()
-	game_over_layer.visible = true
-	_notify_host_complete()
+	queue_redraw()
+	# The end card reports the result to the host and stays up; the overlay
+	# only closes when the guest taps Exit (or the X).
+	end_card.show_result(
+		"You Win!" if won else "Game Over",
+		EndCard.OUTCOME_WIN if won else EndCard.OUTCOME_LOSE,
+		[EndCard.stat("Score", score), EndCard.stat("Length", snake.size())],
+	)
 
 func _on_exit_pressed() -> void:
 	is_running = false
 	round_token += 1
 	tick_timer.stop()
-	_notify_host_complete()
-
-func _notify_host_complete() -> void:
-	# Lets the React MinigameOverlay know the round is over (win, loss, or a
-	# manual exit) so it can close the iframe. No-op outside a web export or
-	# when there's no parent frame listening.
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'mini_snake' }, '*');")
+	EndCard.notify_host_complete("mini_snake")
 
 func _update_labels() -> void:
 	score_value_label.text = str(score)
@@ -371,11 +364,6 @@ func _style_ui() -> void:
 	_style_dpad_button(btn_left)
 	_style_dpad_button(btn_right)
 	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
-	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
-	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
-	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
@@ -391,9 +379,6 @@ func _style_ui() -> void:
 	countdown_label.add_theme_constant_override("shadow_offset_x", 2)
 	countdown_label.add_theme_constant_override("shadow_offset_y", 2)
 	countdown_label.add_theme_font_size_override("font_size", 40)
-
-	result_label.add_theme_color_override("font_color", COLOR_INK)
-	score_result_label.add_theme_color_override("font_color", COLOR_INK)
 
 func _style_dpad_button(btn: Button) -> void:
 	_style_round_button(btn, COLOR_HEADER_GREEN, COLOR_WOOD_LIGHT, 10)

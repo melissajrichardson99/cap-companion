@@ -1,6 +1,7 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/EndCard.gd" id="2_endcard"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
 size = Vector2(28, 36)
@@ -151,49 +152,6 @@ offset_right = 260.0
 offset_bottom = 78.0
 text = "JUMP"
 
-[node name="GameOverLayer" type="Control" parent="UI"]
-visible = false
-offset_right = 400.0
-offset_bottom = 600.0
-
-[node name="Dim" type="ColorRect" parent="UI/GameOverLayer"]
-offset_right = 400.0
-offset_bottom = 600.0
-color = Color(0, 0, 0, 0.6)
-
-[node name="Panel" type="Control" parent="UI/GameOverLayer"]
-offset_left = 40.0
-offset_top = 170.0
-offset_right = 360.0
-offset_bottom = 450.0
-
-[node name="ResultLabel" type="Label" parent="UI/GameOverLayer"]
-offset_left = 40.0
-offset_top = 196.0
-offset_right = 360.0
-offset_bottom = 236.0
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 26
-text = "Game Over"
-
-[node name="ScoreResultLabel" type="Label" parent="UI/GameOverLayer"]
-offset_left = 40.0
-offset_top = 242.0
-offset_right = 360.0
-offset_bottom = 270.0
-horizontal_alignment = 1
-text = ""
-
-[node name="RestartButton" type="Button" parent="UI/GameOverLayer"]
-offset_left = 120.0
-offset_top = 302.0
-offset_right = 280.0
-offset_bottom = 346.0
-text = "Play Again"
-
-[node name="ExitButton" type="Button" parent="UI/GameOverLayer"]
-offset_left = 120.0
-offset_top = 354.0
-offset_right = 280.0
-offset_bottom = 398.0
-text = "Exit"
+[node name="EndCard" type="Control" parent="UI"]
+script = ExtResource("2_endcard")
+game_slug = "mini_platformer"

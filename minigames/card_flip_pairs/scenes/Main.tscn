@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/EndCard.gd" id="2_endcard"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -152,42 +153,6 @@ vertical_alignment = 1
 theme_override_font_sizes/font_size = 13
 text = "Tip: Flip the cards to find all 8 matching pairs. Try to remember where you saw each one!"
 
-[node name="GameOverLayer" type="Control" parent="UI"]
-visible = false
-offset_right = 400.0
-offset_bottom = 600.0
-
-[node name="Dim" type="ColorRect" parent="UI/GameOverLayer"]
-offset_right = 400.0
-offset_bottom = 600.0
-color = Color(0, 0, 0, 0.6)
-
-[node name="ResultLabel" type="Label" parent="UI/GameOverLayer"]
-offset_top = 220.0
-offset_right = 400.0
-offset_bottom = 260.0
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 26
-text = "You Win!"
-
-[node name="ScoreResultLabel" type="Label" parent="UI/GameOverLayer"]
-offset_top = 270.0
-offset_right = 400.0
-offset_bottom = 300.0
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 16
-text = "All 8 pairs found!"
-
-[node name="RestartButton" type="Button" parent="UI/GameOverLayer"]
-offset_left = 140.0
-offset_top = 330.0
-offset_right = 260.0
-offset_bottom = 370.0
-text = "Play Again"
-
-[node name="ExitButton" type="Button" parent="UI/GameOverLayer"]
-offset_left = 140.0
-offset_top = 380.0
-offset_right = 260.0
-offset_bottom = 420.0
-text = "Exit"
+[node name="EndCard" type="Control" parent="UI"]
+script = ExtResource("2_endcard")
+game_slug = "card_flip_pairs"

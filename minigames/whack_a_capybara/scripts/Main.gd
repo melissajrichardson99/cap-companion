@@ -58,13 +58,8 @@ const PORCUPINE_TEXTURE := preload("res://assets/porcupine_face.png")
 @onready var hole_grid: GridContainer = $UI/HoleGrid
 @onready var capy_legend_label: Label = $UI/LegendCapy/Label
 @onready var porc_legend_label: Label = $UI/LegendPorc/Label
-@onready var game_over_layer: Control = $UI/GameOverLayer
-@onready var gameover_card: Panel = $UI/GameOverLayer/Card
-@onready var result_label: Label = $UI/GameOverLayer/ResultLabel
-@onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
-@onready var restart_button: Button = $UI/GameOverLayer/RestartButton
+@onready var end_card: EndCard = $UI/EndCard
 @onready var top_exit_button: Button = $UI/SignBar/ExitButton
-@onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 
 var holes: Array[Button] = []
 var hole_state: Array[Critter] = []
@@ -85,9 +80,9 @@ func _ready() -> void:
 		hole_hide_at.append(-1.0)
 		var idx := i
 		holes[i].pressed.connect(func(): _on_hole_pressed(idx))
-	restart_button.pressed.connect(_start_game)
+	end_card.play_again_pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
-	gameover_exit_button.pressed.connect(_on_exit_pressed)
+	end_card.exit_pressed.connect(_on_exit_pressed)
 	_start_game()
 
 func _start_game() -> void:
@@ -96,7 +91,7 @@ func _start_game() -> void:
 	game_clock = 0.0
 	spawn_cooldown = randf_range(SPAWN_INTERVAL_MIN, SPAWN_INTERVAL_MAX)
 	is_running = true
-	game_over_layer.visible = false
+	end_card.hide_card()
 	for i in range(holes.size()):
 		_set_hole_state(i, Critter.NONE)
 	_update_labels()
@@ -158,21 +153,12 @@ func _on_hole_pressed(index: int) -> void:
 
 func _end_game() -> void:
 	is_running = false
-	result_label.text = "Time's Up!"
-	score_result_label.text = "Capybaras caught: %d" % score
-	game_over_layer.visible = true
-	_notify_host_complete()
+	# Score attack: no win or loss, so the outcome is timeup.
+	end_card.show_result("Time's Up!", EndCard.OUTCOME_TIMEUP, [EndCard.stat("Score", score)])
 
 func _on_exit_pressed() -> void:
 	is_running = false
-	_notify_host_complete()
-
-func _notify_host_complete() -> void:
-	# Lets the React MinigameOverlay know the round is over (finished timer or
-	# a manual exit) so it can close the iframe. No-op outside a web export or
-	# when there's no parent frame listening.
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'whack_a_capybara' }, '*');")
+	EndCard.notify_host_complete("whack_a_capybara")
 
 func _update_labels() -> void:
 	score_value_label.text = str(score)
@@ -324,11 +310,6 @@ func _draw_parchment_pill(rect: Rect2, radius: float = 12.0) -> void:
 
 func _style_ui() -> void:
 	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
-	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
-	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
-	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
 	for hole_button in hole_grid.get_children():
 		_style_hole_button(hole_button)
@@ -344,19 +325,6 @@ func _style_ui() -> void:
 	time_value_label.add_theme_color_override("font_color", COLOR_INK)
 	capy_legend_label.add_theme_color_override("font_color", COLOR_INK)
 	porc_legend_label.add_theme_color_override("font_color", COLOR_INK)
-
-	result_label.add_theme_color_override("font_color", COLOR_INK)
-	score_result_label.add_theme_color_override("font_color", COLOR_INK)
-
-	var card_sb := StyleBoxFlat.new()
-	card_sb.bg_color = COLOR_PARCHMENT
-	card_sb.set_corner_radius_all(16)
-	card_sb.border_width_top = 3
-	card_sb.border_width_bottom = 3
-	card_sb.border_width_left = 3
-	card_sb.border_width_right = 3
-	card_sb.border_color = COLOR_OUTLINE
-	gameover_card.add_theme_stylebox_override("panel", card_sb)
 
 func _style_hole_button(btn: Button) -> void:
 	# All visible art for a hole (mound + critter) is painted by Main._draw()

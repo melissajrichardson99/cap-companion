@@ -108,11 +108,7 @@ const SPECIES_TEXTURES := {
 @onready var status_label: Label = $UI/StatusLabel
 @onready var top_exit_button: Button = $UI/SignBar/ExitButton
 @onready var bin_labels: Array[Label] = [$UI/Bins/BinLabel0, $UI/Bins/BinLabel1, $UI/Bins/BinLabel2]
-@onready var game_over_layer: Control = $UI/GameOverLayer
-@onready var result_label: Label = $UI/GameOverLayer/ResultLabel
-@onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
-@onready var restart_button: Button = $UI/GameOverLayer/RestartButton
-@onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
+@onready var end_card: EndCard = $UI/EndCard
 
 # Each entry: {"lane": int (spawn lane, informational only), "x": float,
 # "y": float, "species": String}. Data-driven and drawn via _draw(), same
@@ -142,9 +138,9 @@ func _ready() -> void:
 	_style_ui()
 	spawn_timer.wait_time = SPAWN_INTERVAL
 	spawn_timer.timeout.connect(_spawn_item)
-	restart_button.pressed.connect(_start_game)
+	end_card.play_again_pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
-	gameover_exit_button.pressed.connect(_on_exit_pressed)
+	end_card.exit_pressed.connect(_on_exit_pressed)
 	_start_game()
 
 func _lane_x(lane: int) -> float:
@@ -162,7 +158,7 @@ func _start_game() -> void:
 	held_index = -1
 	correct_count = 0
 	missed_count = 0
-	game_over_layer.visible = false
+	end_card.hide_card()
 	_shuffle_bin_species()
 	_update_labels()
 	status_label.text = "Ready?"
@@ -287,27 +283,21 @@ func _end_game(won: bool) -> void:
 	round_token += 1
 	spawn_timer.stop()
 	held_index = -1
-	if won:
-		result_label.text = "Great Sorting!"
-	else:
-		result_label.text = "Too Many Missed"
-	score_result_label.text = "Sorted %d correctly, missed %d" % [correct_count, missed_count]
-	game_over_layer.visible = true
-	_notify_host_complete()
+	end_card.show_result(
+		"Great Sorting!" if won else "Too Many Missed",
+		EndCard.OUTCOME_WIN if won else EndCard.OUTCOME_LOSE,
+		[
+			EndCard.stat("Correct", correct_count),
+			EndCard.stat("Missed", missed_count, "%d / %d" % [missed_count, MAX_MISSES]),
+		],
+	)
 
 func _on_exit_pressed() -> void:
 	is_running = false
 	round_token += 1
 	spawn_timer.stop()
 	held_index = -1
-	_notify_host_complete()
-
-func _notify_host_complete() -> void:
-	# Lets the React MinigameOverlay know the round is over (win, loss, or a
-	# manual exit) so it can close the iframe. No-op outside a web export or
-	# when there's no parent frame listening.
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'sort_the_species' }, '*');")
+	EndCard.notify_host_complete("sort_the_species")
 
 func _update_labels() -> void:
 	correct_label.text = "%d" % correct_count
@@ -449,11 +439,6 @@ func _draw_parchment_pill(rect: Rect2, radius: float = 12.0) -> void:
 
 func _style_ui() -> void:
 	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
-	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
-	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
-	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
@@ -471,9 +456,6 @@ func _style_ui() -> void:
 
 	for bin_label in bin_labels:
 		bin_label.add_theme_font_size_override("font_size", 15)
-
-	result_label.add_theme_color_override("font_color", COLOR_INK)
-	score_result_label.add_theme_color_override("font_color", COLOR_INK)
 
 func _style_round_button(btn: Button, bg: Color, border: Color, radius: int) -> void:
 	var normal := StyleBoxFlat.new()

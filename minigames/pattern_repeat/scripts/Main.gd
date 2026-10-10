@@ -88,12 +88,8 @@ const NAME_LABEL_IDLE_COLOR := Color(0.97, 0.95, 0.9)
 	$UI/AnimalGrid/NameHen,
 	$UI/AnimalGrid/NameEwe,
 ]
-@onready var game_over_layer: Control = $UI/GameOverLayer
-@onready var result_label: Label = $UI/GameOverLayer/ResultLabel
-@onready var score_result_label: Label = $UI/GameOverLayer/ScoreResultLabel
-@onready var restart_button: Button = $UI/GameOverLayer/RestartButton
+@onready var end_card: EndCard = $UI/EndCard
 @onready var top_exit_button: Button = $UI/SignBar/ExitButton
-@onready var gameover_exit_button: Button = $UI/GameOverLayer/ExitButton
 
 var sequence: Array[int] = []
 var player_step: int = 0
@@ -119,9 +115,9 @@ func _ready() -> void:
 		var idx := i
 		var button: Button = animal_buttons[i]
 		button.pressed.connect(func(): _on_animal_pressed(idx))
-	restart_button.pressed.connect(_start_game)
+	end_card.play_again_pressed.connect(_start_game)
 	top_exit_button.pressed.connect(_on_exit_pressed)
-	gameover_exit_button.pressed.connect(_on_exit_pressed)
+	end_card.exit_pressed.connect(_on_exit_pressed)
 	_start_game()
 
 func _start_game() -> void:
@@ -131,7 +127,7 @@ func _start_game() -> void:
 	current_round = 1
 	is_running = true
 	is_input_enabled = false
-	game_over_layer.visible = false
+	end_card.hide_card()
 	for i in range(animal_buttons.size()):
 		_set_button_lit(i, false)
 	for i in range(START_LENGTH):
@@ -200,23 +196,17 @@ func _end_game(won: bool) -> void:
 	is_running = false
 	is_input_enabled = false
 	round_token += 1
-	result_label.text = "You Win!" if won else "Game Over"
-	score_result_label.text = "Sequence reached: %d" % sequence.size()
-	game_over_layer.visible = true
-	_notify_host_complete()
+	end_card.show_result(
+		"You Win!" if won else "Game Over",
+		EndCard.OUTCOME_WIN if won else EndCard.OUTCOME_LOSE,
+		[EndCard.stat("Round", current_round)],
+	)
 
 func _on_exit_pressed() -> void:
 	is_running = false
 	is_input_enabled = false
 	round_token += 1
-	_notify_host_complete()
-
-func _notify_host_complete() -> void:
-	# Lets the React MinigameOverlay know the round is over (win, loss, or a
-	# manual exit) so it can close the iframe. No-op outside a web export or
-	# when there's no parent frame listening.
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.parent.postMessage({ type: 'minigame-complete', game: 'pattern_repeat' }, '*');")
+	EndCard.notify_host_complete("pattern_repeat")
 
 func _update_labels() -> void:
 	round_value_label.text = str(current_round)
@@ -346,11 +336,6 @@ func _draw_parchment_pill(rect: Rect2, radius: float = 12.0) -> void:
 
 func _style_ui() -> void:
 	_style_round_button(top_exit_button, COLOR_SUNSET_ORANGE, COLOR_SUNSET_ORANGE_DEEP, 10)
-	_style_round_button(restart_button, COLOR_HEADER_GREEN, COLOR_OUTLINE, 10)
-	_style_round_button(gameover_exit_button, COLOR_PARCHMENT, COLOR_OUTLINE, 10)
-	gameover_exit_button.add_theme_color_override("font_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_hover_color", COLOR_INK)
-	gameover_exit_button.add_theme_color_override("font_pressed_color", COLOR_INK)
 
 	for button in animal_buttons:
 		var empty := StyleBoxEmpty.new()
@@ -374,9 +359,6 @@ func _style_ui() -> void:
 	status_label.add_theme_color_override("font_color", COLOR_INK)
 	round_caption_label.add_theme_color_override("font_color", COLOR_INK)
 	round_value_label.add_theme_color_override("font_color", COLOR_INK)
-
-	result_label.add_theme_color_override("font_color", COLOR_INK)
-	score_result_label.add_theme_color_override("font_color", COLOR_INK)
 
 func _style_round_button(btn: Button, bg: Color, border: Color, radius: int) -> void:
 	var normal := StyleBoxFlat.new()
