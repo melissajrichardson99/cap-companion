@@ -38,45 +38,45 @@ offset_bottom = 128.0
 
 [node name="ThrowsPill" type="Control" parent="UI/StatsBar"]
 offset_left = 10.0
-offset_top = 10.0
+offset_top = 5.0
 offset_right = 185.0
-offset_bottom = 44.0
+offset_bottom = 49.0
 
 [node name="CaptionLabel" type="Label" parent="UI/StatsBar/ThrowsPill"]
-offset_left = 26.0
-offset_top = 2.0
+offset_left = 36.0
+offset_top = 4.0
 offset_right = 155.0
-offset_bottom = 18.0
+offset_bottom = 20.0
 theme_override_font_sizes/font_size = 12
 text = "THROWS"
 
 [node name="ValueLabel" type="Label" parent="UI/StatsBar/ThrowsPill"]
-offset_left = 26.0
-offset_top = 15.0
+offset_left = 36.0
+offset_top = 17.0
 offset_right = 155.0
-offset_bottom = 34.0
+offset_bottom = 42.0
 theme_override_font_sizes/font_size = 18
 text = "4"
 
 [node name="ScorePill" type="Control" parent="UI/StatsBar"]
 offset_left = 195.0
-offset_top = 10.0
+offset_top = 5.0
 offset_right = 370.0
-offset_bottom = 44.0
+offset_bottom = 49.0
 
 [node name="CaptionLabel" type="Label" parent="UI/StatsBar/ScorePill"]
-offset_left = 26.0
-offset_top = 2.0
+offset_left = 36.0
+offset_top = 4.0
 offset_right = 155.0
-offset_bottom = 18.0
+offset_bottom = 20.0
 theme_override_font_sizes/font_size = 12
 text = "SCORE"
 
 [node name="ValueLabel" type="Label" parent="UI/StatsBar/ScorePill"]
-offset_left = 26.0
-offset_top = 15.0
+offset_left = 36.0
+offset_top = 17.0
 offset_right = 155.0
-offset_bottom = 34.0
+offset_bottom = 42.0
 theme_override_font_sizes/font_size = 18
 text = "0"
 

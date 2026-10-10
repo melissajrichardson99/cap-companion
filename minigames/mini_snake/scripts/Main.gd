@@ -24,8 +24,8 @@ const SIGN_RECT := Rect2(10, 10, 380, 56)
 const STATS_RECT := Rect2(10, 74, 380, 54)
 const FRAME_RECT := Rect2(10, 140, 380, 380)
 const CONTROLS_RECT := Rect2(10, 532, 380, 118)
-const SCORE_PILL_RECT := Rect2(20, 84, 175, 34)
-const LENGTH_PILL_RECT := Rect2(205, 84, 175, 34)
+const SCORE_PILL_RECT := Rect2(20, 79, 175, 44)
+const LENGTH_PILL_RECT := Rect2(205, 79, 175, 44)
 
 # --- Brand palette. Mirrors frontend/src/index.css's --cap-* tokens so this
 # game's chrome reads as the same parchment/wood UI system as the rest of

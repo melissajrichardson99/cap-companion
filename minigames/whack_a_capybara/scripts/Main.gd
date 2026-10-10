@@ -14,8 +14,8 @@ const DECOY_CHANCE := 0.25
 # hole-index space (0..8) via HOLE_COLS/HOLE_ORIGIN/HOLE_CELL/HOLE_GAP.
 const SIGN_RECT := Rect2(10, 10, 380, 56)
 const STATS_RECT := Rect2(10, 74, 380, 54)
-const SCORE_PILL_RECT := Rect2(20, 84, 175, 34)
-const TIME_PILL_RECT := Rect2(205, 84, 175, 34)
+const SCORE_PILL_RECT := Rect2(20, 79, 175, 44)
+const TIME_PILL_RECT := Rect2(205, 79, 175, 44)
 const FRAME_RECT := Rect2(10, 140, 380, 380)
 const LEGEND_RECT := Rect2(10, 530, 380, 60)
 const CAPY_LEGEND_PILL_RECT := Rect2(20, 536, 175, 48)

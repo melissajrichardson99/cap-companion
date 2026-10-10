@@ -41,45 +41,45 @@ offset_bottom = 114.0
 
 [node name="TimePill" type="Control" parent="UI/StatsBar"]
 offset_left = 10.0
-offset_top = 10.0
+offset_top = 5.0
 offset_right = 191.0
-offset_bottom = 44.0
+offset_bottom = 49.0
 
 [node name="CaptionLabel" type="Label" parent="UI/StatsBar/TimePill"]
 offset_left = 30.0
-offset_top = 2.0
+offset_top = 4.0
 offset_right = 181.0
-offset_bottom = 18.0
+offset_bottom = 20.0
 theme_override_font_sizes/font_size = 12
 text = "TIME"
 
 [node name="ValueLabel" type="Label" parent="UI/StatsBar/TimePill"]
 offset_left = 30.0
-offset_top = 15.0
+offset_top = 17.0
 offset_right = 181.0
-offset_bottom = 34.0
+offset_bottom = 42.0
 theme_override_font_sizes/font_size = 18
 text = "28"
 
 [node name="DodgedPill" type="Control" parent="UI/StatsBar"]
 offset_left = 201.0
-offset_top = 10.0
+offset_top = 5.0
 offset_right = 382.0
-offset_bottom = 44.0
+offset_bottom = 49.0
 
 [node name="CaptionLabel" type="Label" parent="UI/StatsBar/DodgedPill"]
 offset_left = 30.0
-offset_top = 2.0
+offset_top = 4.0
 offset_right = 181.0
-offset_bottom = 18.0
+offset_bottom = 20.0
 theme_override_font_sizes/font_size = 12
 text = "DODGED"
 
 [node name="ValueLabel" type="Label" parent="UI/StatsBar/DodgedPill"]
 offset_left = 30.0
-offset_top = 15.0
+offset_top = 17.0
 offset_right = 181.0
-offset_bottom = 34.0
+offset_bottom = 42.0
 theme_override_font_sizes/font_size = 18
 text = "0"
 

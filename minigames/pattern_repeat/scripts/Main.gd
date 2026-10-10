@@ -17,7 +17,7 @@ const ANIMAL_NAMES := ["ALPACA", "PIG", "HEN", "EWE"]
 # pattern.
 const SIGN_RECT := Rect2(10, 10, 380, 56)
 const STATS_RECT := Rect2(10, 74, 380, 54)
-const ROUND_PILL_RECT := Rect2(115, 84, 170, 34)
+const ROUND_PILL_RECT := Rect2(115, 79, 170, 44)
 const TIP_RECT := Rect2(10, 530, 380, 58)
 const TILE_COW_RECT := Rect2(43, 170, 150, 150)
 const TILE_PIG_RECT := Rect2(207, 170, 150, 150)

@@ -37,8 +37,8 @@ const FINISH_CELL := Vector2i(GRID_WIDTH - 1, GRID_HEIGHT - 1)
 # CELL_SIZE at draw time.
 const SIGN_RECT := Rect2(10, 10, 380, 56)
 const STATS_RECT := Rect2(10, 74, 380, 54)
-const TIME_PILL_RECT := Rect2(20, 84, 175, 34)
-const MOVES_PILL_RECT := Rect2(205, 84, 175, 34)
+const TIME_PILL_RECT := Rect2(20, 79, 175, 44)
+const MOVES_PILL_RECT := Rect2(205, 79, 175, 44)
 const FRAME_RECT := Rect2(61, 140, 278, 312)
 const CONTROLS_RECT := Rect2(10, 460, 380, 130)
 

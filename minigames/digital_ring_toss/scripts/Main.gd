@@ -8,8 +8,8 @@ const VIEWPORT_HEIGHT := 600.0
 # ANCHOR_POS/PEGS pixel-space and never reads these constants.
 const SIGN_RECT := Rect2(10, 10, 380, 56)
 const STATS_RECT := Rect2(10, 74, 380, 54)
-const THROWS_PILL_RECT := Rect2(20, 84, 175, 34)
-const SCORE_PILL_RECT := Rect2(205, 84, 175, 34)
+const THROWS_PILL_RECT := Rect2(20, 79, 175, 44)
+const SCORE_PILL_RECT := Rect2(205, 79, 175, 44)
 const FRAME_RECT := Rect2(10, 136, 380, 454)
 const FIELD_RECT := Rect2(22, 148, 356, 430)
 

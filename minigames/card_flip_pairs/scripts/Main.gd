@@ -8,7 +8,7 @@ const ICON_SIZE := 80
 # cosmetic - mirrors mini_snake's SIGN_RECT/STATS_RECT-style layout consts.
 const SIGN_RECT := Rect2(10, 10, 380, 56)
 const STATS_RECT := Rect2(10, 74, 380, 54)
-const PAIRS_PILL_RECT := Rect2(115, 84, 170, 34)
+const PAIRS_PILL_RECT := Rect2(115, 79, 170, 44)
 const GRID_FRAME_RECT := Rect2(10, 136, 380, 364)
 const TIP_RECT := Rect2(10, 546, 380, 50)
 

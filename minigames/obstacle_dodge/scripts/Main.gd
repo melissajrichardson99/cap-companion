@@ -22,8 +22,8 @@ const READY_STEP_DURATION := 0.5
 # time. See mini_snake/scripts/Main.gd for the pattern this mirrors.
 const SIGN_RECT := Rect2(4, 4, 392, 48)
 const STATS_RECT := Rect2(4, 60, 392, 54)
-const TIME_PILL_RECT := Rect2(14, 70, 181, 34)
-const DODGED_PILL_RECT := Rect2(205, 70, 181, 34)
+const TIME_PILL_RECT := Rect2(14, 65, 181, 44)
+const DODGED_PILL_RECT := Rect2(205, 65, 181, 44)
 const FRAME_RECT := Rect2(2, 158, 396, 344)
 const CONTROLS_RECT := Rect2(4, 506, 392, 90)
 

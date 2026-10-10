@@ -43,48 +43,48 @@ offset_bottom = 122.0
 
 [node name="CorrectPill" type="Control" parent="UI/StatsBar"]
 offset_left = 10.0
-offset_top = 10.0
+offset_top = 5.0
 offset_right = 191.0
-offset_bottom = 44.0
+offset_bottom = 49.0
 
 [node name="CaptionLabel" type="Label" parent="UI/StatsBar/CorrectPill"]
 offset_left = 0.0
-offset_top = 2.0
+offset_top = 4.0
 offset_right = 181.0
-offset_bottom = 18.0
+offset_bottom = 20.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 12
 text = "CORRECT"
 
 [node name="ValueLabel" type="Label" parent="UI/StatsBar/CorrectPill"]
 offset_left = 0.0
-offset_top = 15.0
+offset_top = 17.0
 offset_right = 181.0
-offset_bottom = 34.0
+offset_bottom = 42.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 18
 text = "0"
 
 [node name="MissedPill" type="Control" parent="UI/StatsBar"]
 offset_left = 201.0
-offset_top = 10.0
+offset_top = 5.0
 offset_right = 382.0
-offset_bottom = 44.0
+offset_bottom = 49.0
 
 [node name="CaptionLabel" type="Label" parent="UI/StatsBar/MissedPill"]
 offset_left = 0.0
-offset_top = 2.0
+offset_top = 4.0
 offset_right = 181.0
-offset_bottom = 18.0
+offset_bottom = 20.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 12
 text = "MISSED"
 
 [node name="ValueLabel" type="Label" parent="UI/StatsBar/MissedPill"]
 offset_left = 0.0
-offset_top = 15.0
+offset_top = 17.0
 offset_right = 181.0
-offset_bottom = 34.0
+offset_bottom = 42.0
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 18
 text = "0 / 4"

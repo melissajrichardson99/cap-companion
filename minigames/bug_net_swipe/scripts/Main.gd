@@ -41,8 +41,8 @@ const BACKGROUND_COLOR := Color(0.11, 0.16, 0.1)
 # chrome stack (0..PLAY_TOP), not just a single TopBar strip anymore.
 const SIGN_RECT := Rect2(4, 4, 392, 56)
 const STATS_RECT := Rect2(4, 68, 392, 54)
-const TIME_PILL_RECT := Rect2(14, 78, 181, 34)
-const CAUGHT_PILL_RECT := Rect2(205, 78, 181, 34)
+const TIME_PILL_RECT := Rect2(14, 73, 181, 44)
+const CAUGHT_PILL_RECT := Rect2(205, 73, 181, 44)
 
 # --- Brand palette. Mirrors frontend/src/index.css's --cap-* tokens so this
 # game's chrome reads as the same parchment/wood UI system as the rest of

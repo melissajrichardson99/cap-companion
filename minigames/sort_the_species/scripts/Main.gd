@@ -44,8 +44,8 @@ const SPECIES_POOL := ["Capybara", "Alpaca", "Chicken"]
 # time, mirroring Mini Snake's SIGN_RECT/STATS_RECT-style layout consts.
 const SIGN_RECT := Rect2(4, 4, 392, 56)
 const STATS_RECT := Rect2(4, 68, 392, 54)
-const CORRECT_PILL_RECT := Rect2(14, 78, 181, 34)
-const MISSED_PILL_RECT := Rect2(205, 78, 181, 34)
+const CORRECT_PILL_RECT := Rect2(14, 73, 181, 44)
+const MISSED_PILL_RECT := Rect2(205, 73, 181, 44)
 const BINS_SHELF_RECT := Rect2(4, 504, 392, 92)
 const BUCKET_PANEL_TOP := BIN_TOP + 12.0
 const BUCKET_PANEL_HEIGHT := 78.0
