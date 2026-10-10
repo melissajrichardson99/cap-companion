@@ -183,7 +183,9 @@ async function closeOtherTopLevelNodes(request: APIRequestContext, staffToken: s
   const topLevel = rows.filter((r) => r.parent_node_id === null)
   const exploration = EXPLORATION_NODE_NAMES.map((name) => topLevel.find((r) => r.name === name)!)
   const others = topLevel.filter((r) => !exploration.some((e) => e.id === r.id))
-  await Promise.all(others.map((r) => setNodeOpen(request, staffToken, r.id, false)))
+  // One at a time: ~20 concurrent PATCHes intermittently got the connection
+  // reset (ECONNRESET) by the local uvicorn backend on Windows.
+  for (const r of others) await setNodeOpen(request, staffToken, r.id, false)
   return exploration
 }
 
