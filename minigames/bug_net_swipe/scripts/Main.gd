@@ -252,7 +252,7 @@ func _end_game(won: bool) -> void:
 	spawn_timer.stop()
 	pointer_active = false
 	end_card.show_result(
-		"Caught 'em All!" if won else "Time's Up!",
+		"Caught 'em All!" if won else "Game Over",
 		EndCard.OUTCOME_WIN if won else EndCard.OUTCOME_LOSE,
 		[
 			EndCard.stat("Time", ceili(max(0.0, TIME_LIMIT - elapsed_time))),

@@ -157,7 +157,7 @@ func _try_move(direction: int) -> void:
 func _end_game(won: bool) -> void:
 	is_running = false
 	end_card.show_result(
-		"You Made It!" if won else "Time's Up!",
+		"You Made It!" if won else "Game Over",
 		EndCard.OUTCOME_WIN if won else EndCard.OUTCOME_LOSE,
 		[EndCard.stat("Time", ceili(time_left)), EndCard.stat("Moves", moves)],
 	)
