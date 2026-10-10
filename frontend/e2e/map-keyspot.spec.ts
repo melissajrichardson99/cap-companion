@@ -62,11 +62,11 @@ test.describe('Take Me There card', () => {
     await expect(page.locator('.map-pin-keyspot-highlighted')).toHaveCount(5)
   })
 
-  test('Attractions highlights all 18 attraction pins', async ({ page }) => {
+  test('Attractions highlights all 19 attraction pins (18 + Cornhole Mini Golf, migration 043)', async ({ page }) => {
     await openMapTab(page)
     await page.getByRole('button', { name: 'Attractions', exact: true }).click()
-    await expect(page.locator('.map-pin-attraction.map-pin-keyspot-highlighted')).toHaveCount(18)
-    await expect(page.locator('.map-pin-keyspot-highlighted')).toHaveCount(18)
+    await expect(page.locator('.map-pin-attraction.map-pin-keyspot-highlighted')).toHaveCount(19)
+    await expect(page.locator('.map-pin-keyspot-highlighted')).toHaveCount(19)
   })
 
   test('switching categories updates the highlight, and re-tapping the active one clears it', async ({ page }) => {
