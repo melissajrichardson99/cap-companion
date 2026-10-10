@@ -14,7 +14,7 @@ import { FoodTruckScreen } from './components/FoodTruckScreen'
 import { HomePage } from './components/HomePage'
 import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
-import { MinigameOverlay, getMinigameSlug } from './components/MinigameOverlay'
+import { MinigameOverlay, finishedRound, getMinigameSlug, type MinigameCloseInfo } from './components/MinigameOverlay'
 import { NavMenu } from './components/NavMenu'
 import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, QuestionMarkIcon, SearchIcon, ShieldIcon, TruckIcon } from './components/NavIcons'
 import { PassportModal } from './components/PassportModal'
@@ -47,6 +47,13 @@ declare global {
   interface Window {
     __capReloadContactStatus?: () => void
   }
+}
+
+// One queued minigame play. See minigameQueue in App.
+interface MinigameLaunch {
+  launchId: string
+  game: Minigame
+  kind: 'base' | 'milestone' | 'hunt'
 }
 
 const TABS: { key: string; label: string; icon: ReactNode }[] = [
@@ -137,8 +144,13 @@ function App() {
   // (played only once the guest opts in via BingoScreen's prompt, never
   // auto-queued); 'hunt' = a Scavenger Hunt Challenge 3 minigame. Tagged so
   // handleMinigameOverlayClose knows what (if anything) to do once the
-  // overlay for it closes.
-  const [minigameQueue, setMinigameQueue] = useState<{ game: Minigame; kind: 'base' | 'milestone' | 'hunt' }[]>([])
+  // overlay for it closes. launchId is unique per queued entry: the overlay
+  // is keyed on it (so the same game queued twice still reloads) and closes
+  // are matched against it (so one launch can only close once).
+  const [minigameQueue, setMinigameQueue] = useState<MinigameLaunch[]>([])
+  // Launches that have already closed. A ref, not state, so a second close
+  // arriving before the re-render still sees the first one.
+  const closedLaunchIdsRef = useRef<Set<string>>(new Set())
   // The milestones + optional celebration minigame a still-playing 'base'
   // minigame will unlock once its overlay closes -- one entry per queued
   // 'base' minigame, in the same order. Kept separate from minigameQueue so
@@ -150,7 +162,7 @@ function App() {
   // tap BingoScreen's "play it" prompt (shown once milestoneQueue drains).
   const [pendingMilestoneMinigames, setPendingMilestoneMinigames] = useState<Minigame[]>([])
   const [toasts, setToasts] = useState<ToastItem[]>([])
-  const activeMinigame = minigameQueue[0]?.game ?? null
+  const activeMinigame = minigameQueue[0] ?? null
   // Set while a Scavenger Hunt Challenge 3 minigame is in the queue, so the
   // overlay's onClose knows to also mark that hunt challenge complete --
   // the overlay itself stays generic/unaware of Hunt.
@@ -396,7 +408,7 @@ function App() {
       return
     }
     if (getMinigameSlug(base)) {
-      setMinigameQueue((prev) => [...prev, { game: base, kind: 'base' as const }])
+      setMinigameQueue((prev) => [...prev, { launchId: crypto.randomUUID(), game: base, kind: 'base' as const }])
       setBaseFollowupQueue((prev) => [...prev, followup])
     } else {
       toastUnbuiltMinigame(base)
@@ -409,7 +421,7 @@ function App() {
     if (!game) return
     setPendingMilestoneMinigames(rest)
     if (getMinigameSlug(game)) {
-      setMinigameQueue((prev) => [...prev, { game, kind: 'milestone' as const }])
+      setMinigameQueue((prev) => [...prev, { launchId: crypto.randomUUID(), game, kind: 'milestone' as const }])
     } else {
       toastUnbuiltMinigame(game)
     }
@@ -487,14 +499,17 @@ function App() {
       setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `\u{1F3AE} That minigame isn't available yet.` }])
       return
     }
-    setMinigameQueue((prev) => [...prev, { game, kind: 'hunt' as const }])
+    setMinigameQueue((prev) => [...prev, { launchId: crypto.randomUUID(), game, kind: 'hunt' as const }])
     setHuntPendingChallengeId(challengeId)
   }
 
-  const handleMinigameOverlayClose = () => {
-    const closed = minigameQueue[0]
-    setMinigameQueue((q) => q.slice(1))
-    if (closed?.kind === 'base') {
+  const handleMinigameOverlayClose = (launchId: string, info: MinigameCloseInfo) => {
+    if (closedLaunchIdsRef.current.has(launchId)) return
+    const closed = minigameQueue.find((entry) => entry.launchId === launchId)
+    if (!closed) return
+    closedLaunchIdsRef.current.add(launchId)
+    setMinigameQueue((q) => q.filter((entry) => entry.launchId !== launchId))
+    if (closed.kind === 'base') {
       // Plain statements, not a setBaseFollowupQueue functional-updater with
       // applyBaseFollowup nested inside it -- React (StrictMode) invokes
       // updater functions twice in dev to catch impure ones, and doing the
@@ -506,12 +521,18 @@ function App() {
       setBaseFollowupQueue(rest)
       if (next) applyBaseFollowup(next)
     }
-    if (closed?.kind === 'hunt' && huntPendingChallengeId) {
+    if (closed.kind === 'hunt' && huntPendingChallengeId) {
       const challengeId = huntPendingChallengeId
       setHuntPendingChallengeId(null)
-      completeHuntChallenge(challengeId).catch((err) =>
-        setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `Couldn't save hunt progress: ${err}` }]),
-      )
+      // Challenge 3 needs a round played to its end (win or lose). Leaving
+      // early via the X or Escape leaves it open, so Play Now can be tapped
+      // again. Old builds can't report a finish, so they complete on any
+      // close, as before.
+      if (finishedRound(info)) {
+        completeHuntChallenge(challengeId).catch((err) =>
+          setToasts((prev) => [...prev, { id: crypto.randomUUID(), text: `Couldn't save hunt progress: ${err}` }]),
+        )
+      }
     }
   }
 
@@ -641,8 +662,8 @@ interface ScanRouteProps {
   onPlayHuntMinigame: (challengeId: string, minigameSlug: string) => void
   toasts: ToastItem[]
   onDismissToast: (id: string) => void
-  activeMinigame: Minigame | null
-  onMinigameOverlayClose: () => void
+  activeMinigame: MinigameLaunch | null
+  onMinigameOverlayClose: (launchId: string, info: MinigameCloseInfo) => void
   announcements: Announcement[] | null
   announcementResetSignal: number
 }
@@ -684,7 +705,14 @@ function ScanRoute({
         />
       </main>
       <ToastStack toasts={toasts} onDismiss={onDismissToast} />
-      {activeMinigame && <MinigameOverlay game={activeMinigame} onClose={onMinigameOverlayClose} />}
+      {activeMinigame && (
+        <MinigameOverlay
+          key={activeMinigame.launchId}
+          game={activeMinigame.game}
+          launchId={activeMinigame.launchId}
+          onClose={onMinigameOverlayClose}
+        />
+      )}
       <AnnouncementPopup announcements={announcements} resetSignal={announcementResetSignal} />
     </div>
   )
@@ -748,8 +776,8 @@ interface GuestShellProps {
   announcementResetSignal: number
   toasts: ToastItem[]
   onDismissToast: (id: string) => void
-  activeMinigame: Minigame | null
-  onMinigameOverlayClose: () => void
+  activeMinigame: MinigameLaunch | null
+  onMinigameOverlayClose: (launchId: string, info: MinigameCloseInfo) => void
   handleResetSession: (result: ResetSessionResult) => void
 }
 
@@ -916,7 +944,14 @@ function GuestShell(props: GuestShellProps) {
 
       <ToastStack toasts={props.toasts} onDismiss={props.onDismissToast} />
 
-      {props.activeMinigame && <MinigameOverlay game={props.activeMinigame} onClose={props.onMinigameOverlayClose} />}
+      {props.activeMinigame && (
+        <MinigameOverlay
+          key={props.activeMinigame.launchId}
+          game={props.activeMinigame.game}
+          launchId={props.activeMinigame.launchId}
+          onClose={props.onMinigameOverlayClose}
+        />
+      )}
 
       {props.showScanEntry && (
         <ScanEntryModal

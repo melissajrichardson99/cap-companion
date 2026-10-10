@@ -1,5 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { seedDeviceSession } from './deviceSessionHelper'
+import { announceResultSupport, dismissMinigameOverlay, postMinigameResult, serveAsLegacyBuild } from './minigameHelper'
 
 // Covers the Scavenger Hunt: the 5-character select screen, the lock/unlock
 // gate (migration 014_hunt_unlock.sql -- characters start locked and are
@@ -263,11 +264,25 @@ test.describe('Scavenger Hunt', () => {
     await expect(overlay).toBeVisible()
     await expect(overlay.locator('iframe')).toHaveAttribute('src', '/games/mini_platformer/index.html')
 
-    const iframeHandle = await page.locator('.minigame-overlay-frame').elementHandle()
-    const frame = await iframeHandle?.contentFrame()
-    await frame?.evaluate(() => window.parent.postMessage({ type: 'minigame-complete' }, '*'))
+    // Leaving with the X before a round ends doesn't complete Challenge 3.
+    // (announceResultSupport makes this hold even while the served build is
+    // an old one that never reports results.)
+    await announceResultSupport(page)
+    await dismissMinigameOverlay(page)
+    await page.waitForTimeout(500)
+    await expect(dialog.getByText('Kangaroo — Challenge 3')).toBeVisible()
+    await expect(characterCard(page, 'Kangaroo').locator('.hunt-character-status')).toHaveText('2/3 challenges completed')
 
-    await expect(page.locator('.minigame-overlay')).toHaveCount(0)
+    // Finishing a round -- a loss counts too -- keeps the end card open, and
+    // Exit then completes the challenge.
+    await dialog.getByRole('button', { name: 'Play Now' }).click()
+    await expect(overlay).toBeVisible()
+    await announceResultSupport(page)
+    await postMinigameResult(page, { outcome: 'lose', stats: {} })
+    await page.waitForTimeout(500)
+    await expect(overlay).toBeVisible()
+    await expect(dialog.getByText('Kangaroo — Challenge 3')).toBeVisible()
+    await dismissMinigameOverlay(page)
     await expect(dialog.getByText('You found Kangaroo! All 3 challenges complete.')).toBeVisible()
 
     await dialog.getByRole('button', { name: 'Done' }).click()
@@ -395,6 +410,28 @@ test.describe('Scavenger Hunt', () => {
     await dialog.getByRole('button', { name: 'Scale', exact: true }).click()
 
     await expect(dialog.getByText('Snake — Challenge 3')).toBeVisible()
+  })
+
+  test('Snake: Challenge 3 from the /scan/:code deep link on an old build that never reports results still completes on close', async ({
+    page,
+  }) => {
+    // Picks up where the Snake test above stopped (Challenge 3). An old game
+    // build can't say whether the round finished, so closing it completes
+    // the challenge, exactly as before end cards existed.
+    await serveAsLegacyBuild(page, 'mini_snake')
+    await page.goto(`/scan/${CHARACTER_CODES.Snake}`)
+    await expect(page.getByText('Snake — Challenge 3')).toBeVisible()
+    await page.getByRole('button', { name: 'Play Now' }).click()
+    await expect(page.locator('.minigame-overlay-frame')).toHaveAttribute('src', '/games/mini_snake/index.html')
+    await page.locator('.minigame-overlay-frame').evaluate(
+      (iframe: HTMLIFrameElement) =>
+        new Promise<void>((resolve) => {
+          if (iframe.contentDocument?.readyState === 'complete') resolve()
+          else iframe.addEventListener('load', () => resolve(), { once: true })
+        }),
+    )
+    await dismissMinigameOverlay(page)
+    await expect(page.getByText('You found Snake! All 3 challenges complete.')).toBeVisible()
   })
 
   test('re-scanning an already-unlocked (and fully completed) character just navigates back in, no error', async ({

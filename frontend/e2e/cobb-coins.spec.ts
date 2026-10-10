@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { apiStaffLogin } from './staffAuthHelper'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
+import { postMinigameResult } from './minigameHelper'
 
 // Covers Cobb Coins' earn side (migration 021_cobb_coins_earn_side.sql):
 // Puzzle Timer (unchanged), Bingo milestone tiers (10/25/50, replacing the
@@ -321,6 +322,8 @@ test.describe('Cobb Coins', () => {
     await dialog.getByRole('button', { name: 'Dolphins and primates', exact: true }).click()
     await expect(dialog.getByText('Pig — Challenge 3')).toBeVisible()
     await dialog.getByRole('button', { name: 'Play Now' }).click()
+    // Challenge 3 completes only once a round has ended (MinigameOverlay).
+    await postMinigameResult(page, { outcome: 'win', stats: {} })
     await dismissMinigameOverlay(page)
 
     await expect(page.locator('.toast', { hasText: '+40 Cobb Coins' })).toBeVisible()
