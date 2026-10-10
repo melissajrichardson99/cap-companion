@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Modal } from './Modal'
 import { CameraIcon } from './NavIcons'
 import { api, type ManualEntryMatchType } from '../api'
+import { logScanForPath, ROUTE_PREFIXES } from '../scanArrival'
 import './ScanEntryModal.css'
 
 interface ScanEntryModalProps {
@@ -13,26 +14,16 @@ interface ScanEntryModalProps {
   onResolved: (path: string) => void
 }
 
-// Every QR sign in the park encodes a full <frontend_base_url>/<prefix>/<id>
-// URL (so a phone's own camera app works with no app install, no in-app
-// scanning needed) -- the path prefix says which of the 4 destinations it
-// is. Checked against the decoded URL's *pathname*, not the raw text, so
-// query strings/fragments/a non-default origin never confuse the match.
-const ROUTE_PREFIXES: { prefix: string; type: ManualEntryMatchType }[] = [
-  { prefix: '/scan/', type: 'scan' },
-  { prefix: '/animals/', type: 'animal' },
-  { prefix: '/scoring/', type: 'scoring' },
-  { prefix: '/puzzles/', type: 'puzzle' },
-]
-
 function routeForMatch(type: ManualEntryMatchType, slug: string): string {
   const entry = ROUTE_PREFIXES.find((r) => r.type === type)
   return `${entry?.prefix ?? '/scan/'}${encodeURIComponent(slug)}`
 }
 
-// Tries to read a destination straight off a decoded QR's URL structure --
-// the fast, no-backend-call path, since the URL's own prefix already says
-// the type unambiguously. Returns null for anything that isn't a recognized
+// Tries to read a destination straight off a decoded QR's URL structure
+// (ROUTE_PREFIXES, scanArrival.ts) -- the fast, no-backend-call path, since
+// the URL's own prefix already says the type unambiguously. Checked against
+// the decoded URL's *pathname*, not the raw text, so query strings/
+// fragments/a non-default origin never confuse the match. Returns null for anything that isn't a recognized
 // <origin>/<prefix>/<id> shape (e.g. a sign that somehow just encodes a bare
 // code with no URL at all) so the caller can fall back to resolving it the
 // same way manual entry does.
@@ -77,6 +68,13 @@ export function ScanEntryModal({ onClose, onResolved }: ScanEntryModalProps) {
     }
   }, [])
 
+  // Every successful scan/entry ends here, exactly once (doneRef guards
+  // every caller): logs the arrival for the Staff Visit Heatmap, then routes.
+  const resolveTo = (path: string) => {
+    logScanForPath(path)
+    onResolved(path)
+  }
+
   const stopCamera = () => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
@@ -100,7 +98,7 @@ export function ScanEntryModal({ onClose, onResolved }: ScanEntryModalProps) {
       if (doneRef.current || unmountedRef.current) return
       doneRef.current = true
       stopCamera()
-      onResolved(routeForMatch(result.type, result.slug))
+      resolveTo(routeForMatch(result.type, result.slug))
     } catch (err) {
       if (doneRef.current || unmountedRef.current) return
       const message = String(err)
@@ -112,7 +110,7 @@ export function ScanEntryModal({ onClose, onResolved }: ScanEntryModalProps) {
       if (message.includes('404')) {
         doneRef.current = true
         stopCamera()
-        onResolved(`/scan/${encodeURIComponent(rawText)}`)
+        resolveTo(`/scan/${encodeURIComponent(rawText)}`)
         return
       }
       setManualError(`Something went wrong looking that up: ${message}`)
@@ -126,7 +124,7 @@ export function ScanEntryModal({ onClose, onResolved }: ScanEntryModalProps) {
     if (directPath) {
       doneRef.current = true
       stopCamera()
-      onResolved(directPath)
+      resolveTo(directPath)
       return
     }
     resolveAndGo(decodedText)

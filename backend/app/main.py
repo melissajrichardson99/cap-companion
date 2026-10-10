@@ -21,6 +21,7 @@ from app.routers import (
     passport,
     photos,
     puzzles,
+    qr_locations,
     scan,
     scoring,
     session,
@@ -72,6 +73,7 @@ app.add_middleware(
 app.include_router(map_router.router)
 app.include_router(bingo.router)
 app.include_router(puzzles.router)
+app.include_router(qr_locations.router)
 app.include_router(scoring.router)
 app.include_router(hunt.router)
 app.include_router(scan.router)

@@ -12,14 +12,22 @@ from datetime import date, datetime, timezone
 
 import pytest
 
+from app.models import HeatmapSource
 from app.services import heatmap
 from app.services.heatmap import PARK_TIMEZONE, HeatmapFilterError, _count_events, _utc_bounds, get_heatmap
 
 FRIDAY, SATURDAY, SUNDAY = 4, 5, 6
 
 
-def _row(source_id: str, iso: str) -> dict:
-    return {"source_id": source_id, "visited_at": iso}
+def _row(source_id: str | None, iso: str, source_type: str = "map_node", destination: tuple[str, str] | None = None) -> dict:
+    dtype, did = destination or (None, None)
+    return {
+        "source_type": source_type,
+        "source_id": source_id,
+        "destination_type": dtype,
+        "destination_id": did,
+        "visited_at": iso,
+    }
 
 
 class _FakeQuery:
@@ -30,11 +38,16 @@ class _FakeQuery:
         self._rows = rows
         self._lo: datetime | None = None
         self._hi: datetime | None = None
+        self._types: list[str] | None = None
 
     def select(self, *_):
         return self
 
     def eq(self, *_):
+        return self
+
+    def in_(self, _col, values):
+        self._types = values
         return self
 
     def order(self, *_):
@@ -57,16 +70,39 @@ class _FakeQuery:
             r
             for r in self._rows
             if self._lo <= datetime.fromisoformat(r["visited_at"]) < self._hi
+            and (self._types is None or r["source_type"] in self._types)
         ] if self._offset == 0 else []
         return type("Resp", (), {"data": data})()
+
+
+class _FakeNodes:
+    def __init__(self, nodes: list[dict]):
+        self._nodes = nodes
+
+    def select(self, *_):
+        return self
+
+    def execute(self):
+        return type("Resp", (), {"data": self._nodes})()
+
+
+# Arcade Pad (top-level pin) with Cornhole as its child, plus Goats.
+NODES = [
+    {"id": "arcade", "parent_node_id": None},
+    {"id": "cornhole", "parent_node_id": "arcade"},
+    {"id": "goats", "parent_node_id": None},
+]
 
 
 @pytest.fixture
 def events(monkeypatch):
     rows: list[dict] = []
+    nodes = NODES
 
     class _Client:
-        def table(self, _name):
+        def table(self, name):
+            if name == "map_nodes":
+                return _FakeNodes(nodes)
             return _FakeQuery(rows)
 
     monkeypatch.setattr(heatmap, "get_supabase_client", lambda: _Client())
@@ -199,3 +235,69 @@ def test_invalid_filters_raise_before_any_query(kwargs):
 def test_end_before_start_rejected():
     with pytest.raises(HeatmapFilterError):
         get_heatmap(date(2026, 10, 2), date(2026, 10, 1))
+
+
+T = "2026-10-03T17:00:00+00:00"
+
+
+def test_aggregate_rolls_child_node_events_up_into_the_parent_pin():
+    parent_of = {n["id"]: n["parent_node_id"] for n in NODES}
+    rows = [
+        _row("arcade", T),
+        _row("cornhole", T, "qr_scan", ("scoring_game", "cornhole")),
+        _row("cornhole", T, "qr_scan", ("scoring_game", "cornhole")),
+    ]
+    counts, unmapped = heatmap._aggregate(rows, parent_of)
+    assert [(c.source_id, c.visits, c.check_ins, c.scans) for c in counts] == [("arcade", 3, 1, 2)]
+    assert unmapped == []
+
+
+def test_aggregate_counts_unmapped_scans_separately():
+    rows = [
+        _row(None, T, "qr_scan", ("animal", "sloth")),
+        _row(None, T, "qr_scan", ("animal", "sloth")),
+        _row(None, T, "qr_scan", ("hunt_character", "quick-falcon")),
+        _row("goats", T, "qr_scan", ("animal", "goat")),
+    ]
+    counts, unmapped = heatmap._aggregate(rows, {})
+    assert [(c.source_id, c.scans) for c in counts] == [("goats", 1)]
+    assert [(u.destination_type, u.destination_id, u.scans) for u in unmapped] == [
+        ("animal", "sloth", 2),
+        ("hunt_character", "quick-falcon", 1),
+    ]
+
+
+def test_aggregate_survives_a_parent_cycle():
+    assert heatmap._top_level("a", {"a": "b", "b": "a"}) in {"a", "b"}
+
+
+def test_get_heatmap_source_filter(events):
+    events += [
+        _row("goats", T),
+        _row("goats", T, "qr_scan", ("animal", "goat")),
+        _row(None, T, "qr_scan", ("animal", "sloth")),
+    ]
+    day = date(2026, 10, 3)
+    both = get_heatmap(day, day)
+    assert (both.total_visits, both.unmapped_scans) == (2, 1)
+    assert [(c.check_ins, c.scans) for c in both.counts] == [(1, 1)]
+    check_ins = get_heatmap(day, day, source=HeatmapSource.CHECK_INS)
+    assert (check_ins.total_visits, check_ins.unmapped_scans) == (1, 0)
+    scans = get_heatmap(day, day, source=HeatmapSource.QR_SCANS)
+    assert (scans.total_visits, scans.unmapped_scans) == (1, 1)
+
+
+def test_scan_debounce_absorbs_only_near_duplicates(monkeypatch):
+    from app.routers import qr_locations as router
+
+    clock = [1000.0]
+    monkeypatch.setattr(router.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(router, "_recent_scans", {})
+    key = ("session-1", "animal", "goat")
+    assert router._is_duplicate(key) is False
+    clock[0] += 2
+    assert router._is_duplicate(key) is True  # double-fire
+    assert router._is_duplicate(("session-1", "animal", "pig")) is False  # different destination
+    assert router._is_duplicate(("session-2", "animal", "goat")) is False  # different device
+    clock[0] += router.SCAN_DEBOUNCE_SECONDS
+    assert router._is_duplicate(key) is False  # a separate, later scan still counts

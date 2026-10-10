@@ -58,3 +58,19 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+
+.staff-qr-row-location {
+  color: var(--cap-color-body-text);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.staff-qr-row-location select {
+  max-width: 100%;
+  font-size: 13px;
+}
+
+.staff-qr-row-location-note,
+.staff-qr-row-location-status {
+  font-size: 12px;
+}

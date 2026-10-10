@@ -141,3 +141,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+
+.staff-heatmap-unmapped {
+  margin: 0 0 var(--cap-space-4);
+  font-size: 13px;
+  text-align: center;
+  color: var(--cap-color-body-text);
+}

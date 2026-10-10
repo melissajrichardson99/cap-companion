@@ -846,22 +846,77 @@ class AnalyticsMapExploration(BaseModel):
     node_rankings: list[MapNodeVisitRank]
 
 
+class HeatmapSource(StrEnum):
+    """GET /staff/heatmap's Source filter -- which map_node_visit_events
+    source_type values to count."""
+
+    ALL = "all"
+    CHECK_INS = "map_node"
+    QR_SCANS = "qr_scan"
+
+
 class HeatmapSourceCount(BaseModel):
-    # Generic, not map-node-specific -- Phase 2 reuses this shape for QR-scan
-    # sources. For Phase 1, source_id is always a map_nodes.id.
+    # source_id is a top-level map_nodes.id (child-node events are rolled up
+    # into their parent pin). visits = check_ins + scans.
     source_id: str
     visits: int = Field(ge=0)
+    check_ins: int = Field(ge=0)
+    scans: int = Field(ge=0)
+
+
+class HeatmapUnmappedCount(BaseModel):
+    # A QR destination with no map location yet, e.g. ("animal", "sloth").
+    destination_type: str
+    destination_id: str
+    scans: int = Field(ge=0)
 
 
 class HeatmapSummary(BaseModel):
-    """GET /staff/heatmap: raw visit-occurrence counts (never deduplicated)
-    from map_node_visit_events, per source_id, within the requested
-    date/day-of-week/hour filters. Only sources with >= 1 matching event are
-    listed -- the frontend treats every other node as 0."""
+    """GET /staff/heatmap: raw occurrence counts (never deduplicated) from
+    map_node_visit_events, per top-level map node, within the requested
+    date/day-of-week/hour/source filters. Only nodes with >= 1 matching event
+    are listed -- the frontend treats every other node as 0. total_visits
+    covers mapped events only; unmapped scans are reported separately."""
 
-    source_type: str
+    source: HeatmapSource
     total_visits: int = Field(ge=0)
     counts: list[HeatmapSourceCount]
+    unmapped_scans: int = Field(ge=0)
+    unmapped: list[HeatmapUnmappedCount]
+
+
+class QrDestinationType(StrEnum):
+    """A QR destination's kind, as stored in map_node_visit_events.
+    destination_type and keyed in GET /staff/qr-locations."""
+
+    HUNT_CHARACTER = "hunt_character"
+    ANIMAL = "animal"
+    SCORING_GAME = "scoring_game"
+    # Locations are set per puzzle (puzzles.map_node_id); scan events record
+    # the specific challenge slug under "puzzle_challenge".
+    PUZZLE = "puzzle"
+    PUZZLE_CHALLENGE = "puzzle_challenge"
+
+
+class QrLocation(BaseModel):
+    """One QR destination's map location. destination_id is the row id for
+    hunt_character / scoring_game / puzzle, the slug for animal."""
+
+    destination_type: QrDestinationType
+    destination_id: str
+    map_node_id: UUID | None
+
+
+class SetQrLocationRequest(BaseModel):
+    map_node_id: UUID | None
+
+
+class ScanEventRequest(BaseModel):
+    """POST /scan-events: the destination a guest just arrived at by QR scan
+    or typed sign code -- same type/id pair ScanEntryModal routes on."""
+
+    type: ManualEntryMatchType
+    id: str = Field(min_length=1, max_length=200)
 
 
 class AnimalPurchaseRank(BaseModel):

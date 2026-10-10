@@ -98,6 +98,9 @@ test('every Map check-in (first visit and repeats) shows on the staff heatmap in
   // Bingo/Map completion state is unchanged by the repeat: still just "Visited".
   await page.locator(`.map-pin[aria-label^="${NODE_NAME}"]`).click()
   await expect(page.getByRole('dialog', { name: NODE_NAME }).locator('.state-pill')).toHaveText('Visited')
+  // Event rows are written by a background task after the visit response is
+  // sent, so poll until both have landed before the staff page fetches.
+  await expect.poll(() => apiHeatmapCount(request, staffToken, id, windowQuery), { timeout: 10_000 }).toBe(before + 2)
 
   // Staff: the heatmap page, filtered to exactly that window.
   const staffPage = await context.newPage()

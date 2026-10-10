@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from app.device_session import get_or_create_session
 from app.errors import NotFoundError
@@ -13,6 +13,7 @@ from app.models import (
     VisitNodeRequest,
     VisitNodeResponse,
 )
+from app.services import heatmap as heatmap_service
 from app.services import map_bingo
 from app.staff_auth import require_staff
 
@@ -31,13 +32,18 @@ def list_nodes(
 def visit_node(
     node_id: UUID,
     body: VisitNodeRequest,
+    background_tasks: BackgroundTasks,
     session: DeviceSession = Depends(get_or_create_session),
     guest: Guest | None = Depends(get_optional_guest),
 ) -> VisitNodeResponse:
     try:
-        return map_bingo.visit_node(node_id, body.completed_tile_ids, session.id, guest.id if guest else None)
+        result = map_bingo.visit_node(node_id, body.completed_tile_ids, session.id, guest.id if guest else None)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # Staff Visit Heatmap: one anonymous event row per successful visit
+    # (repeat visits included), written after the response is sent.
+    background_tasks.add_task(heatmap_service.log_visit_event, heatmap_service.MAP_NODE_SOURCE_TYPE, str(node_id))
+    return result
 
 
 @router.patch("/nodes/{node_id}/status", response_model=MapNode, dependencies=[Depends(require_staff)])

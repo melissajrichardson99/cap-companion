@@ -487,13 +487,30 @@ export interface AnalyticsBingo {
   avg_milestones_per_session: number
 }
 
-// GET /staff/heatmap -- raw (never deduplicated) visit-occurrence counts per
-// source_id. Only sources with >= 1 matching visit are listed; treat every
-// other node as 0. source_id is a map node id for source_type 'map_node'.
+// 'map_node' = Map check-ins, 'qr_scan' = QR scans.
+export type HeatmapSource = 'all' | 'map_node' | 'qr_scan'
+
+// GET /staff/heatmap -- raw (never deduplicated) occurrence counts per
+// top-level map node (child-node events are rolled up into the parent pin).
+// Only nodes with >= 1 matching event are listed; treat every other node as
+// 0. visits = check_ins + scans. Scans of a destination with no map location
+// yet aren't in counts/total_visits -- they're reported under unmapped.
 export interface HeatmapSummary {
-  source_type: string
+  source: HeatmapSource
   total_visits: number
-  counts: { source_id: string; visits: number }[]
+  counts: { source_id: string; visits: number; check_ins: number; scans: number }[]
+  unmapped_scans: number
+  unmapped: { destination_type: string; destination_id: string; scans: number }[]
+}
+
+// GET /staff/qr-locations -- destination_id is the row id for
+// hunt_character / scoring_game / puzzle, the slug for animal.
+export type QrDestinationType = 'hunt_character' | 'animal' | 'scoring_game' | 'puzzle'
+
+export interface QrLocation {
+  destination_type: QrDestinationType
+  destination_id: string
+  map_node_id: string | null
 }
 
 export interface HeatmapFilters {
@@ -504,6 +521,8 @@ export interface HeatmapFilters {
   // [hourStart, hourEnd) in park time; omit both for all hours.
   hourStart?: number
   hourEnd?: number
+  // Omitted = 'all'.
+  source?: HeatmapSource
 }
 
 export interface MapNodeVisitRank {
@@ -660,6 +679,15 @@ export const api = {
     request<HuntCharacter>(`/hunt/characters/${characterId}/unlock`, { method: 'POST' }),
   resolveScanCode: (code: string) => request<ScanResult>(`/scan/${encodeURIComponent(code)}`),
   resolveManualEntry: (text: string) => request<ManualEntryResolution>(`/scan/lookup/${encodeURIComponent(text)}`),
+  // Staff Visit Heatmap: one anonymous QR-scan arrival (see scanLog.ts).
+  logScanEvent: (type: ManualEntryMatchType, id: string) =>
+    request<void>('/scan-events', { method: 'POST', body: JSON.stringify({ type, id }) }),
+  listQrLocations: () => staffRequest<QrLocation[]>('/staff/qr-locations'),
+  setQrLocation: (type: QrDestinationType, id: string, mapNodeId: string | null) =>
+    staffRequest<QrLocation>(`/staff/qr-locations/${type}/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ map_node_id: mapNodeId }),
+    }),
   createStaffRequest: (
     type: StaffRequestType,
     locationNodeId: string | null,
@@ -689,6 +717,7 @@ export const api = {
     if (filters.day) params.set('day', filters.day)
     if (filters.hourStart != null) params.set('hour_start', String(filters.hourStart))
     if (filters.hourEnd != null) params.set('hour_end', String(filters.hourEnd))
+    if (filters.source && filters.source !== 'all') params.set('source', filters.source)
     return staffRequest<HeatmapSummary>(`/staff/heatmap?${params.toString()}`)
   },
   staffLogin: (password: string) =>

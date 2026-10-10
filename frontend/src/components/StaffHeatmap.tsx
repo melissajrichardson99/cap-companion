@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, type HeatmapSummary, type MapNode } from '../api'
+import { api, type HeatmapSource, type HeatmapSummary, type MapNode } from '../api'
 import { clearStaffToken } from '../staffAuth'
 import { ClipboardIcon } from './NavIcons'
 import { StaffAuthGate } from './StaffAuthGate'
@@ -26,6 +26,19 @@ const DAYS: { value: string; label: string }[] = [
   { value: 'saturday', label: 'Saturday' },
   { value: 'sunday', label: 'Sunday' },
 ]
+
+const SOURCES: { value: HeatmapSource; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'map_node', label: 'Check-ins' },
+  { value: 'qr_scan', label: 'QR scans' },
+]
+
+const DESTINATION_LABELS: Record<string, string> = {
+  hunt_character: 'Hunt character',
+  animal: 'Animal',
+  scoring_game: 'Scoring game',
+  puzzle_challenge: 'Puzzle',
+}
 
 function hourLabel(h: number): string {
   if (h === 0 || h === 24) return '12 AM'
@@ -57,6 +70,7 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
   // '' = unbounded on that side; both '' = all hours.
   const [hourStart, setHourStart] = useState('')
   const [hourEnd, setHourEnd] = useState('')
+  const [source, setSource] = useState<HeatmapSource>('all')
 
   const [nodes, setNodes] = useState<MapNode[] | null>(null)
   const [nodesError, setNodesError] = useState<string | null>(null)
@@ -89,6 +103,7 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
         day: day || undefined,
         hourStart: hourStart === '' ? undefined : Number(hourStart),
         hourEnd: hourEnd === '' ? undefined : Number(hourEnd),
+        source,
       })
       .then((result) => {
         if (seq === requestSeq.current) setSummary(result)
@@ -96,18 +111,17 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
       .catch((err) => {
         if (seq === requestSeq.current) setError(String(err))
       })
-  }, [start, end, day, hourStart, hourEnd, hourRangeInvalid])
+  }, [start, end, day, hourStart, hourEnd, source, hourRangeInvalid])
 
-  const visitsById = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const c of summary?.counts ?? []) m.set(c.source_id, c.visits)
-    return m
-  }, [summary])
+  const countsById = useMemo(() => new Map((summary?.counts ?? []).map((c) => [c.source_id, c])), [summary])
   const maxVisits = summary?.counts.reduce((max, c) => Math.max(max, c.visits), 0) ?? 0
 
   const positioned = (nodes ?? []).filter((n) => n.x_pct != null && n.y_pct != null)
   const ranked = (nodes ?? [])
-    .map((n) => ({ node: n, visits: visitsById.get(n.id) ?? 0 }))
+    .map((n) => {
+      const c = countsById.get(n.id)
+      return { node: n, visits: c?.visits ?? 0, checkIns: c?.check_ins ?? 0, scans: c?.scans ?? 0 }
+    })
     .sort((a, b) => b.visits - a.visits || a.node.name.localeCompare(b.node.name))
 
   return (
@@ -137,11 +151,21 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
       <section className="staff-heatmap">
         <h1 className="staff-heatmap-title">Visit Heatmap</h1>
         <p className="staff-heatmap-subtitle">
-          Every Map check-in (repeat visits included), by location.
+          Every Map check-in and QR scan (repeats included), by location.
         </p>
 
         <div className="staff-heatmap-filters">
           <StaffDateRangePicker range={range} />
+          <label className="staff-heatmap-filter">
+            <span>Source</span>
+            <select aria-label="Source" value={source} onChange={(e) => setSource(e.target.value as HeatmapSource)}>
+              {SOURCES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="staff-heatmap-filter">
             <span>Day</span>
             <select aria-label="Day of week" value={day} onChange={(e) => setDay(e.target.value)}>
@@ -200,7 +224,7 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
               <img src="/park-map.png" alt="Cobb's Adventure Park map" className="map-image" />
               {summary &&
                 positioned.map((node) => {
-                  const visits = visitsById.get(node.id) ?? 0
+                  const visits = countsById.get(node.id)?.visits ?? 0
                   const t = maxVisits > 0 ? visits / maxVisits : 0
                   const size = visits === 0 ? 10 : 16 + 26 * t
                   const style = {
@@ -244,6 +268,19 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
           </span>
         </div>
 
+        {summary && source !== 'map_node' && (
+          <p className="staff-heatmap-unmapped" data-testid="heatmap-unmapped">
+            {summary.unmapped_scans === 0
+              ? 'No unmapped QR scans in this window.'
+              : `${summary.unmapped_scans} unmapped QR scan${summary.unmapped_scans === 1 ? '' : 's'} in this window ` +
+                `(no map location, so not on the map): ` +
+                summary.unmapped
+                  .map((u) => `${DESTINATION_LABELS[u.destination_type] ?? u.destination_type} "${u.destination_id}" (${u.scans})`)
+                  .join(', ') +
+                ". Set locations in the Staff Page's QR Codes tab."}
+          </p>
+        )}
+
         {summary && nodes && (
           <table className="staff-heatmap-table">
             <caption>Visits by location</caption>
@@ -251,13 +288,17 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
               <tr>
                 <th scope="col">Location</th>
                 <th scope="col">Visits</th>
+                <th scope="col">Check-ins</th>
+                <th scope="col">QR scans</th>
               </tr>
             </thead>
             <tbody>
-              {ranked.map(({ node, visits }) => (
+              {ranked.map(({ node, visits, checkIns, scans }) => (
                 <tr key={node.id} data-node-name={node.name}>
                   <td>{node.name}</td>
                   <td>{visits}</td>
+                  <td>{checkIns}</td>
+                  <td>{scans}</td>
                 </tr>
               ))}
             </tbody>

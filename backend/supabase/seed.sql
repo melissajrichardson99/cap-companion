@@ -629,3 +629,46 @@ on conflict (code) do nothing;
 -- runtime guest-generated data (see migration 010_contact_staff.sql), not
 -- fixture content -- a fresh install starts with zero requests.
 -- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- QR destination map locations (Staff Visit Heatmap Phase 2, migration 042)
+-- -- confirmed 2026-10-10; uncertain ones left null for staff to set from
+-- the QR Code Directory. Puzzle locations come from puzzles.map_node_id above.
+-- ---------------------------------------------------------------------------
+insert into animal_map_locations (animal_slug, map_node_id)
+select v.slug, n.id
+from (values
+    ('alpaca', 'Alpacas/Sheep/Pigs'),
+    ('pig', 'Alpacas/Sheep/Pigs'),
+    ('capybara', 'Capybaras & Emus'),
+    ('emu', 'Capybaras & Emus'),
+    ('goat', 'Goats'),
+    ('kangaroo', 'Kangaroos/Wallaroos'),
+    ('wallaby', null),
+    ('sloth', null),
+    ('porcupine', null)
+) as v(slug, node_name)
+left join map_nodes n on n.name = v.node_name
+on conflict (animal_slug) do nothing;
+
+update hunt_characters h
+set map_node_id = n.id
+from (values
+    ('Kangaroo', 'Kangaroos/Wallaroos'),
+    ('Pig', 'Alpacas/Sheep/Pigs'),
+    ('Capybara', 'Capybaras & Emus')
+) as v(character_name, node_name)
+join map_nodes n on n.name = v.node_name
+where h.name = v.character_name and h.map_node_id is null;
+
+update scoring_games g
+set map_node_id = n.id
+from (values
+    ('Farm Toss', 'Farm Toss'),
+    ('Horse Hoops', 'Horse Hoops'),
+    ('Cornhole', 'Cornhole'),
+    ('Cornhole Extreme', 'Cornhole Extreme'),
+    ('Tiki Toss / Ring & Hook', 'Tiki Toss/Ring & Hook')
+) as v(game_name, node_name)
+join map_nodes n on n.name = v.node_name
+where g.name = v.game_name and g.map_node_id is null;

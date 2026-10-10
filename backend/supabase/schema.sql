@@ -123,13 +123,21 @@ create index if not exists node_visits_node_id_idx on node_visits(node_id);
 -- Staff Visit Heatmap (migration 041): anonymous, never-deduplicated visit
 -- occurrence log -- one row per successful POST /map/nodes/{id}/visit, unlike
 -- node_visits above (a per-session status flag). No session/guest columns.
--- source_type/source_id are generic so Phase 2 can log QR-scan events for
--- other entity types here too.
+-- Phase 2 (migration 042) adds QR scans: source_type 'map_node' = check-in,
+-- 'qr_scan' = scan. source_id is always the map node (null for a scan of a
+-- destination with no mapped location yet); destination_type/_id record what
+-- was scanned (e.g. 'animal'/'goat') and are null for check-ins.
 create table if not exists map_node_visit_events (
-    id          uuid primary key default gen_random_uuid(),
-    source_type text not null default 'map_node',
-    source_id   text not null,
-    visited_at  timestamptz not null default now()
+    id               uuid primary key default gen_random_uuid(),
+    source_type      text not null default 'map_node',
+    source_id        text,
+    destination_type text,
+    destination_id   text,
+    visited_at       timestamptz not null default now(),
+    constraint map_node_visit_events_source_shape check (
+        (source_type = 'map_node' and source_id is not null)
+        or (source_type = 'qr_scan' and destination_type is not null and destination_id is not null)
+    )
 );
 
 create index if not exists map_node_visit_events_type_visited_at_idx
@@ -275,7 +283,10 @@ create table if not exists scoring_games (
     win_condition_type  text not null check (win_condition_type in ('first_to', 'first_to_bonus_round', 'first_to_round_tiebreak')),
     win_threshold       integer not null check (win_threshold > 0),
     throws_per_round    integer check (throws_per_round is null or throws_per_round > 0),
-    created_at          timestamptz not null default now()
+    created_at          timestamptz not null default now(),
+    -- Where this game's QR sign is on the map (migration 042), for the Staff
+    -- Visit Heatmap's scan counts. Nullable; may be a child node.
+    map_node_id         uuid references map_nodes(id) on delete set null
 );
 
 create table if not exists game_score_events (
@@ -341,7 +352,9 @@ create table if not exists hunt_characters (
     -- Matches a key in GAME_SLUGS (frontend/src/components/MinigameOverlay.tsx).
     minigame_slug    text not null,
     sort_order       integer not null default 0,
-    created_at       timestamptz not null default now()
+    created_at       timestamptz not null default now(),
+    -- Where this character's QR sign is on the map (migration 042). Nullable.
+    map_node_id      uuid references map_nodes(id) on delete set null
 );
 
 create table if not exists hunt_challenges (
@@ -631,6 +644,13 @@ create table if not exists animal_photos (
 );
 
 create index if not exists animal_photos_animal_slug_idx on animal_photos(animal_slug);
+
+-- Where each Our Animals QR sign is on the map (migration 042). Animals are
+-- static frontend content, so this is keyed by slug rather than a column.
+create table if not exists animal_map_locations (
+    animal_slug text primary key,
+    map_node_id uuid references map_nodes(id) on delete set null
+);
 
 -- Public, same reasoning as favorite-photos: guest devices load images
 -- directly with no signed-URL round trip, fine for a POC with no PII.
