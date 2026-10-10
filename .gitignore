@@ -152,6 +152,9 @@ venv/
 # --- Godot build output (already copied into frontend/games-dist/) ---
 /minigames/*/export_web/
 
+# --- Godot editor/import cache (regenerated on every import or export) ---
+/minigames/*/.godot/
+
 # --- Generated QR signage PNGs (backend/scripts/generate_qr_codes.py) ---
 /backend/scripts/output/
 
