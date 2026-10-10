@@ -145,16 +145,49 @@ Follow in order — later steps depend on earlier ones.
 2. **R2 requires a credit card on the Cloudflare account to enable, even to
    stay on the free tier** — budget it into the setup, this isn't
    optional/skippable the way Workers/Pages free tier is.
-3. Export the Godot minigames to `frontend/games-dist/` (not
-   `frontend/public/games/` — they were moved out of the static-assets
-   directory specifically because they're too large for it; see the
-   `.gitignore` comment and `f83ac6f`/`c56a4bf`).
-4. Run `node scripts/upload-games-to-r2.mjs [bucket-name]` (defaults to
+3. Before exporting, run `node scripts/sync-minigame-shared.mjs`. It copies
+   the shared end card (`minigames/_shared/EndCard.gd`) into every game and
+   writes each export preset's `html/head_include` (the inline script that
+   tells the app the build reports round results). Edit the master in
+   `minigames/_shared/`, never a game's copy; `--check` exits non-zero if
+   any copy is out of date.
+4. Export the Godot minigames, then copy each `minigames/<slug>/export_web/`
+   into `frontend/games-dist/<slug>/` (not `frontend/public/games/` — they
+   were moved out of the static-assets directory specifically because
+   they're too large for it; see the `.gitignore` comment and
+   `f83ac6f`/`c56a4bf`). Copy everything **except the `*.import` files**
+   Godot writes next to the export — they're editor metadata, not part of
+   the shipped build.
+5. Run `node scripts/upload-games-to-r2.mjs [bucket-name]` (defaults to
    `cap-companion-games`) to push every file under `frontend/games-dist/`
    into the bucket via `wrangler r2 object put --remote`. Requires
    `wrangler login` to have been run already, or `CLOUDFLARE_API_TOKEN`
    set. Re-run this after every minigame re-export — R2 has no build hook
    into Cloudflare's own build pipeline, unlike static assets.
+6. **Purge the cached game files after every upload.** `worker.js` caches
+   `/games/*` responses (and the upload sets `max-age=3600`), so without a
+   purge guests can get the old files for up to an hour, possibly a new
+   `index.html` with an old `index.pck`. Which steps apply depends on how
+   the app is served:
+   - **Custom domain on a Cloudflare zone:** dashboard → the zone →
+     Caching → Configuration → Purge Cache → Custom Purge. Purge by URL
+     (`https://<host>/games/<slug>/index.html` and `.../index.pck` for each
+     game) or by prefix (`<host>/games/`); both are available on the Free
+     plan. Then open `https://<host>/games/mini_snake/index.html` and check
+     the page source contains the newly exported content (e.g.
+     `cap-minigame-hello`). Not every purge method clears entries a Worker
+     stored with the Cache API — if the old file is still served, use
+     **Purge Everything** as the fallback.
+   - **`*.workers.dev`:** there's no zone to purge; the cached files
+     expire on their own within an hour.
+   - Guests' browsers also keep the files for up to an hour, and no purge
+     reaches a browser cache — so deploy game updates off-hours.
+7. **Deploy order doesn't matter** between the React app and the games.
+   The minigame overlay treats a build that never sends `minigame-hello`
+   exactly as before end cards existed, and an older overlay ignores the
+   new messages and closes on Exit. Deploying React first means the
+   Scavenger Hunt Challenge 3 rule (a round must be finished) takes effect
+   as each game lands.
 
 ### 2.5 Close the loop: URLs and QR codes
 
