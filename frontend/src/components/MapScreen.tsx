@@ -208,7 +208,7 @@ const LEGEND_NUMBER: Record<string, number> = {
   'Arcade Pad': 1,
   'Pedal Karts': 2,
   'Tractor Ride': 3,
-  'Mini-Golf': 4,
+  'Blacklight Mini Golf': 4,
   Archery: 5,
   'Tether Ball': 6,
   'Chicken Bowl': 7,

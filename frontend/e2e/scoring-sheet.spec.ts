@@ -98,7 +98,7 @@ async function dismissWinAnimation(dialog: Locator, expectedText: string): Promi
 }
 
 test.describe('Scoring Sheet', () => {
-  test('lists all 5 documented games with their rules and win conditions, Mini Golf/Archery excluded', async ({
+  test('lists all 5 turn-based games with their rules and win conditions, Archery excluded', async ({
     page,
   }) => {
     await page.goto('/')
@@ -109,7 +109,6 @@ test.describe('Scoring Sheet', () => {
       await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
     }
 
-    await expect(page.getByRole('heading', { name: 'Mini Golf', exact: true })).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'Archery', exact: true })).toHaveCount(0)
 
     await expect(gameCard(page, 'Farm Toss').getByText('First to 21 wins.')).toBeVisible()

@@ -158,10 +158,24 @@ export interface ScoringGame {
   slug: string
   rules_text: string
   win_condition_text: string
-  win_condition_type: WinConditionType
-  win_threshold: number
+  // 'stroke_play' = mini golf (fixed holes, lowest total wins); every other
+  // game is 'turn_based'.
+  scoring_mode: ScoringMode
+  // Turn-based only (null for stroke play).
+  win_condition_type: WinConditionType | null
+  win_threshold: number | null
   throws_per_round: number | null
+  // Stroke play only: holes on the course (data, not code -- 9 to 12).
+  hole_count: number | null
   score_events: GameScoreEvent[]
+}
+
+export type ScoringMode = 'turn_based' | 'stroke_play'
+
+export interface HoleScore {
+  player_name: string
+  hole_number: number
+  strokes: number
 }
 
 export interface ScoreEntry {
@@ -189,9 +203,18 @@ export interface ScoreSheetSession {
   entries: ScoreEntry[]
   tied_players: string[]
   round_number: number | null
-  // Turn-based scoring: null once the session is completed.
+  // Turn-based scoring: null once the session is completed. Stroke play
+  // reuses current_player for whose score is next.
   current_player: string | null
   current_round: number | null
+  // Stroke play only.
+  hole_count: number | null
+  hole_scores: HoleScore[]
+  current_hole: number | null
+  // Lowest total over holes everyone has finished (several on a tie).
+  leaders: string[]
+  // Once complete: everyone sharing the lowest total.
+  winners: string[]
 }
 
 export type HuntSpeciesCategory = 'marsupial' | 'rodent' | 'other'
@@ -663,6 +686,14 @@ export const api = {
       body: JSON.stringify({ game_id: gameId, players }),
     }),
   getScoreSheetSession: (sessionId: string) => request<ScoreSheetSession>(`/scoring/sessions/${sessionId}`),
+  // This device's unfinished round of the game, or null -- resume after a reload.
+  getActiveScoreSheetSession: (gameId: string) =>
+    request<ScoreSheetSession | null>(`/scoring/games/${gameId}/active-session`),
+  recordHoleScore: (sessionId: string, playerName: string, holeNumber: number, strokes: number) =>
+    request<ScoreSheetSession>(`/scoring/sessions/${sessionId}/holes`, {
+      method: 'PUT',
+      body: JSON.stringify({ player_name: playerName, hole_number: holeNumber, strokes }),
+    }),
   recordScoreEntry: (sessionId: string, playerName: string, scoreEventId: string) =>
     request<ScoreSheetSession>(`/scoring/sessions/${sessionId}/entries`, {
       method: 'POST',

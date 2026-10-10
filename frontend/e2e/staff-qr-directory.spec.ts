@@ -35,8 +35,17 @@ test.describe('Staff Page QR Code Directory', () => {
     await expect(huntSection.locator('.staff-qr-row')).toHaveCount(5)
 
     const scoringSection = section(page, 'Scoring Sheet Games')
-    // Farm Toss, Horse Hoops, Cornhole, Cornhole Extreme, Tiki Toss / Ring & Hook.
-    await expect(scoringSection.locator('.staff-qr-row')).toHaveCount(5)
+    // Farm Toss, Horse Hoops, Cornhole, Cornhole Extreme, Tiki Toss / Ring & Hook,
+    // plus the two stroke-play mini golf courses (migration 043).
+    await expect(scoringSection.locator('.staff-qr-row')).toHaveCount(7)
+    for (const [name, slug] of [
+      ['Blacklight Mini Golf', 'blacklight-mini-golf'],
+      ['Cornhole Mini Golf', 'cornhole-mini-golf'],
+    ]) {
+      await expect(scoringSection.locator('.staff-qr-row', { hasText: name }).locator('.staff-qr-row-url')).toHaveText(
+        `http://localhost:5173/scoring/${slug}`,
+      )
+    }
 
     const puzzlesSection = section(page, 'Puzzle Challenges')
     // Pyramid Puzzler (3) + Math Maze (1) + Hop Dots (2) + Right Turn Only (1)

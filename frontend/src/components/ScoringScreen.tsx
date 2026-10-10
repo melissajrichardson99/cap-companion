@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ScoringGame } from '../api'
 import { PAGE_SUBHEADERS } from '../pageSubheaderContent'
 import { ScoringSessionModal } from './ScoringSessionModal'
+import { StrokePlaySessionModal } from './StrokePlaySessionModal'
 import { ClipboardIcon } from './NavIcons'
 import './ScoringScreen.css'
 
@@ -90,9 +91,16 @@ export function ScoringScreen({ games, error, onReload, onCoinsChanged, gameSlug
         ))}
       </div>
 
-      {activeGame && (
-        <ScoringSessionModal game={activeGame} onClose={() => setActiveGame(null)} onCoinsChanged={onCoinsChanged} />
-      )}
+      {activeGame &&
+        (activeGame.scoring_mode === 'stroke_play' ? (
+          <StrokePlaySessionModal
+            game={activeGame}
+            onClose={() => setActiveGame(null)}
+            onCoinsChanged={onCoinsChanged}
+          />
+        ) : (
+          <ScoringSessionModal game={activeGame} onClose={() => setActiveGame(null)} onCoinsChanged={onCoinsChanged} />
+        ))}
     </div>
   )
 }

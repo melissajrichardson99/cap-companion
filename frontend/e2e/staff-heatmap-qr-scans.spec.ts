@@ -60,6 +60,22 @@ const DESTINATIONS: Destination[] = [
     landed: (page) => expect(page.getByRole('dialog')).toBeVisible(),
   },
   {
+    // Stroke-play mini golf (migration 043): each course has its own
+    // top-level pin, so no roll-up.
+    label: 'Scoring game (Blacklight Mini Golf)',
+    code: 'blacklight-mini-golf',
+    path: '/scoring/blacklight-mini-golf',
+    node: 'Blacklight Mini Golf',
+    landed: (page) => expect(page.getByRole('dialog').getByRole('button', { name: 'Begin Round' })).toBeVisible(),
+  },
+  {
+    label: 'Scoring game (Cornhole Mini Golf)',
+    code: 'cornhole-mini-golf',
+    path: '/scoring/cornhole-mini-golf',
+    node: 'Cornhole Mini Golf',
+    landed: (page) => expect(page.getByRole('dialog').getByRole('button', { name: 'Begin Round' })).toBeVisible(),
+  },
+  {
     // Math Maze is a child of Ground Games.
     label: 'Puzzle challenge (Math Maze Standard)',
     code: 'math-maze-standard',

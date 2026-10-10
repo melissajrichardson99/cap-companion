@@ -17,6 +17,33 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+// Stroke play (mini golf): the full scorecard, players by holes plus a
+// total, in one table -- 9 to 12 holes fits without the 10-round blocks the
+// turn-based export needs.
+function buildScorecard(session: ScoreSheetSession): string {
+  const holes = Array.from({ length: session.hole_count ?? 0 }, (_, i) => i + 1)
+  const headerCells = holes.map((h) => `<th>${h}</th>`).join('')
+  const rows = session.players
+    .map((player) => {
+      const cells = holes
+        .map((h) => {
+          const score = session.hole_scores.find((s) => s.player_name === player && s.hole_number === h)
+          return `<td>${score ? score.strokes : ''}</td>`
+        })
+        .join('')
+      const winnerClass = session.winners.includes(player) ? ' class="winner-row"' : ''
+      return `<tr${winnerClass}><td class="player-name">${escapeHtml(player)}</td>${cells}<td class="total-cell">${session.totals[player] ?? 0}</td></tr>`
+    })
+    .join('')
+
+  return `
+    <div class="round-block-title">Scorecard</div>
+    <table class="round-block">
+      <thead><tr><th>Player</th>${headerCells}<th>Total</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`
+}
+
 function roundsPlayed(session: ScoreSheetSession): number {
   return session.entries.reduce((max, e) => Math.max(max, e.turn_round), 0)
 }
@@ -60,15 +87,21 @@ function buildRoundBlock(session: ScoreSheetSession, startRound: number, endRoun
 }
 
 export function buildSummaryHtml(game: ScoringGame, session: ScoreSheetSession): string {
+  const strokePlay = game.scoring_mode === 'stroke_play'
   const totalRounds = roundsPlayed(session)
   const blockCount = Math.max(1, Math.ceil(totalRounds / ROUNDS_PER_BLOCK))
-  const blocks = Array.from({ length: blockCount }, (_, i) => {
-    const startRound = i * ROUNDS_PER_BLOCK + 1
-    const endRound = startRound + ROUNDS_PER_BLOCK - 1
-    return buildRoundBlock(session, startRound, endRound)
-  }).join('')
+  const blocks = strokePlay
+    ? buildScorecard(session)
+    : Array.from({ length: blockCount }, (_, i) => {
+        const startRound = i * ROUNDS_PER_BLOCK + 1
+        const endRound = startRound + ROUNDS_PER_BLOCK - 1
+        return buildRoundBlock(session, startRound, endRound)
+      }).join('')
 
-  const resultLine = session.winner
+  const resultLine =
+    strokePlay && session.winners.length > 1
+      ? `Tied for the win: ${escapeHtml(session.winner ?? '')} (lowest total, shared)`
+      : session.winner
     ? `Winner: ${escapeHtml(session.winner)}`
     : session.tied_players.length > 0
       ? `Tied: ${escapeHtml(session.tied_players.join(' & '))}`
@@ -76,7 +109,8 @@ export function buildSummaryHtml(game: ScoringGame, session: ScoreSheetSession):
 
   const totalsRows = session.players
     .map((player) => {
-      const winnerClass = player === session.winner ? ' class="winner-row"' : ''
+      const isWinner = strokePlay ? session.winners.includes(player) : player === session.winner
+      const winnerClass = isWinner ? ' class="winner-row"' : ''
       return `<tr${winnerClass}><td class="player-name">${escapeHtml(player)}</td><td class="total-cell">${session.totals[player] ?? 0}</td></tr>`
     })
     .join('')
@@ -128,7 +162,7 @@ export function buildSummaryHtml(game: ScoringGame, session: ScoreSheetSession):
 </style>
 </head>
 <body>
-  <div class="wood-frame">
+  <div class="wood-frame"${strokePlay ? ' data-scoring-mode="stroke_play"' : ''}>
     <div class="parchment">
       <h1>Cobb's Adventure Park — ${escapeHtml(game.name)}</h1>
       <p class="meta">Players: ${escapeHtml(session.players.join(', '))}</p>
@@ -147,4 +181,17 @@ export function buildSummaryHtml(game: ScoringGame, session: ScoreSheetSession):
 </body>
 </html>
 `
+}
+
+export function downloadSummary(game: ScoringGame, session: ScoreSheetSession) {
+  const html = buildSummaryHtml(game, session)
+  const blob = new Blob([html], { type: 'text/html' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${game.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-score-sheet.html`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
 }

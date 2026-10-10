@@ -16,6 +16,16 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* clip, not Modal.css's hidden: the leaf accents below overhang
+     .scoring-modal-inner by a few px, and an overflow:hidden box is still
+     programmatically scrollable -- tapping the stroke-play Scorecard button
+     scrolled the whole panel 10px sideways, sliding the parchment off its
+     wood frame. clip makes the panel unscrollable on both axes. Unlike
+     hidden, clip doesn't make this a scroll container, so as a flex item
+     it no longer gets min-width:0 for free -- restored explicitly, or the
+     panel grows to its content's min width and eats the 16px gutter. */
+  overflow: clip;
+  min-width: 0;
   border-radius: var(--cap-radius-md);
   background:
     repeating-linear-gradient(

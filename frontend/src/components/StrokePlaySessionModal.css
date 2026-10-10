@@ -1,0 +1,360 @@
+/* Stroke-play (mini golf) Scoring Sheet -- layered on ScoringSessionModal.css's
+   shared wood frame / parchment chrome. Every rule is scoped under
+   .scoring-modal-inner.stroke-play so it outranks shared.css's .btn and the
+   shared scoring-modal rules regardless of bundle load order (see the
+   specificity comment above .scoring-event-btn in ScoringSessionModal.css). */
+
+/* Per-course accent. Default is the standard sunset-orange look; a course
+   opts in via data-scoring-accent (ACCENT_BY_SLUG in
+   StrokePlaySessionModal.tsx), same idea as the Hunt characters'
+   --hunt-accent theming. */
+.scoring-modal-inner.stroke-play {
+  --stroke-accent: var(--cap-color-sunset-orange);
+  --stroke-accent-deep: var(--cap-color-sunset-orange-deep);
+  --stroke-accent-wash: color-mix(in srgb, var(--cap-color-sunset-orange) 22%, transparent);
+  --stroke-accent-glow: none;
+}
+
+/* Blacklight Mini Golf: UV violet with a faint neon glow on the accent
+   surfaces -- proposal, pending Melissa's approval. */
+.scoring-modal-inner.stroke-play[data-scoring-accent='blacklight'] {
+  --stroke-accent: #7a3cff;
+  --stroke-accent-deep: #5520c4;
+  --stroke-accent-wash: color-mix(in srgb, #7a3cff 20%, transparent);
+  --stroke-accent-glow: 0 0 10px rgba(122, 60, 255, 0.55);
+}
+
+.scoring-modal-inner.stroke-play .stroke-loading {
+  margin: 16px 0;
+  color: var(--cap-color-body-text);
+}
+
+/* ---------------------------------------------------------------------------
+   Entry header + display
+   --------------------------------------------------------------------------- */
+.scoring-modal-inner.stroke-play .stroke-entry-header {
+  text-align: center;
+  margin: 4px 0 10px;
+}
+
+.scoring-modal-inner.stroke-play .stroke-hole-label {
+  display: inline-block;
+  margin: 0 0 6px;
+  padding: 4px 14px;
+  border-radius: var(--cap-radius-pill);
+  border: 2px solid var(--cap-color-outline);
+  background: var(--stroke-accent);
+  box-shadow: var(--cap-shadow-pop-sm), var(--stroke-accent-glow);
+  color: #fff;
+  font-family: var(--cap-font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.scoring-modal-inner.stroke-play .stroke-player-label {
+  margin: 0;
+  font-family: var(--cap-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cap-color-ink);
+  overflow-wrap: anywhere;
+}
+
+.scoring-modal-inner.stroke-play .stroke-correction-note {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--stroke-accent-deep);
+}
+
+.scoring-modal-inner.stroke-play .stroke-display {
+  margin: 0 auto 12px;
+  width: 100%;
+  max-width: 260px;
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--cap-color-outline);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  font-family: var(--mono);
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--cap-color-ink);
+  box-sizing: border-box;
+}
+
+.scoring-modal-inner.stroke-play .stroke-display-empty {
+  opacity: 0.3;
+}
+
+/* ---------------------------------------------------------------------------
+   Keypad: 3 x 4, large touch targets
+   --------------------------------------------------------------------------- */
+.scoring-modal-inner.stroke-play .stroke-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto 14px;
+}
+
+.scoring-modal-inner.stroke-play .stroke-key {
+  min-height: 56px;
+  padding: 0;
+  font-family: var(--cap-font-display);
+  font-size: 24px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--cap-color-ink);
+  touch-action: manipulation;
+}
+
+.scoring-modal-inner.stroke-play .stroke-key:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.scoring-modal-inner.stroke-play .stroke-key-delete {
+  font-size: 22px;
+}
+
+.scoring-modal-inner.stroke-play .stroke-key-enter {
+  font-size: 18px;
+  background: var(--stroke-accent);
+  color: #fff;
+  box-shadow: var(--cap-shadow-pop-sm), var(--stroke-accent-glow);
+}
+
+.scoring-modal-inner.stroke-play .stroke-key-enter:hover:not(:disabled) {
+  background: var(--stroke-accent-deep);
+}
+
+.scoring-modal-inner.stroke-play .stroke-key:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------------
+   Confirm step
+   --------------------------------------------------------------------------- */
+.scoring-modal-inner.stroke-play .stroke-confirm {
+  text-align: center;
+  padding: 14px 8px;
+  margin: 0 0 14px;
+  border: 2px solid var(--cap-color-outline);
+  border-radius: 12px;
+  background: var(--stroke-accent-wash);
+}
+
+.scoring-modal-inner.stroke-play .stroke-confirm-text {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--cap-color-ink);
+}
+
+.scoring-modal-inner.stroke-play .stroke-confirm-value {
+  display: block;
+  margin: 4px 0;
+  font-family: var(--mono);
+  font-size: 56px;
+  line-height: 1;
+  color: var(--stroke-accent-deep);
+}
+
+.scoring-modal-inner.stroke-play .stroke-confirm-warning {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cap-color-diner-red-deep);
+}
+
+.scoring-modal-inner.stroke-play .stroke-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.scoring-modal-inner.stroke-play .stroke-big-btn {
+  min-height: 52px;
+  min-width: 120px;
+  font-size: 17px;
+}
+
+.scoring-modal-inner.stroke-play .stroke-confirm-btn {
+  background: var(--stroke-accent);
+}
+
+.scoring-modal-inner.stroke-play .stroke-confirm-btn:hover:not(:disabled) {
+  background: var(--stroke-accent-deep);
+}
+
+.scoring-modal-inner.stroke-play .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------------
+   Back / Scorecard row + running totals
+   --------------------------------------------------------------------------- */
+.scoring-modal-inner.stroke-play .stroke-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  margin: 0 0 14px;
+}
+
+.scoring-modal-inner.stroke-play .stroke-nav .btn {
+  min-height: 44px;
+}
+
+.scoring-modal-inner.stroke-play .stroke-leader-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--cap-radius-pill);
+  border: 1.5px solid var(--cap-color-outline);
+  background: var(--stroke-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard-hint,
+.scoring-modal-inner.stroke-play .stroke-result-note {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--cap-color-body-text);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------
+   Scorecard grid: horizontal scroll with a sticky player-name column.
+   `overflow: auto hidden` sets both axes explicitly -- overflow-x alone
+   computes overflow-y to auto too (phantom nested scrollbar).
+   --------------------------------------------------------------------------- */
+.scoring-modal-inner.stroke-play .stroke-scorecard-scroll {
+  width: 100%;
+  overflow: auto hidden;
+  margin: 0 0 8px;
+  border: 2px solid var(--cap-color-outline);
+  border-radius: 10px;
+  background: var(--cap-color-parchment);
+  scrollbar-width: thin;
+  scrollbar-color: var(--cap-scrollbar-thumb) var(--cap-scrollbar-track);
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 100%;
+  font-size: 14px;
+  color: var(--cap-color-ink);
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard th,
+.scoring-modal-inner.stroke-play .stroke-scorecard td {
+  min-width: 36px;
+  height: 40px;
+  padding: 0 4px;
+  text-align: center;
+  border-bottom: 1.5px solid var(--cap-color-outline);
+  border-right: 1px solid rgba(20, 24, 26, 0.25);
+  white-space: nowrap;
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard thead th {
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 700;
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard tbody tr:last-child > * {
+  border-bottom: none;
+}
+
+/* Opaque background, so scrolled hole cells pass underneath it. */
+.scoring-modal-inner.stroke-play .stroke-scorecard .stroke-scorecard-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 76px;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  padding-left: 8px;
+  background: var(--cap-color-parchment);
+  border-right: 2px solid var(--cap-color-outline);
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard thead .stroke-scorecard-name {
+  background: color-mix(in srgb, var(--cap-color-parchment) 88%, #000);
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard .stroke-scorecard-total {
+  font-weight: 700;
+  min-width: 48px;
+  border-left: 2px solid var(--cap-color-outline);
+  border-right: none;
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard .stroke-scorecard-current-hole {
+  background: var(--stroke-accent-wash);
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard thead .stroke-scorecard-current-hole {
+  background: var(--stroke-accent);
+  color: #fff;
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard-leader-row > * {
+  color: var(--stroke-accent-deep);
+  font-weight: 700;
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard-cell-btn {
+  width: 100%;
+  min-height: 36px;
+  padding: 0;
+  border: 1.5px dashed transparent;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+}
+
+.scoring-modal-inner.stroke-play .stroke-scorecard-cell-btn:hover,
+.scoring-modal-inner.stroke-play .stroke-scorecard-cell-btn:focus-visible {
+  border-color: var(--stroke-accent-deep);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.scoring-modal-inner.stroke-play .stroke-leader-caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0 4px 4px;
+  font-size: 12px;
+  color: var(--cap-color-body-text);
+}
+
+/* Primary actions (Begin Round, Back to Entry, New Round) follow the course
+   accent too. Three classes, so this outranks ScoringSessionModal.css's
+   .scoring-modal-inner .btn-primary. */
+.scoring-modal-inner.stroke-play .btn-primary {
+  background: var(--stroke-accent);
+}
+
+.scoring-modal-inner.stroke-play .btn-primary:hover:not(:disabled) {
+  background: var(--stroke-accent-deep);
+}

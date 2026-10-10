@@ -3,7 +3,8 @@ import { api, type GameScoreEvent, type MilestoneEvent, type ScoreSheetSession, 
 import { MilestoneBanner } from './MilestoneBanner'
 import { Modal } from './Modal'
 import { ClipboardIcon } from './NavIcons'
-import { buildSummaryHtml } from './scoringSummaryHtml'
+import { ScoringPlayerSetup, validatePlayerInputs } from './ScoringPlayerSetup'
+import { downloadSummary } from './scoringSummaryHtml'
 import './ScoringSessionModal.css'
 
 type ModalState = 'setup' | 'playing' | 'finished'
@@ -18,19 +19,6 @@ interface ScoringSessionModalProps {
 // the turn actually advancing -- long enough to register as confirmation,
 // short enough not to slow the game down.
 const TURN_ADVANCE_DELAY_MS = 700
-
-function downloadSummary(game: ScoringGame, session: ScoreSheetSession) {
-  const html = buildSummaryHtml(game, session)
-  const blob = new Blob([html], { type: 'text/html' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `${game.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-score-sheet.html`
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
-}
 
 // Current player plus the next `count` in the fixed turn order, wrapping
 // (and repeating names, if there are fewer players than `count`) so the
@@ -94,26 +82,13 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
     }
   }, [])
 
-  const updatePlayerField = (index: number, value: string) => {
-    setPlayerInputs((prev) => prev.map((v, i) => (i === index ? value : v)))
-  }
-
-  const addPlayerField = () => setPlayerInputs((prev) => [...prev, ''])
-
-  const removePlayerField = (index: number) => {
-    setPlayerInputs((prev) => prev.filter((_, i) => i !== index))
-  }
-
   const startSession = async () => {
-    const players = playerInputs.map((p) => p.trim()).filter((p) => p.length > 0)
-    if (players.length === 0) {
-      setSetupError('Enter at least one player name.')
+    const validated = validatePlayerInputs(playerInputs)
+    if ('error' in validated) {
+      setSetupError(validated.error)
       return
     }
-    if (new Set(players).size !== players.length) {
-      setSetupError('Player names must be unique.')
-      return
-    }
+    const { players } = validated
     setCreating(true)
     setSetupError(null)
     try {
@@ -199,34 +174,11 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
             <p className="scoring-modal-rules">{game.rules_text}</p>
             <p className="scoring-modal-win-condition">{game.win_condition_text}</p>
 
-            <div className="scoring-setup">
-              <h3 className="scoring-section-title">Players</h3>
-              <p className="scoring-setup-hint">Players take turns in the order entered below.</p>
-              {playerInputs.map((value, i) => (
-                <div className="scoring-player-input-row" key={i}>
-                  <input
-                    type="text"
-                    className="scoring-player-input"
-                    placeholder={`Player ${i + 1} name`}
-                    value={value}
-                    onChange={(e) => updatePlayerField(i, e.target.value)}
-                  />
-                  {playerInputs.length > 1 && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary scoring-remove-player-btn"
-                      aria-label={`Remove player ${i + 1}`}
-                      onClick={() => removePlayerField(i)}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button type="button" className="btn btn-secondary" onClick={addPlayerField}>
-                Add Player
-              </button>
-            </div>
+            <ScoringPlayerSetup
+              playerInputs={playerInputs}
+              onChange={setPlayerInputs}
+              hint="Players take turns in the order entered below."
+            />
 
             {setupError && <p className="screen-error">{setupError}</p>}
 
