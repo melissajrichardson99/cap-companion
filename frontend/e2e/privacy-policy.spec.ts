@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
+import { openNavMenu } from './navMenuHelper'
 import { PRIVACY_POLICY_CONTACT_EMAIL, PRIVACY_POLICY_LAST_UPDATED, PRIVACY_POLICY_SECTIONS } from '../src/privacyPolicyContent'
 
 // Covers the Privacy Policy page (PrivacyScreen.tsx): a real, hard-reload-safe
@@ -9,9 +10,6 @@ import { PRIVACY_POLICY_CONTACT_EMAIL, PRIVACY_POLICY_LAST_UPDATED, PRIVACY_POLI
 // (the signup/login area, contextually useful right where personal
 // information is being collected).
 
-async function openNavMenu(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Open menu' }).click()
-}
 
 test.describe('Privacy Policy page', () => {
   test('/privacy works as a direct hard-reload/deep link', async ({ page }) => {
@@ -51,9 +49,8 @@ test.describe('Privacy Policy page', () => {
     await page.getByRole('button', { name: 'Save Your Progress' }).click()
     const heading = page.getByRole('heading', { name: 'Save Your Progress', exact: true })
     await expect(heading).toBeVisible()
-    // NavMenu's own panel (with its own "Privacy Policy" primary tab) stays
-    // mounted behind the modal even while closed -- scope to the modal
-    // dialog so this doesn't match both.
+    // Scoped to the modal dialog -- NavMenu's panel (with its own "Privacy
+    // Policy" tile) stays mounted behind it, though hidden while closed.
     const modal = page.getByRole('dialog')
     await modal.getByRole('button', { name: 'Privacy Policy' }).click()
     await expect(page.getByRole('heading', { name: 'Privacy Policy', exact: true })).toBeVisible()

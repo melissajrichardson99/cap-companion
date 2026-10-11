@@ -35,7 +35,7 @@ test.describe('/scoring/:gameSlug direct deep link', () => {
 
     await page.getByRole('button', { name: 'Browse Scoring Games' }).click()
     await expect(page.locator('.scoring-game-list')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Scoring Sheet' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Scoring Sheets' })).toBeVisible()
   })
 })
 

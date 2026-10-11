@@ -20,7 +20,12 @@
   justify-content: center;
   gap: 5px;
   padding: 0;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.nav-menu-toggle:focus-visible {
+  outline: 3px solid var(--cap-color-acid-yellow);
+  outline-offset: 2px;
 }
 
 .nav-menu-toggle:hover {
@@ -37,17 +42,14 @@
   transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
 }
 
-.nav-menu-toggle-open .nav-menu-toggle-bar:nth-child(1) {
-  transform: translateY(8px) rotate(45deg);
-}
-
-.nav-menu-toggle-open .nav-menu-toggle-bar:nth-child(2) {
+/* Hidden while the panel is open -- the panel's own X is the single close
+   control. visibility (not just opacity) so it also leaves the tab order and
+   accessibility tree; NavMenu.tsx moves focus to the X on open and back here
+   on a dismiss. */
+.nav-menu-toggle-hidden {
   opacity: 0;
-  transform: scaleX(0);
-}
-
-.nav-menu-toggle-open .nav-menu-toggle-bar:nth-child(3) {
-  transform: translateY(-8px) rotate(-45deg);
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .nav-menu-backdrop {
@@ -65,59 +67,60 @@
   pointer-events: auto;
 }
 
+/* Fixed-height flex column (pinned header / scrolling middle / pinned
+   footer), capped to the viewport space below the fixed header: header
+   height + this panel's 12px top offset + a matching 12px bottom gap. dvh
+   (with a vh fallback) so a mobile browser's collapsing URL bar can't push
+   the pinned footer offscreen. Width: two tile columns need more room than
+   the old single-column list's 280px; the max-width keeps the panel inside
+   the header's own side gutters (--cap-space-5 each side) on narrow phones.
+
+   visibility:hidden while closed (delayed until the fade-out finishes, so
+   the close still animates) takes the closed panel's buttons out of the tab
+   order and the accessibility tree -- otherwise its always-mounted buttons
+   stay focusable and role-queryable while invisible. */
 .nav-menu-panel {
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
   z-index: 2;
-  width: 280px;
-  max-width: calc(100vw - 32px);
-  max-height: 75vh;
-  overflow-y: auto;
-  /* Same thin-bar recipe as ContactStaffModal.css's identical comment. No
-     padding/negative-margin sink here -- unlike those modals, this panel's
-     own box IS the outer edge (.nav-menu-frame's wood border lives inside
-     it, not outside), so the thin bar is already as close to the frame as
-     it can get without widening the fixed 280px panel. */
-  scrollbar-width: thin;
-  scrollbar-color: var(--cap-scrollbar-thumb) var(--cap-scrollbar-track);
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  max-width: calc(100vw - 2 * var(--cap-space-5));
+  max-height: min(90vh, calc(100vh - var(--app-header-height) - 24px));
+  max-height: min(90dvh, calc(100dvh - var(--app-header-height) - 24px));
   box-shadow: var(--cap-shadow-soft), var(--cap-shadow-pop);
   border-radius: var(--cap-radius-lg);
   transform-origin: top right;
   opacity: 0;
+  visibility: hidden;
   transform: translateY(-10px) scale(0.95);
   pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.1);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.1),
+    visibility 0s linear 0.18s;
 }
 
 .nav-menu-panel-open {
   opacity: 1;
+  visibility: visible;
   transform: translateY(0) scale(1);
   pointer-events: auto;
-}
-
-.nav-menu-panel::-webkit-scrollbar {
-  width: 8px;
-}
-
-.nav-menu-panel::-webkit-scrollbar-track {
-  background: var(--cap-scrollbar-track);
-  border-radius: var(--cap-radius-pill);
-}
-
-.nav-menu-panel::-webkit-scrollbar-thumb {
-  background: var(--cap-scrollbar-thumb);
-  border-radius: var(--cap-radius-pill);
-}
-
-.nav-menu-panel::-webkit-scrollbar-thumb:hover {
-  background: var(--cap-scrollbar-thumb-hover);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1.1),
+    visibility 0s linear 0s;
 }
 
 /* Wood-plank border, matching the Map card's frame (.map-frame in
    MapScreen.css) -- same gradient recipe so the two "wood chrome" surfaces
    in the app read as one material. */
 .nav-menu-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border-radius: var(--cap-radius-lg);
   background:
     repeating-linear-gradient(
@@ -138,20 +141,44 @@
 .nav-menu-panel-inner {
   display: flex;
   flex-direction: column;
-  gap: var(--cap-space-3);
-  padding: var(--cap-space-4);
+  min-height: 0;
+  padding: var(--cap-space-3);
   border-radius: calc(var(--cap-radius-lg) - 8px);
   border: var(--cap-outline-width) solid var(--cap-color-outline);
   background: var(--cap-color-nav-panel-green);
 }
 
+/* One shared focus ring for every control in the panel -- acid-yellow
+   (an existing accent token) reads against both the dark green panel and
+   the orange Scan QR button. */
+.nav-menu-panel button:focus-visible {
+  outline: 3px solid var(--cap-color-acid-yellow);
+  outline-offset: 2px;
+}
+
+/* ---- Pinned header ---------------------------------------------------- */
+
+.nav-menu-header {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'coins close'
+    'scan scan';
+  align-items: center;
+  gap: var(--cap-space-2) var(--cap-space-3);
+  padding-bottom: var(--cap-space-3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.28);
+}
+
 .nav-menu-coins {
-  align-self: flex-start;
+  grid-area: coins;
+  justify-self: start;
   font-family: var(--cap-font-display);
   font-weight: 600;
   font-size: 14px;
   padding: 8px 14px;
-  border-radius: var(--cap-radius-sm);
+  border-radius: var(--cap-radius-pill);
   background: var(--cap-color-wood-sign);
   color: var(--cap-color-on-header);
   border: 2px solid var(--cap-color-outline);
@@ -159,103 +186,402 @@
   white-space: nowrap;
 }
 
-.nav-menu-tabs {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding-top: var(--cap-space-1);
-  /* Fixed light divider, not --cap-color-surface-sunken -- that token
-     tracks the adaptive surface neutrals and would go near-invisible (dark
-     mode) or barely visible (light mode) against the now-fixed
-     nav-panel-green background above. */
-  border-top: 2px solid var(--cap-color-on-header-muted);
-}
-
-.nav-menu-tab {
+.nav-menu-close {
+  grid-area: close;
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-family: var(--cap-font-body);
-  font-size: 15px;
-  font-weight: 700;
-  text-align: left;
-  padding: 10px 12px;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border-radius: var(--cap-radius-md);
-  border: none;
-  background: transparent;
-  /* Fixed white, not --cap-color-ink -- ink flips dark-to-light with the
-     system theme, but the panel background is now fixed nav-panel-green
-     regardless of theme, so the text needs to stay fixed light too (same
-     "on-header" treatment as the header chrome itself). */
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--cap-color-on-header);
   cursor: pointer;
-  border-left: 4px solid transparent;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  transition: background 0.12s ease;
 }
 
-.nav-menu-tab-icon {
+.nav-menu-close svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.2;
+}
+
+.nav-menu-close:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* The panel's one filled orange element -- scanning the park's QR codes is
+   the app's key action. Same pill/outline/pop-shadow recipe as the old
+   .nav-menu-actions .btn-primary buttons. */
+.nav-menu-scan {
+  grid-area: scan;
   display: flex;
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-}
-
-.nav-menu-tab-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.nav-menu-tab:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.nav-menu-tab-active {
-  background: rgba(255, 255, 255, 0.16);
-  border-left-color: var(--cap-color-sunset-orange);
-  color: var(--cap-color-sunset-orange);
-}
-
-.nav-menu-tab-active:hover {
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.nav-menu-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cap-space-2);
-  padding-top: var(--cap-space-2);
-  border-top: 2px solid var(--cap-color-on-header-muted);
-}
-
-.nav-menu-actions .btn {
-  font-family: var(--cap-font-body);
-  font-weight: 700;
-  font-size: 14px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
   padding: 10px 16px;
-  border-radius: var(--cap-radius-pill);
+  font-family: var(--cap-font-body);
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--cap-color-sunset-orange);
   border: 2px solid var(--cap-color-outline);
+  border-radius: var(--cap-radius-pill);
   box-shadow: var(--cap-shadow-pop-sm);
+  cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
-.nav-menu-actions .btn:hover:not(:disabled) {
+.nav-menu-scan:hover {
   transform: translate(-1px, -1px);
   box-shadow: var(--cap-shadow-pop);
 }
 
-.nav-menu-actions .btn-primary {
-  background: var(--cap-color-sunset-orange);
-  border-color: var(--cap-color-outline);
-  color: #fff;
+.nav-menu-scan-icon {
+  display: flex;
+  width: 22px;
+  height: 22px;
 }
 
-/* Contact Staff gets its own distinct dark red, separate from the orange
-   used for Scan QR/Generate Passport above, so it reads as its own
-   "urgent" action. */
-.nav-menu-actions .btn-danger {
-  background: var(--cap-color-contact-red);
-  border-color: var(--cap-color-outline);
-  color: #fff;
+.nav-menu-scan-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.9;
+}
+
+/* ---- Scrolling middle ------------------------------------------------- */
+
+/* Positioning context for the scroll hints, which sit over the scroll area's
+   edges without scrolling with it. */
+.nav-menu-scroll-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* The only part of the panel that scrolls. Same thin-bar recipe as
+   ContactStaffModal.css's identical comment. */
+.nav-menu-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-right: calc(-1 * var(--cap-space-2));
+  padding: var(--cap-space-1) var(--cap-space-2) var(--cap-space-3) 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cap-scrollbar-thumb) var(--cap-scrollbar-track);
+}
+
+.nav-menu-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.nav-menu-scroll::-webkit-scrollbar-track {
+  background: var(--cap-scrollbar-track);
+  border-radius: var(--cap-radius-pill);
+}
+
+.nav-menu-scroll::-webkit-scrollbar-thumb {
+  background: var(--cap-scrollbar-thumb);
+  border-radius: var(--cap-radius-pill);
+}
+
+.nav-menu-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--cap-scrollbar-thumb-hover);
+}
+
+.nav-menu-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: var(--cap-space-3) 0 var(--cap-space-2);
+  font-family: var(--cap-font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cap-color-parchment);
+  white-space: nowrap;
+}
+
+/* Divider line filling the rest of the header row. */
+.nav-menu-section-header::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  border-radius: var(--cap-radius-pill);
+  background: rgba(240, 222, 192, 0.35);
+}
+
+.nav-menu-section-icon {
+  display: flex;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.nav-menu-section-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.8;
+}
+
+.nav-menu-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cap-space-2);
+}
+
+/* One fixed tile height for every tile -- tall enough for a two-line label
+   ("Scavenger Hunt", "Save Your Progress" wrap at phone widths) and well
+   over the 44px touch minimum. A lighter fill plus a thin light border keeps
+   each tile's edge readable against the dark green in bright sun. */
+.nav-menu-tile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  min-width: 0;
+  padding: 6px 8px 6px 10px;
+  font-family: var(--cap-font-body);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: left;
+  /* Fixed white, not --cap-color-ink -- ink flips dark-to-light with the
+     system theme, but the panel background is fixed nav-panel-green
+     regardless of theme, so the text needs to stay fixed light too (same
+     "on-header" treatment as the header chrome itself). */
+  color: var(--cap-color-on-header);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--cap-radius-md);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+/* The last tile of an odd-count group (e.g. Explore's Food Truck Menus)
+   takes the full row instead of leaving a gap; .nav-menu-tile-wide forces
+   it (the signed-in account tile, whose email label needs the width). */
+.nav-menu-tile:last-child:nth-child(odd),
+.nav-menu-tile-wide {
+  grid-column: 1 / -1;
+}
+
+.nav-menu-tile:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Active route: same convention as the old single-column list -- orange
+   left bar (an inset shadow here, so it doesn't shift the tile's content)
+   + orange text/icon -- plus a full orange outline. The fill goes
+   DARKER than the panel, not lighter like the old list's: sunset-orange
+   text only reaches ~2.5:1 on a white-tinted fill, but >= 5:1 on this one. */
+.nav-menu-tile.nav-menu-tile-active {
+  background: rgba(0, 0, 0, 0.22);
+  border-color: var(--cap-color-sunset-orange);
+  box-shadow: inset 4px 0 0 var(--cap-color-sunset-orange);
+  color: var(--cap-color-sunset-orange);
+}
+
+.nav-menu-tile.nav-menu-tile-active:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.nav-menu-tile-icon {
+  display: flex;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.nav-menu-tile-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Up to two lines, then ellipsis -- only a long signed-in email ever gets
+   that far. */
+.nav-menu-tile-label {
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: break-word;
+}
+
+/* Staff and Reset Session -- quiet text rows at the bottom of Help &
+   Settings: no tile chrome, no icon, smaller type. Still 44px tall touch
+   targets. */
+.nav-menu-quiet-rows {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--cap-space-2);
+}
+
+.nav-menu-quiet-row {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  font-family: var(--cap-font-body);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--cap-color-on-header-muted);
+  background: none;
+  border: none;
+  border-radius: var(--cap-radius-sm);
+  cursor: pointer;
+}
+
+.nav-menu-quiet-row + .nav-menu-quiet-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+}
+
+.nav-menu-quiet-row:hover {
+  color: var(--cap-color-on-header);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Muted red, mixed from the existing diner-red/parchment tokens rather than
+   contact-red -- that dark red is unreadable as small text on the dark green
+   panel. This mix keeps >= 4.5:1 against nav-panel-green. */
+.nav-menu-quiet-row.nav-menu-reset-link {
+  color: color-mix(in srgb, var(--cap-color-diner-red) 45%, var(--cap-color-parchment));
+}
+
+/* Scroll hints -- purely decorative (aria-hidden, pointer-events:none, so
+   they never take a tap or shrink a touch target). NavMenu.tsx toggles the
+   *-visible classes from the real scroll position, so each fade disappears
+   at its end of the list and none show when everything fits. The fades
+   stop short of the scrollbar gutter on the right. */
+.nav-menu-fade {
+  position: absolute;
+  left: 0;
+  right: var(--cap-space-2);
+  height: 28px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.nav-menu-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--cap-color-nav-panel-green), transparent);
+}
+
+.nav-menu-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--cap-color-nav-panel-green), transparent);
+}
+
+.nav-menu-fade-visible {
+  opacity: 1;
+}
+
+/* Small "more below" chevron, centered just above the footer. Shown only
+   until the guest first scrolls; one gentle nudge on appearing, never a
+   loop, and no motion at all under prefers-reduced-motion. */
+.nav-menu-more {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 18px;
+  margin-left: -14px;
+  border-radius: var(--cap-radius-pill);
+  background: var(--cap-color-wood-sign);
+  border: 1.5px solid var(--cap-color-outline);
+  color: var(--cap-color-on-header);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.nav-menu-more svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.4;
+}
+
+.nav-menu-more-visible {
+  opacity: 1;
+  animation: nav-menu-more-nudge 0.7s ease-in-out 0.35s 1;
+}
+
+@keyframes nav-menu-more-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu-more-visible {
+    animation: none;
+  }
+}
+
+/* ---- Pinned footer ---------------------------------------------------- */
+
+.nav-menu-footer {
+  flex-shrink: 0;
+  padding-top: var(--cap-space-3);
+  border-top: 2px solid rgba(255, 255, 255, 0.28);
+}
+
+/* "Need help", not an emergency -- outlined and quiet rather than the old
+   filled contact-red button. */
+.nav-menu-contact-staff-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 16px;
+  font-family: var(--cap-font-body);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cap-color-on-header);
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--cap-radius-pill);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.nav-menu-contact-staff-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--cap-color-on-header);
+}
+
+.nav-menu-contact-staff-icon {
+  display: flex;
+  width: 20px;
+  height: 20px;
+}
+
+.nav-menu-contact-staff-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 /* Persistent "you have an active request" indicator -- the check-anytime
@@ -263,10 +589,6 @@
    isn't looking at the modal when it fires. Same absolutely-positioned-pill
    structure as StaffSidebar.css's .staff-sidebar-tab-badge, just a plain dot
    (no count) since there's at most one active request per session. */
-.nav-menu-contact-staff-btn {
-  position: relative;
-}
-
 .nav-menu-contact-staff-badge {
   position: absolute;
   top: -5px;
@@ -285,39 +607,75 @@
   background: var(--cap-color-adventure-green);
 }
 
-/* Two narrow, low-emphasis links -- Staff and the guest-facing reset --
-   distinct from the primary/danger pill buttons above -- underlined text,
-   not its own button chrome, so both read as "advanced"/irrelevant-to-most
-   actions rather than headline CTAs. /staff is gated behind its own login
-   (StaffPage), so this link doesn't need to be hidden for security -- it's
-   kept subtle only because it's irrelevant to the vast majority of guests.
-   Actual reset confirmation happens in ResetSessionModal, opened via
-   onResetSession -- that link never resets anything by itself. */
-.nav-menu-footer {
-  padding-top: var(--cap-space-1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+/* Narrow phones: widen the panel into the header's side gutter (12px
+   viewport margin each side instead of 20px) so single words like
+   "Collectibles" fit a half-width tile without breaking. right:-8px pulls
+   the panel's right edge out to match, keeping it centered. */
+@media (max-width: 379px) {
+  .nav-menu-panel {
+    right: calc(var(--cap-space-3) - var(--cap-space-5));
+    max-width: calc(100vw - 2 * var(--cap-space-3));
+  }
 }
 
-.nav-menu-account-link,
-.nav-menu-staff-link,
-.nav-menu-reset-link {
-  font-family: var(--cap-font-body);
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--cap-color-on-header-muted);
-  background: none;
-  border: none;
-  padding: 4px 8px;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+/* ---- Wide screens (laptop/desktop) ----------------------------------- */
+
+/* A laptop's ~700-800px of usable height can't fit the four sections
+   stacked (they need ~685px on their own), so wide screens lay the
+   sections out as a 2x2 grid in a wider panel instead -- everything fits
+   without scrolling at 1280x720 and up. Tiles keep the same two-column
+   grid and height inside each section. */
+@media (min-width: 1024px) and (min-height: 501px) {
+  .nav-menu-panel {
+    width: 640px;
+  }
+
+  .nav-menu-scroll-content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--cap-space-5);
+    align-items: start;
+  }
 }
 
-.nav-menu-account-link:hover,
-.nav-menu-staff-link:hover,
-.nav-menu-reset-link:hover {
-  color: var(--cap-color-on-header);
+/* ---- Short screens (landscape phones) --------------------------------- */
+
+/* Not enough height for a two-row header plus a usefully tall scrolling
+   middle -- fold the header into one row (coins, Scan QR, close) and tighten
+   the paddings. */
+@media (max-height: 500px) {
+  /* Landscape has width to spare -- room for the one-row header. */
+  .nav-menu-panel {
+    width: 400px;
+  }
+
+  .nav-menu-header {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: 'coins scan close';
+    padding-bottom: var(--cap-space-2);
+  }
+
+  .nav-menu-coins {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .nav-menu-scan {
+    min-height: 44px;
+    padding: 6px 12px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  .nav-menu-section-header {
+    margin: var(--cap-space-2) 0;
+  }
+
+  .nav-menu-panel-inner {
+    padding: var(--cap-space-2) var(--cap-space-3);
+  }
+
+  .nav-menu-footer {
+    padding-top: var(--cap-space-2);
+  }
 }

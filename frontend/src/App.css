@@ -106,6 +106,44 @@
   padding: calc(var(--app-header-height) + var(--cap-space-5)) var(--cap-space-5) 60px;
 }
 
+/* Top-bar scan button, between the logo and the menu toggle. Auto left
+   margin pushes it (and the toggle after it) to the right edge; same 44px
+   box and outline as the toggle, but a quiet outlined fill so the toggle's
+   orange stays the header's one loud control. */
+.app-header-scan {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: var(--cap-radius-md);
+  border: var(--cap-outline-width) solid var(--cap-color-outline);
+  background: var(--cap-color-nav-panel-green);
+  color: var(--cap-color-on-header);
+  box-shadow: var(--cap-shadow-pop-sm);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.app-header-scan svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.8;
+}
+
+.app-header-scan:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--cap-shadow-pop);
+}
+
+.app-header-scan:focus-visible {
+  outline: 3px solid var(--cap-color-acid-yellow);
+  outline-offset: 2px;
+}
+
 .brand-logo {
   height: 48px;
   width: auto;

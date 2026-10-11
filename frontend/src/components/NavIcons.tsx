@@ -394,3 +394,69 @@ export function QrCodeIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+// Compass -- the nav dropdown's "Explore" section header. Nothing else in the
+// app covers this shape.
+export function CompassIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="M13 7l-1.8 4.2L7 13l1.8-4.2z" />
+    </svg>
+  )
+}
+
+// Five-point star -- the nav dropdown's "Activities" section header. Nothing
+// else in the app covers this shape.
+export function StarIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M10 2.5l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5-3.7-3.4 5-.6z" />
+    </svg>
+  )
+}
+
+// Backpack -- the nav dropdown's "My Collection" section header. Nothing else
+// in the app covers this shape.
+export function BackpackIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M4.5 9a5.5 5.5 0 0 1 11 0v8.5h-11z" />
+      <path d="M7.5 4.2V3a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.2" />
+      <rect x="7" y="11.5" width="6" height="3.5" rx="0.8" />
+    </svg>
+  )
+}
+
+// Gear -- the nav dropdown's "Help & Settings" section header. Nothing else
+// in the app covers this shape.
+export function GearIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <circle cx="10" cy="10" r="2.6" />
+      <path d="M10 2v2.2M10 15.8V18M2 10h2.2M15.8 10H18M4.3 4.3l1.6 1.6M14.1 14.1l1.6 1.6M4.3 15.7l1.6-1.6M14.1 5.9l1.6-1.6" />
+      <circle cx="10" cy="10" r="5.4" />
+    </svg>
+  )
+}
+
+// Plain X -- the nav dropdown panel's own close button. Nothing else in the
+// app covers this shape.
+export function CloseIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <line x1="4.5" y1="4.5" x2="15.5" y2="15.5" />
+      <line x1="15.5" y1="4.5" x2="4.5" y2="15.5" />
+    </svg>
+  )
+}
+
+// Down chevron -- the nav dropdown's "more below" scroll hint. Pairs with
+// ChevronLeftIcon/ChevronRightIcon above.
+export function ChevronDownIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M3.5 7.5L10 13.5l6.5-6" />
+    </svg>
+  )
+}

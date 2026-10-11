@@ -96,7 +96,7 @@ export function StaffAnalytics() {
             </ChartCard>
           </AnalyticsSection>
 
-          <AnalyticsSection title="Puzzle Timer / Scoring Sheet">
+          <AnalyticsSection title="Puzzle Timer / Scoring Sheets">
             <StatCard
               label="Puzzle Timer Solves"
               value={summary.puzzle_scoring.puzzle_timer_solves}

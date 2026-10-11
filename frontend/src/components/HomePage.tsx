@@ -100,7 +100,7 @@ export function HomePage({ announcements, onScanQr }: HomePageProps) {
           </button>
           <button type="button" className="home-quicknav-btn" onClick={() => navigate('/scoring')}>
             <ClipboardIcon className="home-quicknav-btn-icon" />
-            <span className="home-quicknav-btn-label">Scoring Sheet</span>
+            <span className="home-quicknav-btn-label">Scoring Sheets</span>
           </button>
           <button type="button" className="home-quicknav-btn" onClick={() => navigate('/collectibles')}>
             <PawIcon className="home-quicknav-btn-icon" />

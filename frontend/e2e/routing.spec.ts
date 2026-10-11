@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
+import { openTab } from './navMenuHelper'
 
 // Covers the App-wide routing-fix rollout (App.tsx): every guest-facing
 // screen -- Home included -- is now a real router-driven route with its own
@@ -17,7 +18,7 @@ const ROUTES: { path: string; heading: string; navLabel: string }[] = [
   { path: '/map', heading: 'Park Map', navLabel: 'Map' },
   { path: '/bingo', heading: 'Bingo Card', navLabel: 'Bingo Card' },
   { path: '/puzzles', heading: 'Floor Puzzles', navLabel: 'Puzzles' },
-  { path: '/scoring', heading: 'Scoring Sheet', navLabel: 'Scoring Sheet' },
+  { path: '/scoring', heading: 'Scoring Sheets', navLabel: 'Scoring Sheets' },
   { path: '/hunt', heading: 'Scavenger Hunt', navLabel: 'Scavenger Hunt' },
   { path: '/animals', heading: 'Our Animals', navLabel: 'Our Animals' },
   { path: '/collectibles', heading: 'Collectibles', navLabel: 'Collectibles' },
@@ -26,10 +27,6 @@ const ROUTES: { path: string; heading: string; navLabel: string }[] = [
   { path: '/faq', heading: 'FAQ', navLabel: 'FAQ' },
 ]
 
-async function openTab(page: Page, label: string): Promise<void> {
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: label }).click()
-}
 
 test.describe('Per-screen URLs', () => {
   for (const { path, heading } of ROUTES) {
@@ -72,8 +69,8 @@ test.describe('Browser Back/Forward across real in-app navigation', () => {
     await openTab(page, 'Bingo Card')
     await expect(page.getByRole('heading', { name: 'Bingo Card', exact: true })).toBeVisible()
 
-    await openTab(page, 'Scoring Sheet')
-    await expect(page.getByRole('heading', { name: 'Scoring Sheet', exact: true })).toBeVisible()
+    await openTab(page, 'Scoring Sheets')
+    await expect(page.getByRole('heading', { name: 'Scoring Sheets', exact: true })).toBeVisible()
 
     await openTab(page, 'FAQ')
     await expect(page.getByRole('heading', { name: 'FAQ', exact: true })).toBeVisible()
@@ -82,7 +79,7 @@ test.describe('Browser Back/Forward across real in-app navigation', () => {
     // must land on the exact previous in-app screen, not skip straight past
     // the app to about:blank.
     await page.goBack()
-    await expect(page.getByRole('heading', { name: 'Scoring Sheet', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Scoring Sheets', exact: true })).toBeVisible()
 
     await page.goBack()
     await expect(page.getByRole('heading', { name: 'Bingo Card', exact: true })).toBeVisible()
@@ -99,7 +96,7 @@ test.describe('Browser Back/Forward across real in-app navigation', () => {
     await page.goForward()
     await expect(page.getByRole('heading', { name: 'Bingo Card', exact: true })).toBeVisible()
     await page.goForward()
-    await expect(page.getByRole('heading', { name: 'Scoring Sheet', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Scoring Sheets', exact: true })).toBeVisible()
     await page.goForward()
     await expect(page.getByRole('heading', { name: 'FAQ', exact: true })).toBeVisible()
   })

@@ -47,7 +47,7 @@ async function openGame(
   // explicit menuitemradio role, not the implicit button role -- see
   // cap-companion-nav-menu-e2e-regression memory.
   await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Scoring Sheet' }).click()
+  await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
   await gameCard(page, gameName).getByRole('button', { name: 'Start Scoring' }).click()
   return { dialog: page.getByRole('dialog'), token }
 }
@@ -103,7 +103,7 @@ test.describe('Scoring Sheet', () => {
   }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Scoring Sheet' }).click()
+    await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
 
     for (const name of ['Farm Toss', 'Horse Hoops', 'Cornhole', 'Cornhole Extreme', 'Tiki Toss / Ring & Hook']) {
       await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()

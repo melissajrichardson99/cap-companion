@@ -59,7 +59,7 @@ export function PassportCard({ session }: PassportCardProps) {
             🎯 Bingo: {stats.bingo_tiles_completed} / {stats.bingo_tiles_total} tiles
             {milestoneNote}
           </li>
-          <li>🏆 Scoring Sheet: {stats.scoring_sheet_games_won} game(s) won</li>
+          <li>🏆 Scoring Sheets: {stats.scoring_sheet_games_won} game(s) won</li>
           <li>🧩 Puzzles: {stats.puzzle_challenges_completed} challenge(s) completed</li>
           <li>🪙 Cobb Coins: {stats.total_cobb_coins}</li>
         </ul>

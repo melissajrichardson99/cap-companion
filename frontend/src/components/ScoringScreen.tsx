@@ -50,7 +50,7 @@ export function ScoringScreen({ games, error, onReload, onCoinsChanged, gameSlug
       <div className="scoring-screen">
         <h1 className="cap-sign-board">
           <ClipboardIcon className="cap-sign-board-icon" />
-          Scoring Sheet
+          Scoring Sheets
         </h1>
         <p className="scoring-not-found">
           We couldn't find that game ("{gameSlug}"). It may have moved or the sign's QR code is out of date.
@@ -69,7 +69,7 @@ export function ScoringScreen({ games, error, onReload, onCoinsChanged, gameSlug
       <div className="scoring-foliage scoring-foliage-bottom-right" aria-hidden="true" />
       <h1 className="cap-sign-board">
         <ClipboardIcon className="cap-sign-board-icon" />
-        Scoring Sheet
+        Scoring Sheets
       </h1>
       <p className="cap-page-subheader">{PAGE_SUBHEADERS.scoring}</p>
 

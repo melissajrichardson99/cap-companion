@@ -234,7 +234,7 @@ test('Choose Your Adventure quick-nav card links to the right destinations', asy
   await expect(quicknav.getByRole('button', { name: 'Map' })).toBeVisible()
   await expect(quicknav.getByRole('button', { name: 'Bingo Card' })).toBeVisible()
   await expect(quicknav.getByRole('button', { name: 'Scan QR' })).toBeVisible()
-  await expect(quicknav.getByRole('button', { name: 'Scoring Sheet' })).toBeVisible()
+  await expect(quicknav.getByRole('button', { name: 'Scoring Sheets' })).toBeVisible()
   await expect(quicknav.getByRole('button', { name: 'Collectibles' })).toBeVisible()
   await expect(page.getByText('Looking for something else? Check the menu in the top-right corner.')).toBeVisible()
 
@@ -246,8 +246,8 @@ test('Choose Your Adventure quick-nav card links to the right destinations', asy
   await expect(page.getByRole('heading', { name: 'Bingo Card' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Go to home page' }).click()
-  await quicknav.getByRole('button', { name: 'Scoring Sheet' }).click()
-  await expect(page.getByRole('heading', { name: 'Scoring Sheet' })).toBeVisible()
+  await quicknav.getByRole('button', { name: 'Scoring Sheets' }).click()
+  await expect(page.getByRole('heading', { name: 'Scoring Sheets' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Go to home page' }).click()
   await quicknav.getByRole('button', { name: 'Collectibles' }).click()

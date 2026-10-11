@@ -212,7 +212,7 @@ test.describe('QR scans on the staff heatmap', () => {
     await expect(page.getByRole('heading', { name: 'Goat', exact: true })).toBeVisible()
 
     // Scoring Sheet -> Cornhole.
-    await openTab('Scoring Sheet')
+    await openTab('Scoring Sheets')
     await page
       .locator('.scoring-game-card')
       .filter({ has: page.getByRole('heading', { name: 'Cornhole', exact: true }) })

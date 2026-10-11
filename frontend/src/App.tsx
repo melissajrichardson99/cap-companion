@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Dispatch, ReactNode, SetStateAction } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, type AnimalPhoto, type Announcement, type BingoCard, type CoinsSummary, type CollectibleCard, type CollectibleCatalogEntry, type Guest, type HuntCharacter, type MapNode, type Minigame, type MilestoneEvent, type PhotoSubmission, type Puzzle, type ResetSessionResult, type ScoringGame, type StaffRequest, type TileCompletionResult, type VisitNodeResponse } from './api'
 import { AccountModal } from './components/AccountModal'
@@ -15,8 +15,8 @@ import { HomePage } from './components/HomePage'
 import { HuntScreen } from './components/HuntScreen'
 import { MapScreen } from './components/MapScreen'
 import { MinigameOverlay, finishedRound, getMinigameSlug, type MinigameCloseInfo } from './components/MinigameOverlay'
-import { NavMenu } from './components/NavMenu'
-import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, QuestionMarkIcon, SearchIcon, ShieldIcon, TruckIcon } from './components/NavIcons'
+import { NavMenu, type NavMenuTab } from './components/NavMenu'
+import { BinocularsIcon, CameraIcon, ClipboardIcon, GridIcon, HomeIcon, MapPinIcon, PawIcon, PuzzlePieceIcon, QrCodeIcon, QuestionMarkIcon, SearchIcon, ShieldIcon, TruckIcon } from './components/NavIcons'
 import { PassportModal } from './components/PassportModal'
 import { PhotoScreen } from './components/PhotoScreen'
 import { PrivacyScreen } from './components/PrivacyScreen'
@@ -56,22 +56,25 @@ interface MinigameLaunch {
   kind: 'base' | 'milestone' | 'hunt'
 }
 
-const TABS: { key: string; label: string; icon: ReactNode }[] = [
-  { key: '/map', label: 'Map', icon: <MapPinIcon /> },
-  { key: '/bingo', label: 'Bingo Card', icon: <GridIcon /> },
-  { key: '/puzzles', label: 'Puzzles', icon: <PuzzlePieceIcon /> },
-  { key: '/scoring', label: 'Scoring Sheet', icon: <ClipboardIcon /> },
-  { key: '/hunt', label: 'Scavenger Hunt', icon: <SearchIcon /> },
-  { key: '/animals', label: 'Our Animals', icon: <BinocularsIcon /> },
-  { key: '/collectibles', label: 'Collectibles', icon: <PawIcon /> },
-  { key: '/photos', label: 'Favorite Photo', icon: <CameraIcon /> },
-  { key: '/food-trucks', label: 'Food Truck Menus', icon: <TruckIcon /> },
-  { key: '/faq', label: 'FAQ', icon: <QuestionMarkIcon /> },
+const TABS: NavMenuTab<string>[] = [
+  // Home is also reachable via the header logo, but every guest page belongs
+  // in the menu too (see nav-menu.spec.ts's completeness test).
+  { key: '/', label: 'Home', icon: <HomeIcon />, section: 'explore' },
+  { key: '/map', label: 'Map', icon: <MapPinIcon />, section: 'explore' },
+  { key: '/animals', label: 'Our Animals', icon: <BinocularsIcon />, section: 'explore' },
+  { key: '/food-trucks', label: 'Food Truck Menus', icon: <TruckIcon />, section: 'explore' },
+  { key: '/bingo', label: 'Bingo Card', icon: <GridIcon />, section: 'activities' },
+  { key: '/puzzles', label: 'Puzzles', icon: <PuzzlePieceIcon />, section: 'activities' },
+  { key: '/scoring', label: 'Scoring Sheets', icon: <ClipboardIcon />, section: 'activities' },
+  { key: '/hunt', label: 'Scavenger Hunt', icon: <SearchIcon />, section: 'activities' },
+  { key: '/collectibles', label: 'Collectibles', icon: <PawIcon />, section: 'collection' },
+  { key: '/photos', label: 'Favorite Photo', icon: <CameraIcon />, section: 'collection' },
+  { key: '/faq', label: 'FAQ', icon: <QuestionMarkIcon />, section: 'help' },
   // PIPA "Openness" -- the Privacy Policy must be genuinely, easily
   // discoverable to any guest, not just one who happens into the account
-  // flow -- so it gets the same primary-tab tier as FAQ, not the low-emphasis
-  // footer treatment (see NavMenu.css's nav-menu-footer comment).
-  { key: '/privacy', label: 'Privacy Policy', icon: <ShieldIcon /> },
+  // flow -- so it gets the same full tile tier as FAQ, not the quiet
+  // text-row treatment Staff/Reset Session get (see NavMenu.tsx).
+  { key: '/privacy', label: 'Privacy Policy', icon: <ShieldIcon />, section: 'help' },
 ]
 
 function App() {
@@ -802,6 +805,20 @@ function GuestShell(props: GuestShellProps) {
       <header className="app-header">
         <div className="app-header-top">
           <BrandLogo onClick={() => navigate('/')} />
+          {/* One-tap scan, same flow as the menu's Scan QR (which stays) --
+              scanning the park's QR codes is the app's key action. Named
+              "Open QR scanner", not "Scan ...": e2e's getByRole name
+              matching is substring-based, and "Scan QR" (menu, Home),
+              "Scan QR Code" (Hunt) and "Scan a QR Code" (Our Animals)
+              already name other scan buttons. */}
+          <button
+            type="button"
+            className="app-header-scan"
+            aria-label="Open QR scanner"
+            onClick={() => props.setShowScanEntry(true)}
+          >
+            <QrCodeIcon />
+          </button>
           <NavMenu
             tabs={TABS}
             activeTab={navActiveTab}
@@ -809,6 +826,7 @@ function GuestShell(props: GuestShellProps) {
             coinTotal={props.coinsSummary?.total ?? 0}
             contactRequestStatus={props.myRequestStatus?.status ?? null}
             accountLabel={props.guest ? props.guest.email : 'Save Your Progress'}
+            accountSignedIn={props.guest !== null}
             onScanQr={() => props.setShowScanEntry(true)}
             onGeneratePassport={() => props.setShowPassport(true)}
             onContactStaff={() => props.setShowContactStaff(true)}

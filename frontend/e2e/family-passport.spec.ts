@@ -195,7 +195,7 @@ test.describe('Family Passport', () => {
     // win -- no separate Finish Game tap needed) -- untouched by
     // scoring-sheet.spec.ts (Farm Toss/Horse Hoops/Cornhole/Tiki Toss only).
     await openMenu(page)
-    await page.getByRole('menuitemradio', { name: 'Scoring Sheet' }).click()
+    await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
     const cornholeExtremeCard = page
       .locator('.scoring-game-card')
       .filter({ has: page.getByRole('heading', { name: 'Cornhole Extreme', exact: true }) })

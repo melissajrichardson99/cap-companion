@@ -67,7 +67,7 @@ async function prefillRound(
 async function openViaMenu(page: Page, gameName: string): Promise<Locator> {
   await page.goto('/')
   await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Scoring Sheet' }).click()
+  await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
   await page
     .locator('.scoring-game-card')
     .filter({ has: page.getByRole('heading', { name: gameName, exact: true }) })
@@ -142,7 +142,7 @@ test.describe('Mini golf (stroke play) Scoring Sheet', () => {
     }
     await page.goto('/')
     await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Scoring Sheet' }).click()
+    await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
     for (const name of [BLACKLIGHT.name, CORNHOLE_GOLF.name, 'Cornhole', 'Cornhole Extreme']) {
       await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
     }
