@@ -4,24 +4,12 @@
    shared scoring-modal rules regardless of bundle load order (see the
    specificity comment above .scoring-event-btn in ScoringSessionModal.css). */
 
-/* Per-course accent. Default is the standard sunset-orange look; a course
-   opts in via data-scoring-accent (ACCENT_BY_SLUG in
-   StrokePlaySessionModal.tsx), same idea as the Hunt characters'
-   --hunt-accent theming. */
+/* Accent for both courses: the app's standard sunset orange (Melissa,
+   2026-10-11 -- a per-course Blacklight violet was proposed and declined). */
 .scoring-modal-inner.stroke-play {
   --stroke-accent: var(--cap-color-sunset-orange);
   --stroke-accent-deep: var(--cap-color-sunset-orange-deep);
   --stroke-accent-wash: color-mix(in srgb, var(--cap-color-sunset-orange) 22%, transparent);
-  --stroke-accent-glow: none;
-}
-
-/* Blacklight Mini Golf: UV violet with a faint neon glow on the accent
-   surfaces -- proposal, pending Melissa's approval. */
-.scoring-modal-inner.stroke-play[data-scoring-accent='blacklight'] {
-  --stroke-accent: #7a3cff;
-  --stroke-accent-deep: #5520c4;
-  --stroke-accent-wash: color-mix(in srgb, #7a3cff 20%, transparent);
-  --stroke-accent-glow: 0 0 10px rgba(122, 60, 255, 0.55);
 }
 
 .scoring-modal-inner.stroke-play .stroke-loading {
@@ -44,7 +32,7 @@
   border-radius: var(--cap-radius-pill);
   border: 2px solid var(--cap-color-outline);
   background: var(--stroke-accent);
-  box-shadow: var(--cap-shadow-pop-sm), var(--stroke-accent-glow);
+  box-shadow: var(--cap-shadow-pop-sm);
   color: #fff;
   font-family: var(--cap-font-display);
   font-size: 15px;
@@ -126,7 +114,7 @@
   font-size: 18px;
   background: var(--stroke-accent);
   color: #fff;
-  box-shadow: var(--cap-shadow-pop-sm), var(--stroke-accent-glow);
+  box-shadow: var(--cap-shadow-pop-sm);
 }
 
 .scoring-modal-inner.stroke-play .stroke-key-enter:hover:not(:disabled) {

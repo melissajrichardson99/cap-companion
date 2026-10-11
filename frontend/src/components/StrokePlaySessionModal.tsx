@@ -36,13 +36,6 @@ interface Target {
 // double tap on Enter can't confirm a score nobody has looked at.
 const CONFIRM_ARM_DELAY_MS = 600
 
-// Per-course accent within the shared wood/parchment chrome (same idea as
-// the Hunt characters' data-hunt-character theming). Courses without an
-// entry use the standard sunset-orange look.
-const ACCENT_BY_SLUG: Record<string, string> = {
-  'blacklight-mini-golf': 'blacklight',
-}
-
 interface StrokePlaySessionModalProps {
   game: ScoringGame
   onClose: () => void
@@ -79,7 +72,6 @@ export function StrokePlaySessionModal({ game, onClose, onCoinsChanged }: Stroke
   const [discarding, setDiscarding] = useState(false)
   const armTimeoutRef = useRef<number | null>(null)
 
-  const accent = ACCENT_BY_SLUG[game.slug]
 
   useEffect(() => {
     let cancelled = false
@@ -225,7 +217,7 @@ export function StrokePlaySessionModal({ game, onClose, onCoinsChanged }: Stroke
 
   const frame = (children: ReactNode, overlay?: ReactNode) => (
     <Modal onClose={onClose} labelledBy="scoring-modal-title" className="scoring-modal-frame">
-      <div className="scoring-modal-inner stroke-play" data-scoring-accent={accent}>
+      <div className="scoring-modal-inner stroke-play">
         <div className="scoring-modal-scroll">
           {title}
           {children}
