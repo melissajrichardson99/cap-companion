@@ -75,6 +75,8 @@ export function StrokePlaySessionModal({ game, onClose, onCoinsChanged }: Stroke
   const [confirmArmed, setConfirmArmed] = useState(false)
   const [saving, setSaving] = useState(false)
   const [resultAnimation, setResultAnimation] = useState<MilestoneEvent | null>(null)
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false)
+  const [discarding, setDiscarding] = useState(false)
   const armTimeoutRef = useRef<number | null>(null)
 
   const accent = ACCENT_BY_SLUG[game.slug]
@@ -192,7 +194,24 @@ export function StrokePlaySessionModal({ game, onClose, onCoinsChanged }: Stroke
     setTarget(null)
     setDigits('')
     setView('entry')
+    setConfirmingDiscard(false)
     setPhase('setup')
+  }
+
+  // "Start new round" mid-round: discards the unfinished round on the
+  // backend (so it's no longer resumed), after an explicit confirm.
+  const discardRound = async () => {
+    if (!session || discarding) return
+    setDiscarding(true)
+    setEntryError(null)
+    try {
+      await api.abandonScoreSheetSession(session.id)
+      startNewRound()
+    } catch (err) {
+      setEntryError(String(err))
+    } finally {
+      setDiscarding(false)
+    }
   }
 
   const title = (
@@ -437,6 +456,37 @@ export function StrokePlaySessionModal({ game, onClose, onCoinsChanged }: Stroke
 
       {entryError && <p className="screen-error">{entryError}</p>}
       {runningTotals}
+
+      {confirmingDiscard ? (
+        <div className="stroke-discard" role="group" aria-label="Discard this round">
+          <p className="stroke-discard-text">Discard this round?</p>
+          <p className="stroke-discard-note">Every score entered so far will be lost.</p>
+          <div className="stroke-confirm-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={discarding}
+              onClick={() => setConfirmingDiscard(false)}
+            >
+              Keep Playing
+            </button>
+            <button type="button" className="btn stroke-discard-btn" disabled={discarding} onClick={discardRound}>
+              {discarding ? 'Discarding…' : 'Discard Round'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="stroke-new-round">
+          <button
+            type="button"
+            className="btn btn-secondary stroke-new-round-btn"
+            disabled={saving}
+            onClick={() => setConfirmingDiscard(true)}
+          >
+            Start New Round
+          </button>
+        </div>
+      )}
     </>,
     overlay,
   )

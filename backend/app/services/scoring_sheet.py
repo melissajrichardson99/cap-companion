@@ -515,3 +515,16 @@ def get_active_session(game_id: UUID, device_session_id: UUID) -> ScoreSheetSess
     if not rows:
         return None
     return _session_from_row(client, rows[0], device_session_id)
+
+
+def abandon_session(session_id: UUID, device_session_id: UUID) -> None:
+    """Discard this device's unfinished session ("Start new round" on the
+    golf sheet), so a group isn't stuck resuming an old round. Deleted rather
+    than marked finished: completed_at is what Passport counts as a win and
+    analytics as a completion. Hole scores / entries cascade with it. A
+    finished session is a result and is kept (409)."""
+    client = get_supabase_client()
+    session_row = _get_session_row(client, session_id, device_session_id)
+    if session_row["completed_at"]:
+        raise ConflictError("This session has already finished -- there's nothing to discard.")
+    client.table("score_sheet_sessions").delete().eq("id", str(session_id)).is_("completed_at", "null").execute()

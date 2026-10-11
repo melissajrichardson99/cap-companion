@@ -689,6 +689,9 @@ export const api = {
   // This device's unfinished round of the game, or null -- resume after a reload.
   getActiveScoreSheetSession: (gameId: string) =>
     request<ScoreSheetSession | null>(`/scoring/games/${gameId}/active-session`),
+  // Discards this device's unfinished session (golf "Start new round").
+  abandonScoreSheetSession: (sessionId: string) =>
+    request<void>(`/scoring/sessions/${sessionId}`, { method: 'DELETE' }),
   recordHoleScore: (sessionId: string, playerName: string, holeNumber: number, strokes: number) =>
     request<ScoreSheetSession>(`/scoring/sessions/${sessionId}/holes`, {
       method: 'PUT',

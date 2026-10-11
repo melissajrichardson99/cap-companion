@@ -358,3 +358,57 @@
 .scoring-modal-inner.stroke-play .btn-primary:hover:not(:disabled) {
   background: var(--stroke-accent-deep);
 }
+
+/* ---------------------------------------------------------------------------
+   Start New Round (discard the unfinished round) + its confirm step
+   --------------------------------------------------------------------------- */
+.scoring-modal-inner.stroke-play .stroke-new-round {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.scoring-modal-inner.stroke-play .stroke-new-round-btn {
+  min-height: 44px;
+  border-style: dashed;
+  box-shadow: none;
+  color: var(--cap-color-body-text);
+}
+
+.scoring-modal-inner.stroke-play .stroke-discard {
+  margin-top: 16px;
+  padding: 12px 8px;
+  text-align: center;
+  border: 2px solid var(--cap-color-diner-red-deep);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cap-color-diner-red) 10%, transparent);
+}
+
+.scoring-modal-inner.stroke-play .stroke-discard-text {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cap-color-ink);
+}
+
+.scoring-modal-inner.stroke-play .stroke-discard-note {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--cap-color-body-text);
+}
+
+.scoring-modal-inner.stroke-play .stroke-discard-btn {
+  min-height: 44px;
+  background: var(--cap-color-diner-red);
+  color: #fff;
+}
+
+.scoring-modal-inner.stroke-play .stroke-discard-btn:hover:not(:disabled) {
+  background: var(--cap-color-diner-red-deep);
+}
+
+.scoring-modal-inner.stroke-play .stroke-discard .btn {
+  white-space: nowrap;
+  padding-left: 16px;
+  padding-right: 16px;
+}

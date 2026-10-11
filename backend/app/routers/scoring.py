@@ -92,3 +92,13 @@ def record_hole_score(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+def abandon_session(session_id: UUID, device_session: DeviceSession = Depends(get_or_create_session)) -> None:
+    try:
+        scoring_sheet_service.abandon_session(session_id, device_session.id)
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

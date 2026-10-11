@@ -45,7 +45,7 @@ async function prefillRound(
   slug: string,
   players: string[],
   strokesByHole: number[][],
-): Promise<void> {
+): Promise<string> {
   const created = await request.post(`${API}/scoring/sessions`, {
     ...withSession(token),
     data: { game_id: await gameId(request, slug), players },
@@ -61,6 +61,7 @@ async function prefillRound(
       expect(res.ok()).toBe(true)
     }
   }
+  return id
 }
 
 async function openViaMenu(page: Page, gameName: string): Promise<Locator> {
@@ -406,6 +407,64 @@ test.describe('Mini golf (stroke play) Scoring Sheet', () => {
     expect((await put({ hole_number: 2, strokes: 3 })).status()).toBe(409) // skipping ahead
     expect((await put({ hole_number: 1, strokes: 999 })).status()).toBe(200)
     expect((await put({ hole_number: 1, strokes: 1 })).status()).toBe(200) // correction
+  })
+})
+
+test.describe('Mini golf: Start New Round', () => {
+  test('discarding needs a confirm, Keep Playing backs out, and a discarded round is not resumed', async ({
+    page,
+    request,
+  }) => {
+    const token = await freshGuest(page)
+    await prefillRound(request, token, BLACKLIGHT.slug, ['Alex', 'Sam'], [[3, 4], [2]])
+    await page.goto(`/scoring/${BLACKLIGHT.slug}`)
+    const dialog = page.getByRole('dialog')
+    await expect(header(dialog)).toContainText('Hole 2 of 9')
+
+    // Confirm step, then back out: nothing lost.
+    await dialog.getByRole('button', { name: 'Start New Round' }).click()
+    await expect(dialog.locator('.stroke-discard-text')).toHaveText('Discard this round?')
+    await dialog.getByRole('button', { name: 'Keep Playing' }).click()
+    await expect(dialog.locator('.stroke-discard')).toHaveCount(0)
+    await expect(header(dialog)).toContainText('Hole 2 of 9')
+    await expect(runningTotal(dialog, 'Alex')).toHaveText('5')
+
+    // Discard for real: back to setup, and the old round is gone server-side.
+    await dialog.getByRole('button', { name: 'Start New Round' }).click()
+    await dialog.getByRole('button', { name: 'Discard Round' }).click()
+    await expect(dialog.getByRole('button', { name: 'Begin Round' })).toBeVisible()
+    const active = await request.get(
+      `${API}/scoring/games/${await gameId(request, BLACKLIGHT.slug)}/active-session`,
+      withSession(token),
+    )
+    expect(await active.json()).toBeNull()
+
+    // A reload doesn't bring it back.
+    await page.reload()
+    await expect(dialog.getByRole('button', { name: 'Begin Round' })).toBeVisible()
+
+    // A different group can start fresh.
+    await beginRound(dialog, ['Jo', 'Kim', 'Lee'])
+    await expect(header(dialog)).toContainText('Hole 1 of 9')
+    await expect(header(dialog).locator('.stroke-player-label')).toHaveText('Jo')
+    await expect(runningTotal(dialog, 'Jo')).toHaveText('0')
+  })
+
+  test('only an unfinished round on this device can be discarded', async ({ request }) => {
+    const token = crypto.randomUUID()
+    const finishedId = await prefillRound(request, token, CORNHOLE_GOLF.slug, ['Alex'], Array.from({ length: 9 }, () => [3]))
+    const openId = await prefillRound(request, token, CORNHOLE_GOLF.slug, ['Alex'], [[4]])
+    const discard = (id: string, t: string) => request.delete(`${API}/scoring/sessions/${id}`, withSession(t))
+
+    // A finished round is a result (and a Passport win): kept.
+    expect((await discard(finishedId, token)).status()).toBe(409)
+    // Another device can't discard this one's round.
+    expect((await discard(openId, crypto.randomUUID())).status()).toBe(404)
+    expect((await discard(openId, token)).status()).toBe(204)
+    expect((await discard(openId, token)).status()).toBe(404)
+    // Its coin from the finished round is untouched.
+    const coins = await request.get(`${API}/coins/summary`, withSession(token))
+    expect(((await coins.json()) as { total: number }).total).toBe(10)
   })
 })
 
