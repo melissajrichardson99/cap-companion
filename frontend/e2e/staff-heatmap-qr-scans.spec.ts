@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { apiStaffLogin, loginAsStaff } from './staffAuthHelper'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
+import { ANIMALS } from '../src/animalContent'
 
 // Staff Visit Heatmap, Phase 2 (migration 042 / POST /scan-events). Covers:
 // - for each of the four QR destination types, a scan through the in-app
@@ -264,6 +265,47 @@ test.describe('QR scans on the staff heatmap', () => {
     await expect(note).toHaveCount(0)
   })
 
+  test('each of the 11 newer animals (unmapped): manual entry and a direct URL each log exactly one scan, browsing logs none', async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(180_000)
+    const newAnimals = ANIMALS.slice(9)
+    expect(newAnimals).toHaveLength(11)
+
+    for (const animal of newAnimals) {
+      const before = await unmappedScans(request, staffToken, 'animal', animal.slug)
+      const landed = (p: Page) => expect(p.getByRole('heading', { name: animal.name, exact: true })).toBeVisible()
+
+      const viaModal = await freshGuest(page)
+      await scanViaModal(page, animal.slug)
+      await expect(page).toHaveURL(new RegExp(`/animals/${animal.slug}$`))
+      await landed(page)
+      await expectScans(() => unmappedScans(request, staffToken, 'animal', animal.slug), before + 1)
+      expect(viaModal.count()).toBe(1)
+
+      const page2 = await page.context().newPage()
+      const viaUrl = await freshGuest(page2)
+      await page2.goto(`/animals/${animal.slug}`)
+      await landed(page2)
+      await expectScans(() => unmappedScans(request, staffToken, 'animal', animal.slug), before + 2)
+      expect(viaUrl.count()).toBe(1)
+      await page2.close()
+    }
+
+    // Browsing to every one of them from inside the app logs nothing.
+    const posts = await freshGuest(page)
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
+    for (const animal of newAnimals) {
+      await page.locator('.animal-card').filter({ has: page.getByText(animal.name, { exact: true }) }).click()
+      await expect(page).toHaveURL(new RegExp(`/animals/${animal.slug}$`))
+      await page.getByRole('button', { name: 'Back to Our Animals' }).click()
+    }
+    expect(posts.count()).toBe(0)
+  })
+
   test('the Source filter splits check-ins from QR scans on the map and in the table', async ({
     page,
     context,
@@ -315,7 +357,11 @@ test.describe('QR scans on the staff heatmap', () => {
     // Snake (quick-falcon) has no seeded location; restored to null after.
     await loginAsStaff(page)
     await page.getByRole('tab', { name: 'QR Codes' }).click()
-    const picker = page.getByLabel('Map location for Snake')
+    // Scoped to the Hunt section: Our Animals also has a "Snake" row.
+    const picker = page
+      .locator('.staff-qr-section')
+      .filter({ has: page.getByRole('heading', { name: 'Scavenger Hunt Characters', exact: true }) })
+      .getByLabel('Map location for Snake')
     await expect(picker).toHaveValue('')
     await expect(page.getByLabel('Map location for Cornhole', { exact: true })).toHaveValue(ids.get('Cornhole')!)
 

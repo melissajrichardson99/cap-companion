@@ -5,7 +5,7 @@ collision across those four sources.
 Nothing enforces this automatically today: scannable_codes, scoring_games.slug,
 and puzzle_challenges.slug each have their own unique index, but that only
 guards uniqueness *within* a table, and Our Animals slugs aren't DB-backed at
-all (see app/services/collectibles.ANIMAL_SLUGS), so no single DB constraint
+all (see app/services/animals.ANIMAL_SLUGS), so no single DB constraint
 can span all four. A collision would make ScanEntryModal's manual-entry
 lookup (GET /scan/lookup/{text}) 409 instead of resolving -- see
 app/services/scan.py's resolve_manual_entry.

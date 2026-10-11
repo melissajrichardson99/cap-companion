@@ -3,8 +3,8 @@
 Unlike the Hunt QR scripts (generate_qr_codes.py, generate_hunt_qr_codes.py),
 these encode <FRONTEND_BASE_URL>/animals/<slug> -- a deep link straight into
 that animal's AnimalDetailScreen -- not a /scan/<code> Hunt URL. Deliberately
-a separate URL scheme/namespace from Hunt (see app/services/qr.py) so the 4
-animals that are also Hunt characters (Capybara, Kangaroo, Sloth, Pig) never
+a separate URL scheme/namespace from Hunt (see app/services/qr.py) so the 5
+animals that are also Hunt characters (Capybara, Kangaroo, Sloth, Pig, Snake) never
 collide with a Hunt scan code. No Supabase lookup needed: Our Animals content
 is a static frontend constant (frontend/src/animalContent.ts), not
 backend/DB-backed, so the slugs below are just a hardcoded mirror of that
@@ -40,6 +40,17 @@ ANIMALS = [
     ("Sloth", "sloth"),
     ("Porcupine", "porcupine"),
     ("Pig", "pig"),
+    ("Wallaroo", "wallaroo"),
+    ("Tamandua (Anteater)", "tamandua"),
+    ("Sugar Glider", "sugar-glider"),
+    ("Tortoise", "tortoise"),
+    ("Iguana", "iguana"),
+    ("Snake", "snake"),
+    ("Sheep", "sheep"),
+    ("Rabbit", "rabbit"),
+    ("Ferret", "ferret"),
+    ("Chicken", "chicken"),
+    ("Duck", "duck"),
 ]
 
 

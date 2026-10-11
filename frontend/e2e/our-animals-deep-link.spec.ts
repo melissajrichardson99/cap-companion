@@ -4,7 +4,7 @@ import { ANIMALS } from '../src/animalContent'
 // Covers the /animals/:slug direct deep link (QR signage at each enclosure),
 // added alongside backend/scripts/generate_animal_qr_codes.py. Deliberately a
 // separate URL scheme from the Scavenger Hunt's /scan/:code (see App.tsx and
-// app/services/qr.py) -- 4 animals (Capybara, Kangaroo, Sloth, Pig) are also
+// app/services/qr.py) -- 5 animals (Capybara, Kangaroo, Sloth, Pig, Snake) are also
 // Hunt characters, so this suite specifically checks the two never interact.
 //
 // Named to sort right before our-animals.spec.ts (and well after
@@ -22,7 +22,7 @@ import { ANIMALS } from '../src/animalContent'
 // in-app list->detail path, not some other/frozen source.
 
 test.describe('/animals/:slug direct deep link', () => {
-  test('landing directly on each of the 9 animals via /animals/:slug shows that animal, bypassing the list', async ({
+  test('landing directly on each animal via /animals/:slug shows that animal, bypassing the list', async ({
     page,
   }) => {
     for (const animal of ANIMALS) {

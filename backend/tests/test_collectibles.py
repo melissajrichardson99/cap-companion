@@ -4,7 +4,7 @@ frontend/e2e/collectible-cards.spec.ts instead, same split as test_coins.py)."""
 
 from app.models import CollectibleTier
 from app.services.collectibles import (
-    ANIMAL_SLUGS,
+    COLLECTIBLE_SLUGS,
     PHOTO_POOL_SIZE,
     PRICE_SPECIAL,
     PRICE_STANDARD,
@@ -16,14 +16,14 @@ from app.services.collectibles import (
 
 def test_catalog_has_one_entry_per_animal_with_no_duplicates():
     catalog = get_catalog()
-    assert len(catalog) == len(ANIMAL_SLUGS) == 9
-    assert {entry.animal_slug for entry in catalog} == set(ANIMAL_SLUGS)
+    assert len(catalog) == len(COLLECTIBLE_SLUGS) == 9
+    assert {entry.animal_slug for entry in catalog} == set(COLLECTIBLE_SLUGS)
 
 
 def test_no_animal_is_special_yet_but_the_tier_is_structurally_supported():
     # Ticket: "no current animal should be flagged special yet -- leave the
     # category structurally supported, not populated."
-    for slug in ANIMAL_SLUGS:
+    for slug in COLLECTIBLE_SLUGS:
         assert tier_for(slug) == CollectibleTier.STANDARD
         assert price_for(slug) == PRICE_STANDARD == 100
 

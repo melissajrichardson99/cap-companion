@@ -103,11 +103,13 @@ test('every Map check-in (first visit and repeats) shows on the staff heatmap in
   await expect.poll(() => apiHeatmapCount(request, staffToken, id, windowQuery), { timeout: 10_000 }).toBe(before + 2)
 
   // Staff: the heatmap page, filtered to exactly that window.
+  // Straight to the page, not via Analytics -> "Open Visit Heatmap": that
+  // link only renders after the full analytics summary loads (~17s on the
+  // dev DB), which pushed this test past the 30s default. The link itself is
+  // covered by its own test below.
   const staffPage = await context.newPage()
   await loginAsStaff(staffPage)
-  await staffPage.getByRole('tab', { name: 'Analytics' }).click()
-  await staffPage.getByRole('link', { name: 'Open Visit Heatmap' }).click()
-  await expect(staffPage).toHaveURL(/\/staff\/heatmap$/)
+  await staffPage.goto('/staff/heatmap')
   await expect(staffPage.getByTestId('heatmap-tz-note')).toContainText('park time')
   // The browser really is in Tokyo, and the page must not forward that zone.
   expect(await staffPage.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe(BROWSER_TZ)
@@ -172,6 +174,20 @@ test('/staff/heatmap shows the staff login screen without a staff session, then 
   await page.getByRole('button', { name: 'Log In' }).click()
   await expect(page.getByRole('heading', { name: 'Visit Heatmap' })).toBeVisible()
   await expect(page).toHaveURL(/\/staff\/heatmap$/)
+})
+
+test('the Analytics tab links to the Visit Heatmap', async ({ page }) => {
+  // The link only renders once GET /analytics/summary has loaded. That
+  // summary makes many sequential, paginated Supabase calls over every
+  // device session ever created, so it slows as e2e data accumulates on the
+  // dev DB (~17s at the time of writing). Hence a larger timeout for this
+  // test only, rather than a global one.
+  test.setTimeout(90_000)
+  await loginAsStaff(page)
+  await page.getByRole('tab', { name: 'Analytics' }).click()
+  await page.getByRole('link', { name: 'Open Visit Heatmap' }).click({ timeout: 75_000 })
+  await expect(page).toHaveURL(/\/staff\/heatmap$/)
+  await expect(page.getByRole('heading', { name: 'Visit Heatmap' })).toBeVisible()
 })
 
 test('GET /staff/heatmap rejects requests without a valid staff Authorization header', async ({ request }) => {

@@ -2,14 +2,15 @@ import { test, expect, type Page } from '@playwright/test'
 import { ANIMALS } from '../src/animalContent'
 
 // Covers the "Our Animals" feature (rebranded Encyclopedia, Plan.md 2.5/5):
-// the 9-animal list + name search, the individual animal detail page's
+// the full animal list + name search, the individual animal detail page's
 // About/Photos tabs (no third Fun Facts tab), the Photos tab's plain
 // uncategorized grid (no filter/voting UI), the information-cards flashcard
 // view's text counter + linear side-arrow navigation (no dots, no Shuffle/
 // bottom Next button), and the list screen's QR scan entry point. Facts are
-// a flexible { label, value }[] list (length varies per animal, always 6
-// here) rather than a fixed schema -- assertions below check labels present
-// in the current content rather than hardcoding a fixed 5-row table.
+// a flexible { label, value }[] list (length varies per animal; empty, and
+// hidden, for the 11 newer animals -- see our-animals-new-animals.spec.ts)
+// rather than a fixed schema -- assertions below check labels present in the
+// current content rather than hardcoding a fixed 5-row table.
 //
 // Photos themselves ARE backend-dependent now (Staff-Managed Animal Photos):
 // each grid/hero/nugget image comes from GET /animal-photos, seeded once by

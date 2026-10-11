@@ -148,6 +148,14 @@
   margin: 0;
 }
 
+.animal-detail-tagline {
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--cap-color-cafe-brown);
+  margin: -6px 0 0;
+}
+
 .animal-detail-description {
   font-size: 14px;
   color: var(--cap-color-body-text);

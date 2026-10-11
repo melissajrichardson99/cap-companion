@@ -81,17 +81,20 @@ export function AnimalDetailScreen({ animal, photos, onBack, onViewCards }: Anim
       {tab === 'about' && (
         <section className="animal-detail-about cap-parchment-card">
           <h3 className="animal-detail-about-heading">{animal.aboutHeading}</h3>
+          {animal.tagline && <p className="animal-detail-tagline">{animal.tagline}</p>}
           <p className="animal-detail-description">{animal.description}</p>
-          <table className="animal-detail-facts-table">
-            <tbody>
-              {animal.facts.map((fact) => (
-                <tr key={fact.label}>
-                  <th scope="row">{fact.label}</th>
-                  <td>{fact.value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {animal.facts.length > 0 && (
+            <table className="animal-detail-facts-table">
+              <tbody>
+                {animal.facts.map((fact) => (
+                  <tr key={fact.label}>
+                    <th scope="row">{fact.label}</th>
+                    <td>{fact.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
           <button type="button" className="btn btn-primary animal-detail-cards-btn" onClick={onViewCards}>
             View Information Cards
           </button>

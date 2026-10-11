@@ -20,7 +20,7 @@ from uuid import UUID
 
 from app.errors import NotFoundError
 from app.models import ManualEntryMatchType, QrDestinationType, QrLocation
-from app.services.collectibles import ANIMAL_SLUGS
+from app.services.animals import ANIMAL_SLUGS
 from app.services.scan_codes import normalize_code
 from app.supabase_client import get_supabase_client
 

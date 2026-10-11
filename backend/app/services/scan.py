@@ -20,7 +20,7 @@ from uuid import UUID
 from app.errors import ConflictError, NotFoundError
 from app.models import EncyclopediaEntry, ManualEntryMatchType, ManualEntryResolution, ScanResult, ScanResultType
 from app.services import hunt as hunt_service
-from app.services.collectibles import ANIMAL_SLUGS
+from app.services.animals import ANIMAL_SLUGS
 from app.services.scan_codes import normalize_code
 from app.supabase_client import get_supabase_client
 
@@ -60,9 +60,9 @@ def resolve_manual_entry(raw_text: str) -> ManualEntryResolution:
     a guest typing what's printed on the sign, which carries no such prefix.
 
     Animal slugs have no table of their own (Our Animals is static frontend
-    content, not DB-backed) -- ANIMAL_SLUGS, already the canonical
-    backend-side mirror collectibles.purchase() validates against, stands in
-    for a real query there.
+    content, not DB-backed) -- ANIMAL_SLUGS (app/services/animals.py), the
+    canonical backend-side mirror of that roster, stands in for a real query
+    there.
     """
     client = get_supabase_client()
     text = normalize_code(raw_text)

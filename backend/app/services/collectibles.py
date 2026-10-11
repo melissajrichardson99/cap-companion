@@ -9,8 +9,11 @@ whose name it was collected under -- see app/routers/collectibles.py.
 
 The animal roster itself has no backend table (same as the frontend's
 ANIMALS constant in animalContent.ts -- this is a POC with no admin UI for
-either); ANIMAL_SLUGS below is this module's own copy of that same 9-slug
-list, used only to validate purchase requests and price them. Pricing/tier
+either); COLLECTIBLE_SLUGS below is the 9-animal subset of that roster that
+has a curated photo pool, used only to validate purchase requests and price
+them. It is deliberately not the full Our Animals roster
+(app/services/animals.ANIMAL_SLUGS), so a new animal page doesn't
+automatically become a buyable card. Pricing/tier
 are backend-owned so the frontend never hardcodes them -- it fetches
 get_catalog() instead.
 
@@ -35,7 +38,7 @@ from app.models import CollectibleCard, CollectibleCatalogEntry, CollectibleTier
 from app.services import coins as coins_service
 from app.supabase_client import get_supabase_client
 
-ANIMAL_SLUGS = ["capybara", "kangaroo", "alpaca", "emu", "wallaby", "goat", "sloth", "porcupine", "pig"]
+COLLECTIBLE_SLUGS = ["capybara", "kangaroo", "alpaca", "emu", "wallaby", "goat", "sloth", "porcupine", "pig"]
 
 PRICE_STANDARD = 100
 PRICE_SPECIAL = 150
@@ -60,7 +63,7 @@ def price_for(animal_slug: str) -> int:
 
 def get_catalog() -> list[CollectibleCatalogEntry]:
     return [
-        CollectibleCatalogEntry(animal_slug=slug, tier=tier_for(slug), price=price_for(slug)) for slug in ANIMAL_SLUGS
+        CollectibleCatalogEntry(animal_slug=slug, tier=tier_for(slug), price=price_for(slug)) for slug in COLLECTIBLE_SLUGS
     ]
 
 
@@ -98,7 +101,7 @@ def list_cards(session_id: UUID, guest_id: UUID | None = None) -> list[Collectib
 
 
 def purchase(animal_slug: str, guest_name: str, session_id: UUID, guest_id: UUID | None = None) -> CollectibleCard:
-    if animal_slug not in ANIMAL_SLUGS:
+    if animal_slug not in COLLECTIBLE_SLUGS:
         raise NotFoundError(f"Unknown animal '{animal_slug}'")
 
     price = price_for(animal_slug)
