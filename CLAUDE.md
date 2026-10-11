@@ -23,3 +23,5 @@ Full detail in CAP_Companion_App_TechSpec.md. Order:
 - Bingo milestone detection (line/X/blackout) needs exact tile-index math, not approximate shape detection
 - Minigame random draw must be uniformly distributed across the pool — test it
 - Snake needs solid collision handling + a real win condition (not endless mode)
+
+Never run git commit, git add or git push. Leave changes uncommitted; the owner commits manually with her own messages. No Co-Authored-By or “generated with” lines.
