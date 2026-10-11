@@ -167,16 +167,15 @@ test.describe('Attraction open/closed status', () => {
     // closed parent, since a future regression here would otherwise leave a
     // child's status silently unrepresented anywhere.
     // Exact-name matches: "Cornhole" is a prefix of the top-level "Cornhole
-    // Mini Golf" pin (migration 043), which does have its own pin and card.
-    // Pin labels read "Name (Category...)", hence the "${child} (" prefix,
-    // same as map-parent-child.spec.ts.
+    // Mini Golf" pin (migration 043), which has a pin of its own. Pin labels
+    // read "Name (Category...)", hence the "${child} (" prefix, same as
+    // map-parent-child.spec.ts. (Node cards only exist for top-level nodes
+    // with no map position, so Cornhole Mini Golf has a pin, not a card.)
     for (const child of ['Cornhole', 'Cornhole Extreme', 'Horse Hoops', 'Tiki Toss/Ring & Hook']) {
       await expect(page.locator(`.map-pin[aria-label^="${child} ("]`)).toHaveCount(0)
       const exactName = new RegExp(`^${child.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`)
       await expect(page.locator('.node-card-name').filter({ hasText: exactName })).toHaveCount(0)
     }
-    // Sanity check that the exact-name matcher does match a real card.
-    await expect(page.locator('.node-card-name').filter({ hasText: /^Cornhole Mini Golf$/ })).toHaveCount(1)
 
     // The parent's own popup already lists its children by name -- that
     // content stays intact alongside the closed note (additive, not
