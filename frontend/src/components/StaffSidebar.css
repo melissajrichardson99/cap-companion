@@ -178,6 +178,33 @@
   border: 1.5px solid var(--cap-color-header-green);
 }
 
+/* Standalone-page links (currently just the Visit Heatmap) -- same item
+   styling as the tabs above, set apart by a divider plus a small up-right
+   arrow in the badge corner so they read as "opens a page", not another
+   in-page tab. Never gets the active state: the sidebar isn't shown on
+   those pages. */
+.staff-sidebar-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding-top: var(--cap-space-2);
+  border-top: 1px dashed var(--cap-color-on-header-muted);
+}
+
+.staff-sidebar-page-link {
+  text-decoration: none;
+}
+
+.staff-sidebar-page-link-arrow {
+  position: absolute;
+  top: -5px;
+  right: -9px;
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.4;
+}
+
 @media (max-width: 720px) {
   .staff-sidebar {
     width: 72px;

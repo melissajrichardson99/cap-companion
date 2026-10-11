@@ -258,6 +258,58 @@ test('Choose Your Adventure quick-nav card links to the right destinations', asy
   await expect(page.getByText('Scan a Code')).toBeVisible()
 })
 
+// Regression: the quick-nav used to be a flex-wrap row with a 140px basis,
+// which collapsed to one column on any viewport under ~386px (360/375px
+// phones). Checks real bounding boxes, not the CSS, so a future rule change
+// that breaks the layout is caught however it happens.
+for (const width of [320, 360, 390]) {
+  test(`Choose Your Adventure quick-nav stays 2 columns on a ${width}px phone`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/')
+    const buttons = page.locator('.home-quicknav-grid .home-quicknav-btn')
+    await expect(buttons).toHaveCount(5)
+    const boxes = await buttons.evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect()
+        const label = el.querySelector('.home-quicknav-btn-label') as HTMLElement
+        return {
+          x: r.x,
+          y: r.y,
+          width: r.width,
+          height: r.height,
+          labelClipped: label.scrollWidth > label.clientWidth + 1 || label.scrollHeight > label.clientHeight + 1,
+        }
+      }),
+    )
+
+    // Rows of two: buttons 0/1 and 2/3 share a top edge, side by side, with
+    // equal widths; the odd last button spans the full row beneath them.
+    for (const [a, b] of [
+      [0, 1],
+      [2, 3],
+    ]) {
+      expect(Math.abs(boxes[a].y - boxes[b].y)).toBeLessThan(1)
+      expect(boxes[b].x).toBeGreaterThan(boxes[a].x + boxes[a].width - 1)
+      expect(Math.abs(boxes[a].width - boxes[b].width)).toBeLessThan(1)
+    }
+    expect(boxes[2].y).toBeGreaterThan(boxes[0].y + boxes[0].height - 1)
+    expect(boxes[4].y).toBeGreaterThan(boxes[2].y + boxes[2].height - 1)
+    expect(Math.abs(boxes[4].x - boxes[0].x)).toBeLessThan(1)
+    expect(Math.abs(boxes[4].x + boxes[4].width - (boxes[1].x + boxes[1].width))).toBeLessThan(1)
+
+    for (const box of boxes) {
+      expect(box.height).toBeGreaterThanOrEqual(44)
+      expect(box.width).toBeGreaterThanOrEqual(44)
+      expect(box.labelClipped).toBe(false)
+    }
+
+    const noHorizontalScroll = await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    )
+    expect(noHorizontalScroll).toBe(true)
+  })
+}
+
 test('Photo of the Day renders the actual highest-voted shortlisted photo', async ({ page, context, browser }) => {
   const lowLabel = `E2E Home Low ${Date.now()}`
   const highLabel = `E2E Home High ${Date.now()}`

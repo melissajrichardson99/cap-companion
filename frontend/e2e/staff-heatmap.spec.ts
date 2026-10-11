@@ -188,7 +188,51 @@ test('the Analytics tab links to the Visit Heatmap', async ({ page }) => {
   await page.getByRole('link', { name: 'Open Visit Heatmap' }).click({ timeout: 75_000 })
   await expect(page).toHaveURL(/\/staff\/heatmap$/)
   await expect(page.getByRole('heading', { name: 'Visit Heatmap' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Back to Staff Page' }).click()
+  await expect(page).toHaveURL(/\/staff$/)
+  await expect(page.getByRole('tab', { name: 'Photo Queue' })).toBeVisible()
+  await expect(page.getByLabel('Password')).toHaveCount(0)
 })
+
+// The sidebar entry is a real link to the standalone page (not an in-page
+// tab), at both a phone width (72px rail) and desktop (88px rail). The staff
+// token carries over both ways: no login prompt on the heatmap, none on the
+// way back.
+for (const viewport of [
+  { width: 390, height: 844 },
+  { width: 1280, height: 900 },
+]) {
+  test(`the Staff sidebar's Heatmap link opens the Visit Heatmap and Back returns to the Staff page (${viewport.width}px)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport)
+    await loginAsStaff(page)
+
+    const sidebar = page.getByRole('navigation', { name: 'Staff sections' })
+    const heatmapLink = sidebar.getByRole('link', { name: 'Heatmap', exact: true })
+    await expect(heatmapLink).toBeVisible()
+    // Kept out of the tablist, so it can't be mistaken for (or counted as) a tab.
+    await expect(sidebar.getByRole('tablist').getByRole('link')).toHaveCount(0)
+    const box = await heatmapLink.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width)
+    expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height)
+
+    await heatmapLink.click()
+    await expect(page).toHaveURL(/\/staff\/heatmap$/)
+    await expect(page.getByRole('heading', { name: 'Visit Heatmap' })).toBeVisible()
+    await expect(page.getByLabel('Password')).toHaveCount(0)
+    await expect(page.getByRole('combobox', { name: 'Source' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Date range' })).toBeVisible()
+    await expect(page.getByTestId('heatmap-total')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Back to Staff Page' }).click()
+    await expect(page).toHaveURL(/\/staff$/)
+    await expect(page.getByRole('tab', { name: 'Photo Queue' })).toBeVisible()
+    await expect(page.getByLabel('Password')).toHaveCount(0)
+  })
+}
 
 test('GET /staff/heatmap rejects requests without a valid staff Authorization header', async ({ request }) => {
   const noAuth = await request.get(`${API}/staff/heatmap?start=2020-01-01&end=2020-01-02`)

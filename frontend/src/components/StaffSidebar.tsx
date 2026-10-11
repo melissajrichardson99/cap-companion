@@ -1,7 +1,17 @@
 import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { BrandLogo } from './BrandLogo'
-import { BarChartIcon, BinocularsIcon, CameraIcon, MapPinIcon, MegaphoneIcon, MessageIcon, QrCodeIcon } from './NavIcons'
+import {
+  ArrowUpRightIcon,
+  BarChartIcon,
+  BinocularsIcon,
+  CameraIcon,
+  HeatmapIcon,
+  MapPinIcon,
+  MegaphoneIcon,
+  MessageIcon,
+  QrCodeIcon,
+} from './NavIcons'
 import './StaffSidebar.css'
 
 export type StaffTab =
@@ -83,6 +93,22 @@ export function StaffSidebar({ tab, onSelectTab, pendingPhotosCount, openRequest
               </span>
             </button>
           ))}
+        </div>
+        {/* Separate standalone pages (own routes, not in-page tabs) -- kept
+            outside the tablist so it only ever contains real tabs, below a
+            divider and marked with an arrow so it doesn't read as one more
+            tab. Same staff token, so no second login; the page's own "Back
+            to Staff Page" button returns here. */}
+        <div className="staff-sidebar-pages">
+          <Link to="/staff/heatmap" className="staff-sidebar-tab staff-sidebar-page-link">
+            <span className="staff-sidebar-tab-label">Heatmap</span>
+            <span className="staff-sidebar-tab-icon-wrap">
+              <span className="staff-sidebar-tab-icon">
+                <HeatmapIcon />
+              </span>
+              <ArrowUpRightIcon className="staff-sidebar-page-link-arrow" />
+            </span>
+          </Link>
         </div>
       </nav>
     </div>

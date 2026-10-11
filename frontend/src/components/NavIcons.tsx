@@ -353,6 +353,29 @@ export function BarChartIcon({ className }: IconProps) {
   )
 }
 
+// Hotspot -- a solid center ringed by two fading circles, the Staff Page
+// sidebar's Visit Heatmap link. Distinct from MapPinIcon (a folded map) and
+// CompassIcon; nothing else in the app covers this shape.
+export function HeatmapIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <circle cx="10" cy="10" r="2.2" fill="currentColor" stroke="none" />
+      <circle cx="10" cy="10" r="5" />
+      <circle cx="10" cy="10" r="7.8" strokeDasharray="2 2.2" />
+    </svg>
+  )
+}
+
+// Small arrow pointing up-right -- marks a Staff sidebar entry that opens
+// its own page instead of switching an in-page tab.
+export function ArrowUpRightIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...commonProps}>
+      <path d="M6 14L14 6M7.5 6H14v6.5" />
+    </svg>
+  )
+}
+
 // Head + shoulders -- Guest Accounts' "Save Your Progress" nav entry and the
 // AccountModal's title badge. Nothing else in the app covers this shape.
 export function UserIcon({ className }: IconProps) {

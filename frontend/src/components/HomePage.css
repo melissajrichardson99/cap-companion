@@ -485,6 +485,34 @@
   line-height: 1.2;
 }
 
+/* Phones: a fixed 2-column grid instead of the flex-wrap above. The flex
+   basis (140px x 2 + gap) needs ~292px of grid width, which the card only
+   has from a ~386px viewport up -- so 360/375px phones (and anything
+   zoomed) collapsed to a single sparse column. minmax(0, 1fr) keeps the two
+   tracks equal and lets long labels wrap inside the button rather than
+   widening their track. An odd last button spans both columns instead of
+   sitting alone in the left one. Tablet/desktop keep the flex layout. */
+@media (max-width: 480px) {
+  .home-quicknav-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-quicknav-btn {
+    min-width: 0;
+    max-width: none;
+    min-height: 44px;
+  }
+
+  .home-quicknav-btn:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .home-quicknav-btn-label {
+    overflow-wrap: anywhere;
+  }
+}
+
 /* "How It Works" step list -- numbered rows echoing the orange of the Quick
    Links buttons directly below, so the two cards read as one continuous
    "here's the loop, now go do it" flow rather than unrelated sections. */
