@@ -158,36 +158,70 @@ Follow in order — later steps depend on earlier ones.
    `f83ac6f`/`c56a4bf`). Copy everything **except the `*.import` files**
    Godot writes next to the export — they're editor metadata, not part of
    the shipped build.
-5. Run `node scripts/upload-games-to-r2.mjs [bucket-name]` (defaults to
-   `cap-companion-games`) to push every file under `frontend/games-dist/`
-   into the bucket via `wrangler r2 object put --remote`. Requires
-   `wrangler login` to have been run already, or `CLOUDFLARE_API_TOKEN`
-   set. Re-run this after every minigame re-export — R2 has no build hook
-   into Cloudflare's own build pipeline, unlike static assets.
-6. **Purge the cached game files after every upload.** `worker.js` caches
-   `/games/*` responses (and the upload sets `max-age=3600`), so without a
-   purge guests can get the old files for up to an hour, possibly a new
-   `index.html` with an old `index.pck`. Which steps apply depends on how
-   the app is served:
-   - **Custom domain on a Cloudflare zone:** dashboard → the zone →
-     Caching → Configuration → Purge Cache → Custom Purge. Purge by URL
-     (`https://<host>/games/<slug>/index.html` and `.../index.pck` for each
-     game) or by prefix (`<host>/games/`); both are available on the Free
-     plan. Then open `https://<host>/games/mini_snake/index.html` and check
-     the page source contains the newly exported content (e.g.
-     `cap-minigame-hello`). Not every purge method clears entries a Worker
-     stored with the Cache API — if the old file is still served, use
-     **Purge Everything** as the fallback.
-   - **`*.workers.dev`:** there's no zone to purge; the cached files
-     expire on their own within an hour.
-   - Guests' browsers also keep the files for up to an hour, and no purge
-     reaches a browser cache — so deploy game updates off-hours.
+5. **Upload with `node scripts/upload-games-to-r2.mjs`** from the repo root.
+   Re-run it after every minigame re-export — R2 has no build hook into
+   Cloudflare's own build pipeline, unlike static assets.
+   - It runs a pinned wrangler (`npx --yes wrangler@4.142.0`, set in the
+     script's `WRANGLER_VERSION`) and uses your `wrangler login`. Run
+     `npx wrangler@4.142.0 login` first if `npx wrangler@4.142.0 whoami`
+     says the token expired (it can't refresh non-interactively).
+   - **Always dry-run first:** `--dry-run` lists every file with its key,
+     size, content type and whether it would upload or skip, and why. No
+     writes, no confirmation needed.
+   - **Only changed files upload.** The script keeps a manifest
+     (`_meta/upload-manifest.json` in the bucket; the Worker 404s it) with
+     each file's size and SHA-256; matching files are skipped, anything
+     else (changed, unrecorded, unreadable) uploads. `--verify-remote`
+     ignores the manifest and compares against the live bytes instead
+     (downloads the whole bucket, ~380MB, read-only) — use it for the first
+     run (no manifest exists yet) and after any upload done outside the
+     script. `--force-all` uploads everything; `--only <slug,...>` limits
+     the run.
+   - **Order:** one game at a time, and within a game the engine/support
+     files first, then `index.pck`, then `index.html` last — a run that
+     stops part-way never serves a new `index.html` in front of older files.
+   - **Failures:** each file is retried twice (2s, 5s). If it still fails
+     the script stops, lists what was and wasn't uploaded, prints the
+     resume command, and exits non-zero. Re-running resumes — finished
+     files are skipped.
+   - A real run prints the target bucket and asks you to type its name;
+     `--yes` skips that.
+   - Testing the script itself: `--local <dir>` targets wrangler's local R2
+     simulator instead of the real bucket.
+6. **Caching and how long until guests see it.** `worker.js` sets the
+   `Cache-Control` guests get (the object's stored header is ignored):
+   `index.html` and `index.pck` — the only files a game update changes —
+   get `public, max-age=60`; `.wasm`, `.js` and images keep
+   `public, max-age=3600`. The edge (Cache API) and the browser each honour
+   it, so a new build reaches every guest within about **2 minutes**. The
+   live app is on `*.workers.dev`, which has **no zone to purge** — waiting
+   is the only option. That header only applies to files cached after the
+   Worker change deployed, so the Worker must be live (it deploys with the
+   frontend on push) at least an hour before the first game upload that
+   relies on it. Mixing is harmless: an old `index.pck` behind a new
+   `index.html` boots and plays, but the overlay closes at round end without
+   a result, so a Scavenger Hunt Challenge 3 play in that window doesn't
+   count; the reverse mix shows the end card normally. The size of
+   `index.pck` written into `index.html` only drives the loading bar.
 7. **Deploy order doesn't matter** between the React app and the games.
    The minigame overlay treats a build that never sends `minigame-hello`
    exactly as before end cards existed, and an older overlay ignores the
    new messages and closes on Exit. Deploying React first means the
    Scavenger Hunt Challenge 3 rule (a round must be finished) takes effect
    as each game lands.
+8. **Rollback** — every build is in git (`frontend/games-dist/` is
+   tracked; R2 has no object versioning). To restore the previous build:
+   ```powershell
+   git restore --source=<previous-commit> -- frontend/games-dist
+   node scripts/upload-games-to-r2.mjs --dry-run   # shows just the files that differ
+   node scripts/upload-games-to-r2.mjs
+   git restore --source=HEAD -- frontend/games-dist
+   ```
+   `git log --oneline -- frontend/games-dist` lists the builds.
+
+> **History:** until the October 2026 release the bucket was still serving
+> the 2026-08-16 build (commit `f83ac6f`), so the first upload after it also
+> ships the 2026-08-22 popup fixes (`07cc092`), not just the end-card work.
 
 ### 2.5 Close the loop: URLs and QR codes
 
@@ -227,6 +261,10 @@ Follow in order — later steps depend on earlier ones.
   silently splits into multiple argv entries. The script has its own
   `shellQuote()` helper to guard against this — if you add new args to
   that script, quote them the same way rather than passing raw strings.
+- **`worker.js` must not have named exports.** The Workers runtime treats
+  every named export as an entrypoint and refuses to start on anything that
+  isn't a handler (`export const X = ...` took the whole Worker down in
+  `wrangler dev`). Keep helpers module-private; check with `wrangler dev`.
 - **Cloudflare's 25MiB per-file static-asset cap** is why minigames live in
   R2 instead of `frontend/public/games/` — Godot's `.wasm` exports run
   ~38MB. See `worker.js`'s header comment and section 2.4 above.

@@ -4,6 +4,7 @@ import { api, type AnimalPhoto, type Announcement, type MapNode, type PhotoSubmi
 import { ANIMALS } from '../animalContent'
 import { clearStaffToken } from '../staffAuth'
 import { getStaffName } from '../staffName'
+import { useVisibleInterval } from '../useVisibleInterval'
 import { ClearShortlistModal } from './ClearShortlistModal'
 import { ClipboardIcon } from './NavIcons'
 import { StaffAnalytics } from './StaffAnalytics'
@@ -172,25 +173,25 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
       .catch((err) => setAnimalPhotosError(String(err)))
   }
 
-  // Re-runs (and restarts the poll interval) whenever showResolved changes,
-  // so toggling it doesn't wait up to POLL_INTERVAL_MS for a stale closure
-  // to pick up the new value.
-  useEffect(() => {
+  const reloadEverything = () => {
     reload()
     reloadAllPhotos()
     reloadAnimalPhotos()
     reloadAnnouncements()
     reloadAttractionNodes()
-    const interval = setInterval(() => {
-      reload()
-      reloadAllPhotos()
-      reloadAnimalPhotos()
-      reloadAnnouncements()
-      reloadAttractionNodes()
-    }, POLL_INTERVAL_MS)
-    return () => clearInterval(interval)
+  }
+
+  // Loads everything on mount, and reloads whenever showResolved changes so
+  // toggling it doesn't wait up to POLL_INTERVAL_MS for the next tick.
+  useEffect(() => {
+    reloadEverything()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showResolved])
+
+  // The poll itself pauses in a hidden tab and reloads everything at once
+  // when the tab is shown again (useVisibleInterval). It always calls the
+  // latest reloadEverything, so it picks up showResolved without restarting.
+  useVisibleInterval(reloadEverything, POLL_INTERVAL_MS, true)
 
   const toggleNodeOpen = (node: MapNode) => {
     setPendingAttractionActionId(node.id)

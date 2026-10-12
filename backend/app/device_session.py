@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import threading
 from collections import OrderedDict
+from concurrent.futures import Future
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -44,6 +45,13 @@ _RECENT_SESSIONS_MAX = 20_000
 
 _recent_sessions: OrderedDict[str, DeviceSession] = OrderedDict()
 _recent_sessions_lock = threading.Lock()
+# Single-flight: the upsert currently running for a token, if any. A new
+# device's first page load fires its API calls in parallel, and every one of
+# them used to miss the cache and upsert on its own (about 6 for one load).
+# Now the first request runs the upsert and the rest wait on its Future.
+# Entries are removed as soon as the upsert finishes, success or failure, so
+# a failed upsert is retried by the next request rather than cached.
+_inflight: dict[str, Future[DeviceSession]] = {}
 
 
 def _now() -> datetime:
@@ -60,13 +68,32 @@ def get_or_create_session(x_device_session: str = Header(...)) -> DeviceSession:
         if cached is not None and now - cached.last_active_at < LAST_ACTIVE_REFRESH_INTERVAL:
             _recent_sessions.move_to_end(x_device_session)
             return cached
+        inflight = _inflight.get(x_device_session)
+        if inflight is None:
+            inflight = _inflight[x_device_session] = Future()
+            leader = True
+        else:
+            leader = False
 
-    session = _upsert_session(x_device_session, now)
+    if not leader:
+        # Re-raises the leader's exception if its upsert failed. The lock is
+        # not held while waiting, only while touching the two dicts.
+        return inflight.result()
+
+    try:
+        session = _upsert_session(x_device_session, now)
+    except BaseException as exc:
+        with _recent_sessions_lock:
+            del _inflight[x_device_session]
+        inflight.set_exception(exc)
+        raise
     with _recent_sessions_lock:
         _recent_sessions[x_device_session] = session
         _recent_sessions.move_to_end(x_device_session)
         while len(_recent_sessions) > _RECENT_SESSIONS_MAX:
             _recent_sessions.popitem(last=False)
+        del _inflight[x_device_session]
+    inflight.set_result(session)
     return session
 
 

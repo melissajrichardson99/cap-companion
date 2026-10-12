@@ -32,6 +32,7 @@ import { ToastStack, type ToastItem } from './components/ToastStack'
 import { rotateDeviceSessionId } from './deviceSession'
 import { clearDismissedAnnouncements } from './dismissedAnnouncements'
 import { clearGuestAuthToken, getGuestAuthToken, setGuestAuthToken } from './guestAuth'
+import { useVisibleInterval } from './useVisibleInterval'
 import './components/shared.css'
 import './App.css'
 
@@ -42,12 +43,16 @@ import './App.css'
 // current location to highlight the active tab.
 // Test-only hook (same spirit as main.tsx's window.__capWhoami) so e2e can
 // force an immediate Contact Staff status poll tick instead of sleeping past
-// the real 12s interval.
+// the real interval.
 declare global {
   interface Window {
     __capReloadContactStatus?: () => void
   }
 }
+
+// Only runs while the guest has an active request (see the poll below), so
+// the worst case for seeing a staff response is one interval.
+const CONTACT_STATUS_POLL_INTERVAL_MS = 15_000
 
 // One queued minigame play. See minigameQueue in App.
 interface MinigameLaunch {
@@ -117,9 +122,8 @@ function App() {
   // undefined = not yet loaded once (mirrors nodes === null elsewhere);
   // null = loaded, no active request; otherwise the session's own active
   // (open/acknowledged) Contact Staff request. myRequestStatusRef mirrors
-  // the state so the poll's setInterval closure can compare against the
-  // PREVIOUS value without depending on stale state from when the interval
-  // was created.
+  // the state so each status check compares against the latest value even
+  // when several are in flight at once (load, poll tick, modal open).
   const [myRequestStatus, setMyRequestStatus] = useState<StaffRequest | null | undefined>(undefined)
   const myRequestStatusRef = useRef<StaffRequest | null | undefined>(undefined)
 
@@ -233,10 +237,8 @@ function App() {
   // status change worth interrupting the guest for is open -> acknowledged
   // ("a staff member has seen this and is on the way") -- resolved/cancelled
   // just clear the indicator silently, same as the guest closing the modal
-  // themselves. Compares against myRequestStatusRef (not React state) since
-  // this also runs from a setInterval callback created once on mount, which
-  // would otherwise only ever see the myRequestStatus value from that first
-  // render.
+  // themselves. Compares against myRequestStatusRef (not React state), so
+  // overlapping checks never compare against a stale render's value.
   const reloadMyRequestStatus = () => {
     api
       .getMyStaffRequest()
@@ -354,18 +356,23 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Contact Staff proactive-notification poll -- mirrors StaffPage.tsx's own
-  // POLL_INTERVAL_MS (12s) simple-polling approach (no websockets in this
-  // app). window.__capReloadContactStatus is a test-only hook (same spirit
-  // as main.tsx's window.__capWhoami) so e2e can force an immediate poll
-  // tick instead of sleeping past the real interval.
+  // Contact Staff status: one check on load. window.__capReloadContactStatus
+  // is a test-only hook (same spirit as main.tsx's window.__capWhoami) so
+  // e2e can force an immediate check instead of waiting out the interval.
   useEffect(() => {
     reloadMyRequestStatus()
-    const timer = window.setInterval(reloadMyRequestStatus, 12_000)
     window.__capReloadContactStatus = reloadMyRequestStatus
-    return () => window.clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ...then poll only while there's something staff can still change: an
+  // active (open/acknowledged) request, or a status that hasn't loaded yet
+  // (undefined -- so a failed first check keeps retrying). null (no active
+  // request) means no timer at all; submitting a request refreshes the
+  // status via ContactStaffModal's onRequestChanged, which starts the poll,
+  // and the poll seeing it resolved/cancelled (null) stops it again. Paused
+  // in a hidden tab, with an immediate check on return (useVisibleInterval).
+  useVisibleInterval(reloadMyRequestStatus, CONTACT_STATUS_POLL_INTERVAL_MS, myRequestStatus !== null)
 
   // Bingo's coin amount rides along with its MilestoneBanner (see
   // MilestoneEvent.coins_awarded) instead of a toast, since a bingo tile

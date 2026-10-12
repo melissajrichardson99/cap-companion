@@ -20,7 +20,9 @@ interface ContactStaffModalProps {
   myRequestStatus: StaffRequest | null | undefined
   // Called after a successful submit AND after a successful cancel, so
   // App.tsx's badge/toast state updates immediately rather than waiting for
-  // its next 12s poll tick. Also fired on mount, so reopening this modal
+  // its next poll tick -- and, after a submit, so App.tsx sees the new
+  // active request and starts polling at all (it doesn't poll while there's
+  // no active request). Also fired on mount, so reopening this modal
   // always shows a freshly-checked status -- the "check anytime" half of
   // this feature, and what lets e2e force a poll tick without sleeping.
   onRequestChanged: () => void
