@@ -186,6 +186,12 @@ test('editing re-triggers the popup for a guest who already dismissed the origin
   const editingRow = staffPage.locator('.staff-announcement-edit')
   await editingRow.locator('.staff-announcement-textarea').fill(updatedText)
   await editingRow.getByRole('button', { name: 'Save' }).click()
+  // The edit form only closes once the PATCH has returned. Wait for that
+  // rather than for the row text below, which already matches while the
+  // textarea still holds the new text -- otherwise the guest's reload can
+  // race the save (and with the backend's announcements cache, a reload that
+  // lands before the write is answered instantly with the pre-edit row).
+  await expect(editingRow).toHaveCount(0)
 
   // Still one row, same announcement -- editing must never create a second.
   await expect(staffPage.locator('.staff-announcement-row', { hasText: updatedText })).toHaveCount(1)

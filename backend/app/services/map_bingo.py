@@ -24,6 +24,7 @@ import random
 from datetime import datetime, timezone
 from uuid import UUID
 
+from app import reference_cache
 from app.device_session import list_guest_session_ids
 from app.errors import NotFoundError
 from app.models import (
@@ -92,6 +93,57 @@ def _row_to_bingo_tile(row: dict, completed_at: str | None) -> BingoTile:
     )
 
 
+def _all_map_nodes(client) -> list[dict]:
+    """Every map_nodes row (shared reference data, cached -- see
+    app/reference_cache.py; set_node_open_status invalidates it)."""
+    return reference_cache.get(
+        reference_cache.MAP_NODES, lambda: client.table("map_nodes").select("*").execute().data
+    )
+
+
+def _all_map_nodes_by_name(client) -> list[dict]:
+    """Same rows as _all_map_nodes, in the database's name collation order."""
+    return reference_cache.get(
+        reference_cache.MAP_NODES_BY_NAME,
+        lambda: client.table("map_nodes").select("*").order("name").execute().data,
+    )
+
+
+def _bingo_tile_links(client) -> list[dict]:
+    """id/label/linked_map_node_id of every bingo tile (shared, cached)."""
+    return reference_cache.get(
+        reference_cache.BINGO_TILE_LINKS,
+        lambda: client.table("bingo_tiles").select("id,label,linked_map_node_id").execute().data,
+        reference_cache.STATIC_TTL,
+    )
+
+
+def _all_bingo_cards(client) -> list[dict]:
+    """Every bingo_cards row, oldest first (shared, cached)."""
+    return reference_cache.get(
+        reference_cache.BINGO_CARDS,
+        lambda: client.table("bingo_cards").select("*").order("created_at").execute().data,
+        reference_cache.STATIC_TTL,
+    )
+
+
+def _card_tile_rows(client, card_id: str) -> list[dict]:
+    """One card's bingo_tiles rows in row/col order (shared layout, cached
+    per card). Only called for a card that exists, so the keys stay bounded
+    by the number of cards."""
+    return reference_cache.get(
+        reference_cache.bingo_card_tiles_key(card_id),
+        lambda: client.table("bingo_tiles")
+        .select("*")
+        .eq("card_id", card_id)
+        .order("row_index")
+        .order("col_index")
+        .execute()
+        .data,
+        reference_cache.STATIC_TTL,
+    )
+
+
 def _resolve_session_ids(session_id: UUID, guest_id: UUID | None) -> list[str]:
     """Guest Accounts Phase 3: the set of session_ids a guest-aware read
     should span -- every device session ever linked to the guest
@@ -141,8 +193,10 @@ def list_map_nodes(session_id: UUID, guest_id: UUID | None = None) -> list[MapNo
     """
     client = get_supabase_client()
     session_ids = _resolve_session_ids(session_id, guest_id)
-    nodes = client.table("map_nodes").select("*").execute().data
-    all_tiles = client.table("bingo_tiles").select("id,label,linked_map_node_id").execute().data
+    # Shared parts (identical for every guest) come from the reference
+    # cache; visits and completions below are always read per request.
+    nodes = _all_map_nodes(client)
+    all_tiles = _bingo_tile_links(client)
     visited_rows = (
         client.table("node_visits").select("node_id").in_("session_id", session_ids).execute().data
         if session_ids
@@ -189,7 +243,7 @@ def list_map_nodes(session_id: UUID, guest_id: UUID | None = None) -> list[MapNo
 
 def list_bingo_cards() -> list[BingoCardSummary]:
     client = get_supabase_client()
-    rows = client.table("bingo_cards").select("id,owner_label").order("created_at").execute().data
+    rows = _all_bingo_cards(client)
     return [BingoCardSummary(id=r["id"], owner_label=r["owner_label"]) for r in rows]
 
 
@@ -206,20 +260,12 @@ def get_bingo_card(card_id: UUID, session_id: UUID, guest_id: UUID | None = None
     """
     client = get_supabase_client()
     session_ids = _resolve_session_ids(session_id, guest_id)
-    card_rows = client.table("bingo_cards").select("*").eq("id", str(card_id)).execute().data
-    if not card_rows:
+    card_row = next((r for r in _all_bingo_cards(client) if r["id"] == str(card_id)), None)
+    if card_row is None:
         raise NotFoundError(f"Bingo card {card_id} not found")
-    card_row = card_rows[0]
 
-    tile_rows = (
-        client.table("bingo_tiles")
-        .select("*")
-        .eq("card_id", str(card_id))
-        .order("row_index")
-        .order("col_index")
-        .execute()
-        .data
-    )
+    # Shared layout from the reference cache; completions are per request.
+    tile_rows = _card_tile_rows(client, card_row["id"])
     completions = _session_tile_completions(client, session_ids, [r["id"] for r in tile_rows])
     completed_indices = {
         r["row_index"] * 5 + r["col_index"] for r in tile_rows if r["id"] in completions
@@ -239,7 +285,11 @@ def _minigame_pool() -> list[Minigame]:
     # once Phase 2 ships" — it's every game shipped so far, not just the
     # games belonging to the current phase number.
     client = get_supabase_client()
-    rows = client.table("minigames").select("*").lte("phase", CURRENT_MINIGAME_PHASE).execute().data
+    rows = reference_cache.get(
+        reference_cache.MINIGAMES,
+        lambda: client.table("minigames").select("*").lte("phase", CURRENT_MINIGAME_PHASE).execute().data,
+        reference_cache.STATIC_TTL,
+    )
     if not rows:
         raise RuntimeError("No minigames available in the current phase pool.")
     return [Minigame(**r) for r in rows]
@@ -287,13 +337,9 @@ def complete_tile(tile_id: UUID, session_id: UUID, guest_id: UUID | None = None)
         raise NotFoundError(f"Bingo tile {tile_id} not found")
     tile_row = tile_rows[0]
 
-    all_tiles = (
-        client.table("bingo_tiles")
-        .select("id,row_index,col_index")
-        .eq("card_id", tile_row["card_id"])
-        .execute()
-        .data
-    )
+    # The card's full layout from the reference cache (only id/row/col are
+    # used here, so its row order doesn't matter).
+    all_tiles = _card_tile_rows(client, tile_row["card_id"])
     index_to_tile_id = {r["row_index"] * 5 + r["col_index"]: r["id"] for r in all_tiles}
     prior_completions = _session_tile_completions(client, session_ids, [r["id"] for r in all_tiles])
     prior_indices = {
@@ -435,7 +481,7 @@ def _check_map_exploration_bonus(
     """
     session_ids = _resolve_session_ids(session_id, guest_id)
     if all_nodes is None:
-        all_nodes = client.table("map_nodes").select("id,is_open,parent_node_id").execute().data
+        all_nodes = _all_map_nodes(client)
     top_level_open_ids = {n["id"] for n in all_nodes if n["is_open"] and n["parent_node_id"] is None}
     if not top_level_open_ids:
         return 0
@@ -502,8 +548,10 @@ def visit_node(
     # children and the exploration-bonus check below, instead of three
     # separate map_nodes queries. Ordered by name in SQL so the children
     # keep the database's collation order, exactly as their own
-    # .order("name") query returned them before.
-    all_nodes = client.table("map_nodes").select("*").order("name").execute().data
+    # .order("name") query returned them before. Shared reference data, so
+    # it comes from the cache; is_open (which the exploration bonus reads)
+    # is kept current by set_node_open_status's invalidation.
+    all_nodes = _all_map_nodes_by_name(client)
     node_row = next((n for n in all_nodes if n["id"] == str(node_id)), None)
     if node_row is None:
         raise NotFoundError(f"Map node {node_id} not found")
@@ -518,12 +566,14 @@ def visit_node(
     # Completing a tile never changes bingo_tiles (completion state lives in
     # session_tile_completions), so one read before completing is the same
     # data the old second read returned.
-    tiles = (
-        client.table("bingo_tiles")
+    tiles = reference_cache.get(
+        reference_cache.node_linked_tiles_key(str(node_id)),
+        lambda: client.table("bingo_tiles")
         .select("id,label")
         .in_("linked_map_node_id", relevant_node_ids)
         .execute()
-        .data
+        .data,
+        reference_cache.STATIC_TTL,
     )
     linked_ids = {t["id"] for t in tiles}
 
@@ -579,9 +629,14 @@ def set_node_open_status(node_id: UUID, is_open: bool) -> MapNode:
     """
     client = get_supabase_client()
 
-    updated_rows = (
-        client.table("map_nodes").update({"is_open": is_open}).eq("id", str(node_id)).execute().data
-    )
+    try:
+        updated_rows = (
+            client.table("map_nodes").update({"is_open": is_open}).eq("id", str(node_id)).execute().data
+        )
+    finally:
+        # Before the response goes out, so the change is live on the very
+        # next guest load (and the exploration bonus sees it immediately).
+        reference_cache.invalidate(reference_cache.MAP_NODES, reference_cache.MAP_NODES_BY_NAME)
     if not updated_rows:
         raise NotFoundError(f"Map node {node_id} not found")
     updated_node_row = updated_rows[0]

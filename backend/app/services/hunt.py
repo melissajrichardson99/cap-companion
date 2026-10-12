@@ -19,10 +19,40 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
+from app import reference_cache
 from app.errors import NotFoundError
 from app.models import CoinSourceType, HuntCharacter, HuntCharacterScanCode, HuntChallenge
 from app.services import coins as coins_service
 from app.supabase_client import get_supabase_client
+
+
+def cached_character_rows() -> list[dict]:
+    """Every hunt_characters row in sort order (shared reference data,
+    cached -- see app/reference_cache.py). Default TTL rather than
+    STATIC_TTL because map_node_id lives on these rows; the one API that
+    changes it (qr_locations.set_location) invalidates this key."""
+    client = get_supabase_client()
+    return reference_cache.get(
+        reference_cache.HUNT_CHARACTERS,
+        lambda: client.table("hunt_characters").select("*").order("sort_order").execute().data,
+    )
+
+
+def _cached_challenge_rows() -> list[dict]:
+    """Every hunt_challenges row (shared content, cached; no API writes it)."""
+    client = get_supabase_client()
+    return reference_cache.get(
+        reference_cache.HUNT_CHALLENGES,
+        lambda: client.table("hunt_challenges").select("*").execute().data,
+        reference_cache.STATIC_TTL,
+    )
+
+
+def _cached_character_row(character_id: UUID | str) -> dict:
+    row = next((c for c in cached_character_rows() if c["id"] == str(character_id)), None)
+    if row is None:
+        raise NotFoundError(f"Hunt character {character_id} not found")
+    return row
 
 
 def _row_to_challenge(row: dict) -> HuntChallenge:
@@ -75,8 +105,10 @@ def _get_or_create_progress(client, session_id: UUID, character_id: str) -> dict
 
 def list_characters(session_id: UUID) -> list[HuntCharacter]:
     client = get_supabase_client()
-    char_rows = client.table("hunt_characters").select("*").order("sort_order").execute().data
-    challenge_rows = client.table("hunt_challenges").select("*").execute().data
+    # Characters and challenges are shared (cached); progress is this
+    # session's own and always read fresh.
+    char_rows = cached_character_rows()
+    challenge_rows = _cached_challenge_rows()
     progress_rows = client.table("hunt_progress").select("*").eq("session_id", str(session_id)).execute().data
 
     challenges_by_character: dict[str, list[dict]] = {}
@@ -122,11 +154,9 @@ def get_character(character_id: UUID | str, session_id: UUID | None = None) -> H
     caller passes a real session_id."""
     client = get_supabase_client()
 
-    char_rows = client.table("hunt_characters").select("*").eq("id", str(character_id)).execute().data
-    if not char_rows:
-        raise NotFoundError(f"Hunt character {character_id} not found")
-
-    challenge_rows = client.table("hunt_challenges").select("*").eq("character_id", str(character_id)).execute().data
+    char_row = _cached_character_row(character_id)
+    # Order doesn't matter here: _character_from_rows sorts by order_index.
+    challenge_rows = [r for r in _cached_challenge_rows() if r["character_id"] == char_row["id"]]
 
     progress_row = None
     if session_id is not None:
@@ -140,7 +170,7 @@ def get_character(character_id: UUID | str, session_id: UUID | None = None) -> H
         )
         progress_row = progress_rows[0] if progress_rows else None
 
-    return _character_from_rows(char_rows[0], challenge_rows, progress_row)
+    return _character_from_rows(char_row, challenge_rows, progress_row)
 
 
 def unlock_character(character_id: UUID | str, session_id: UUID) -> HuntCharacter:
@@ -151,9 +181,7 @@ def unlock_character(character_id: UUID | str, session_id: UUID) -> HuntCharacte
     scanning the same physical sign each get their own independent unlock."""
     client = get_supabase_client()
 
-    char_rows = client.table("hunt_characters").select("id").eq("id", str(character_id)).execute().data
-    if not char_rows:
-        raise NotFoundError(f"Hunt character {character_id} not found")
+    _cached_character_row(character_id)  # 404s an unknown id
 
     progress_row = _get_or_create_progress(client, session_id, str(character_id))
     if progress_row["unlocked_at"] is None:
@@ -167,10 +195,9 @@ def unlock_character(character_id: UUID | str, session_id: UUID) -> HuntCharacte
 def complete_challenge(challenge_id: UUID, session_id: UUID) -> HuntCharacter:
     client = get_supabase_client()
 
-    challenge_rows = client.table("hunt_challenges").select("*").eq("id", str(challenge_id)).execute().data
-    if not challenge_rows:
+    challenge_row = next((r for r in _cached_challenge_rows() if r["id"] == str(challenge_id)), None)
+    if challenge_row is None:
         raise NotFoundError(f"Hunt challenge {challenge_id} not found")
-    challenge_row = challenge_rows[0]
     character_id = challenge_row["character_id"]
 
     progress_row = _get_or_create_progress(client, session_id, character_id)
@@ -209,7 +236,7 @@ def complete_challenge(challenge_id: UUID, session_id: UUID) -> HuntCharacter:
         all_progress = (
             client.table("hunt_progress").select("completed_at").eq("session_id", str(session_id)).execute().data
         )
-        characters_total = len(client.table("hunt_characters").select("id").execute().data)
+        characters_total = len(cached_character_rows())
         all_characters_complete = len(all_progress) == characters_total and all(
             r["completed_at"] is not None for r in all_progress
         )

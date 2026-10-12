@@ -369,3 +369,46 @@ module's docstring for the full per-table policy and the safety reasoning.
 - Manual/dev-DB verification lives in
   `backend/scripts/verify_session_cleanup.py` (run against the real dev
   Supabase project, same as `reset_demo_data.py` — see its docstring).
+
+## 7. Reference-data cache
+
+The backend keeps shared, slow-changing data in memory
+(`backend/app/reference_cache.py`) so a guest's page load doesn't re-read it
+from Supabase every time. It covers map nodes, the bingo layout, minigames,
+puzzles, scoring games, Hunt characters and challenges, announcements,
+animal photos, the shortlisted photo gallery (photo of the day comes from
+it) and the QR lookup tables. Anything per-device, per-guest or staff-only
+is always read fresh.
+
+- **Kill switch:** set `REFERENCE_CACHE_ENABLED=0` in the Render dashboard
+  to turn caching off completely. Render restarts the service when an env
+  var changes; after that every request reads Supabase directly, exactly
+  as before the cache existed. Unset (the default) means on. No code
+  change or redeploy needed either way.
+- **Staff changes are immediate.** Every write that goes through the API
+  (opening or closing an attraction, announcements, animal photo
+  upload/delete/reorder, photo shortlist/reject/delete/clear, votes, Reset
+  Session and session cleanup removing votes, QR location edits) clears
+  the affected entries before it responds.
+- **Direct database edits are not immediate.** A migration, a `seed.sql`
+  re-run or a value typed into the SQL editor (for example a Math Maze
+  staff time) shows up when the entry expires: within **60 seconds** for
+  most data, and within **5 minutes** for minigames, scoring games, the
+  bingo layout and Hunt challenge content. To make a change show at once,
+  restart the service from the Render dashboard (the cache is in memory,
+  so a restart empties it).
+- **Restarts and sleep:** the cache lives only in the running process. A
+  deploy, a restart or the free tier spinning down after 15 idle minutes
+  empties it, and the first requests afterwards simply refill it.
+- **More than one instance:** today the backend is a single uvicorn
+  process on one free-tier instance, so every request shares one cache. If
+  it is ever scaled to several instances (or run with `--workers N`), each
+  one keeps its own cache, and a staff write only clears the cache of the
+  instance that handled it. The other instances catch up when their copy
+  expires, so a guest could see the old value for up to the TTL above
+  (60 seconds, or 5 minutes for the static tables). If that matters at
+  that point, either lower the TTLs, move the cache to a shared store such
+  as Redis, or turn it off with the kill switch.
+- **Signed URLs:** nothing cached contains an expiring URL. Animal photos
+  and gallery photos use public Storage URLs, built from the stored path
+  on every request.

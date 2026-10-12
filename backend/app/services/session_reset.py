@@ -116,6 +116,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from app import reference_cache
 from app.models import ResetSessionResult
 from app.supabase_client import get_supabase_client
 
@@ -161,6 +162,9 @@ def reset_session(session_id: UUID, guest_auth_token: str | None = None) -> Rese
     )
 
     photo_vote_rows = client.table("photo_votes").delete().eq("session_id", str(session_id)).execute().data
+    if photo_vote_rows:
+        # Vote counts are part of the cached guest gallery.
+        reference_cache.invalidate(reference_cache.PHOTO_GALLERY)
 
     return ResetSessionResult(
         bingo_tiles_reset=len(tile_rows),

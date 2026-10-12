@@ -14,6 +14,7 @@ import re
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from app import reference_cache
 from app.errors import ConflictError, NotFoundError, ValidationError
 from app.models import EMAIL_RE, PhotoStatus, PhotoSubmission
 from app.supabase_client import get_supabase_client
@@ -104,13 +105,16 @@ def _curate(submission_id: UUID, new_status: PhotoStatus) -> PhotoSubmission:
         raise ConflictError(f'Photo submission {submission_id} is "{current}", cannot mark {new_status}')
 
     client = get_supabase_client()
-    row = (
-        client.table("photo_submissions")
-        .update({"status": new_status.value})
-        .eq("id", str(submission_id))
-        .execute()
-        .data[0]
-    )
+    try:
+        row = (
+            client.table("photo_submissions")
+            .update({"status": new_status.value})
+            .eq("id", str(submission_id))
+            .execute()
+            .data[0]
+        )
+    finally:
+        reference_cache.invalidate(reference_cache.PHOTO_GALLERY)
     return _row_to_submission(row)
 
 
@@ -136,8 +140,11 @@ def delete_submission(submission_id: UUID) -> None:
         raise ConflictError(f'Photo submission {submission_id} is "{current}", cannot delete')
 
     client = get_supabase_client()
-    client.storage.from_(BUCKET).remove([row["storage_path"]])
-    client.table("photo_submissions").delete().eq("id", str(submission_id)).execute()
+    try:
+        client.storage.from_(BUCKET).remove([row["storage_path"]])
+        client.table("photo_submissions").delete().eq("id", str(submission_id)).execute()
+    finally:
+        reference_cache.invalidate(reference_cache.PHOTO_GALLERY)
 
 
 def delete_all_shortlisted() -> int:
@@ -156,14 +163,17 @@ def delete_all_shortlisted() -> int:
     if not rows:
         return 0
 
-    client.storage.from_(BUCKET).remove([r["storage_path"] for r in rows])
-    client.table("photo_submissions").delete().eq("status", PhotoStatus.SHORTLISTED.value).execute()
+    try:
+        client.storage.from_(BUCKET).remove([r["storage_path"] for r in rows])
+        client.table("photo_submissions").delete().eq("status", PhotoStatus.SHORTLISTED.value).execute()
+    finally:
+        reference_cache.invalidate(reference_cache.PHOTO_GALLERY)
     return len(rows)
 
 
-def list_gallery(session_id: UUID | None, include_email: bool = False) -> list[PhotoSubmission]:
+def _query_gallery_rows() -> list[dict]:
     client = get_supabase_client()
-    rows = (
+    return (
         client.table("photo_submissions")
         .select("*,photo_votes(session_id)")
         .eq("status", PhotoStatus.SHORTLISTED.value)
@@ -171,6 +181,24 @@ def list_gallery(session_id: UUID | None, include_email: bool = False) -> list[P
         .execute()
         .data
     )
+
+
+def _guest_gallery_rows() -> list[dict]:
+    # Cached (app/reference_cache.py) with email stripped before storing --
+    # the guest view never shows it, and staff-only data never goes in the
+    # cache. Every vote and every curation write invalidates this, as do
+    # Reset Session and session cleanup when they delete votes.
+    def load() -> list[dict]:
+        return [{k: v for k, v in row.items() if k != "email"} for row in _query_gallery_rows()]
+
+    return reference_cache.get(reference_cache.PHOTO_GALLERY, load)
+
+
+def list_gallery(session_id: UUID | None, include_email: bool = False) -> list[PhotoSubmission]:
+    # The cached rows are shared; voted_by_me is still worked out per
+    # request from this session's id against each photo's vote list. The
+    # staff view (include_email) always reads fresh.
+    rows = _query_gallery_rows() if include_email else _guest_gallery_rows()
     return [_row_to_submission(r, session_id, include_email) for r in rows]
 
 
@@ -211,7 +239,13 @@ def vote(submission_id: UUID, session_id: UUID) -> PhotoSubmission:
     # The unique(submission_id, session_id) constraint (migration 028) is
     # the real enforcement against a duplicate vote; the check above just
     # gives a friendlier error ahead of it.
-    client.table("photo_votes").insert({"submission_id": str(submission_id), "session_id": str(session_id)}).execute()
+    try:
+        client.table("photo_votes").insert(
+            {"submission_id": str(submission_id), "session_id": str(session_id)}
+        ).execute()
+    finally:
+        # Vote counts (and photo of the day) are part of the cached gallery.
+        reference_cache.invalidate(reference_cache.PHOTO_GALLERY)
 
     updated_row = (
         client.table("photo_submissions")

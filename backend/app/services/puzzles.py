@@ -13,6 +13,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+from app import reference_cache
 from app.errors import NotFoundError
 from app.models import CoinSourceType, Puzzle, PuzzleAttempt, PuzzleChallenge
 from app.services import coins as coins_service
@@ -38,10 +39,31 @@ def _parse_timestamptz(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def list_puzzles() -> list[Puzzle]:
+def cached_puzzle_rows() -> list[dict]:
+    """Every puzzles row, oldest first (shared reference data, cached at
+    the default TTL -- see app/reference_cache.py; qr_locations.set_location
+    invalidates it)."""
     client = get_supabase_client()
-    puzzle_rows = client.table("puzzles").select("*").order("created_at").execute().data
-    challenge_rows = client.table("puzzle_challenges").select("*").order("sort_order").execute().data
+    return reference_cache.get(
+        reference_cache.PUZZLES, lambda: client.table("puzzles").select("*").order("created_at").execute().data
+    )
+
+
+def cached_challenge_rows() -> list[dict]:
+    """Every puzzle_challenges row in sort order (shared, cached). Default
+    TTL, not STATIC_TTL: staff_time_seconds is edited by hand in the
+    database (there's no API for it), so that's how long such an edit takes
+    to show."""
+    client = get_supabase_client()
+    return reference_cache.get(
+        reference_cache.PUZZLE_CHALLENGES,
+        lambda: client.table("puzzle_challenges").select("*").order("sort_order").execute().data,
+    )
+
+
+def list_puzzles() -> list[Puzzle]:
+    puzzle_rows = cached_puzzle_rows()
+    challenge_rows = cached_challenge_rows()
 
     challenges_by_puzzle: dict[str, list[PuzzleChallenge]] = {}
     for row in challenge_rows:

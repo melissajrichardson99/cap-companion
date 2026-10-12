@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
+from app import reference_cache
 from app.errors import NotFoundError
 from app.models import Announcement
 from app.supabase_client import get_supabase_client
@@ -25,26 +26,37 @@ def _row_to_announcement(row: dict) -> Announcement:
 
 
 def list_announcements() -> list[Announcement]:
+    # Shared by every guest, so cached (app/reference_cache.py); each write
+    # below invalidates it before returning.
     client = get_supabase_client()
-    rows = client.table("announcements").select("*").order("created_at", desc=True).execute().data
+    rows = reference_cache.get(
+        reference_cache.ANNOUNCEMENTS,
+        lambda: client.table("announcements").select("*").order("created_at", desc=True).execute().data,
+    )
     return [_row_to_announcement(r) for r in rows]
 
 
 def create_announcement(text: str) -> Announcement:
     client = get_supabase_client()
-    row = client.table("announcements").insert({"text": text}).execute().data[0]
+    try:
+        row = client.table("announcements").insert({"text": text}).execute().data[0]
+    finally:
+        reference_cache.invalidate(reference_cache.ANNOUNCEMENTS)
     return _row_to_announcement(row)
 
 
 def update_announcement(announcement_id: UUID, text: str) -> Announcement:
     client = get_supabase_client()
-    rows = (
-        client.table("announcements")
-        .update({"text": text, "updated_at": datetime.now(timezone.utc).isoformat()})
-        .eq("id", str(announcement_id))
-        .execute()
-        .data
-    )
+    try:
+        rows = (
+            client.table("announcements")
+            .update({"text": text, "updated_at": datetime.now(timezone.utc).isoformat()})
+            .eq("id", str(announcement_id))
+            .execute()
+            .data
+        )
+    finally:
+        reference_cache.invalidate(reference_cache.ANNOUNCEMENTS)
     if not rows:
         raise NotFoundError(f"Announcement {announcement_id} not found")
     return _row_to_announcement(rows[0])
@@ -52,6 +64,9 @@ def update_announcement(announcement_id: UUID, text: str) -> Announcement:
 
 def delete_announcement(announcement_id: UUID) -> None:
     client = get_supabase_client()
-    rows = client.table("announcements").delete().eq("id", str(announcement_id)).execute().data
+    try:
+        rows = client.table("announcements").delete().eq("id", str(announcement_id)).execute().data
+    finally:
+        reference_cache.invalidate(reference_cache.ANNOUNCEMENTS)
     if not rows:
         raise NotFoundError(f"Announcement {announcement_id} not found")

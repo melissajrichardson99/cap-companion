@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+from app import reference_cache
 from app.errors import NotFoundError, ValidationError
 from app.models import AnimalPhoto
 from app.supabase_client import get_supabase_client
@@ -38,8 +39,15 @@ def _row_to_photo(row: dict) -> AnimalPhoto:
 
 
 def list_all() -> list[AnimalPhoto]:
+    # Shared by every guest, so cached (app/reference_cache.py); upload,
+    # delete and reorder invalidate it before returning. photo_url is a
+    # public (non-expiring) Storage URL built locally from storage_path, so
+    # nothing in here goes stale on its own.
     client = get_supabase_client()
-    rows = client.table("animal_photos").select("*").order("animal_slug").order("display_order").execute().data
+    rows = reference_cache.get(
+        reference_cache.ANIMAL_PHOTOS,
+        lambda: client.table("animal_photos").select("*").order("animal_slug").order("display_order").execute().data,
+    )
     return [_row_to_photo(r) for r in rows]
 
 
@@ -72,20 +80,26 @@ def upload(animal_slug: str, filename: str, content_type: str, file_bytes: bytes
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
     storage_path = f"{animal_slug}/{uuid4()}.{suffix}"
     client.storage.from_(BUCKET).upload(storage_path, file_bytes, {"content-type": content_type})
-    row = (
-        client.table("animal_photos")
-        .insert({"animal_slug": animal_slug, "storage_path": storage_path, "display_order": next_order})
-        .execute()
-        .data[0]
-    )
+    try:
+        row = (
+            client.table("animal_photos")
+            .insert({"animal_slug": animal_slug, "storage_path": storage_path, "display_order": next_order})
+            .execute()
+            .data[0]
+        )
+    finally:
+        reference_cache.invalidate(reference_cache.ANIMAL_PHOTOS)
     return _row_to_photo(row)
 
 
 def delete(photo_id: UUID) -> None:
     row = _get_row(photo_id)
     client = get_supabase_client()
-    client.storage.from_(BUCKET).remove([row["storage_path"]])
-    client.table("animal_photos").delete().eq("id", str(photo_id)).execute()
+    try:
+        client.storage.from_(BUCKET).remove([row["storage_path"]])
+        client.table("animal_photos").delete().eq("id", str(photo_id)).execute()
+    finally:
+        reference_cache.invalidate(reference_cache.ANIMAL_PHOTOS)
 
 
 def reorder(animal_slug: str, photo_ids: list[UUID]) -> list[AnimalPhoto]:
@@ -96,8 +110,13 @@ def reorder(animal_slug: str, photo_ids: list[UUID]) -> list[AnimalPhoto]:
     if submitted_ids != existing_ids:
         raise ValidationError(f"Submitted photo ids don't match {animal_slug}'s current photo set")
 
-    for display_order, photo_id in enumerate(photo_ids, start=1):
-        client.table("animal_photos").update({"display_order": display_order}).eq("id", str(photo_id)).execute()
+    try:
+        for display_order, photo_id in enumerate(photo_ids, start=1):
+            client.table("animal_photos").update({"display_order": display_order}).eq("id", str(photo_id)).execute()
+    finally:
+        # Even after a partial failure, so guests never keep a cached order
+        # that no longer matches the database.
+        reference_cache.invalidate(reference_cache.ANIMAL_PHOTOS)
 
     return list_for_animal(animal_slug)
 

@@ -51,6 +51,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
+from app import reference_cache
 from app.models import SessionCleanupResult
 from app.services.passport import BUCKET as PASSPORT_BUCKET
 from app.supabase_client import get_supabase_client
@@ -140,6 +141,9 @@ def _clean_batch(client, session_ids: list[str]) -> dict[str, int]:
     for table, column in _FULL_DELETE_TABLES:
         rows = client.table(table).delete().in_(column, session_ids).execute().data
         counts[f"{table}_deleted"] = len(rows)
+    if counts.get("photo_votes_deleted"):
+        # Vote counts are part of the cached guest gallery.
+        reference_cache.invalidate(reference_cache.PHOTO_GALLERY)
 
     # guest_id IS NULL re-asserted here too -- belt-and-suspenders on top of
     # _reconfirm_unlinked's check moments ago, so this delete can never

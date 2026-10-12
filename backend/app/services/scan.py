@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from app import reference_cache
 from app.errors import ConflictError, NotFoundError
 from app.models import EncyclopediaEntry, ManualEntryMatchType, ManualEntryResolution, ScanResult, ScanResultType
 from app.services import hunt as hunt_service
@@ -29,25 +30,40 @@ def _row_to_entry(row: dict) -> EncyclopediaEntry:
     return EncyclopediaEntry(id=row["id"], animal_name=row["animal_name"], status=row["status"])
 
 
+def cached_scannable_code(code: str) -> dict | None:
+    """The scannable_codes row for an already-normalized code, or None.
+
+    The whole table (one row per printed sign) is shared reference data and
+    is cached as one entry (app/reference_cache.py) rather than per code, so
+    looking up made-up codes can't grow the cache. No API writes this table;
+    signage codes are added by migration and show up within the default
+    TTL."""
+    client = get_supabase_client()
+    rows = reference_cache.get(
+        reference_cache.SCANNABLE_CODES, lambda: client.table("scannable_codes").select("*").execute().data
+    )
+    return next((r for r in rows if r["code"] == code), None)
+
+
 def resolve_code(raw_code: str, session_id: UUID | None) -> ScanResult:
     client = get_supabase_client()
     code = normalize_code(raw_code)
 
-    rows = client.table("scannable_codes").select("*").eq("code", code).execute().data
-    if not rows:
+    row = cached_scannable_code(code)
+    if row is None:
         raise NotFoundError(f'No scannable code "{code}" found')
-    row = rows[0]
 
     if row["hunt_character_id"]:
         character = hunt_service.get_character(row["hunt_character_id"], session_id)
         return ScanResult(type=ScanResultType.HUNT_CHARACTER, target=character)
 
-    entry_rows = (
-        client.table("encyclopedia_entries").select("*").eq("id", row["encyclopedia_entry_id"]).execute().data
+    entry_rows = reference_cache.get(
+        reference_cache.ENCYCLOPEDIA_ENTRIES, lambda: client.table("encyclopedia_entries").select("*").execute().data
     )
-    if not entry_rows:
+    entry_row = next((r for r in entry_rows if r["id"] == row["encyclopedia_entry_id"]), None)
+    if entry_row is None:
         raise NotFoundError(f'Encyclopedia entry for code "{code}" not found')
-    return ScanResult(type=ScanResultType.ENCYCLOPEDIA_ENTRY, target=_row_to_entry(entry_rows[0]))
+    return ScanResult(type=ScanResultType.ENCYCLOPEDIA_ENTRY, target=_row_to_entry(entry_row))
 
 
 def resolve_manual_entry(raw_text: str) -> ManualEntryResolution:
@@ -63,6 +79,11 @@ def resolve_manual_entry(raw_text: str) -> ManualEntryResolution:
     content, not DB-backed) -- ANIMAL_SLUGS (app/services/animals.py), the
     canonical backend-side mirror of that roster, stands in for a real query
     there.
+
+    Deliberately not served from the reference cache: it's never on a page
+    load (only when a guest types a sign code), and it's the check that
+    catches a new cross-table slug collision, so it should see the database
+    as it is right now.
     """
     client = get_supabase_client()
     text = normalize_code(raw_text)

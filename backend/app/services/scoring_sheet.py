@@ -33,6 +33,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from uuid import UUID
 
+from app import reference_cache
 from app.errors import ConflictError, NotFoundError, ValidationError
 from app.models import (
     CoinSourceType,
@@ -80,10 +81,26 @@ def _row_to_game(row: dict, events: list[GameScoreEvent]) -> ScoringGame:
     )
 
 
+def cached_game_rows() -> list[dict]:
+    """Every scoring_games row, oldest first (shared reference data, cached
+    -- see app/reference_cache.py; qr_locations.set_location invalidates it
+    when a game's map location changes)."""
+    client = get_supabase_client()
+    return reference_cache.get(
+        reference_cache.SCORING_GAMES,
+        lambda: client.table("scoring_games").select("*").order("created_at").execute().data,
+        reference_cache.STATIC_TTL,
+    )
+
+
 def list_games() -> list[ScoringGame]:
     client = get_supabase_client()
-    game_rows = client.table("scoring_games").select("*").order("created_at").execute().data
-    event_rows = client.table("game_score_events").select("*").order("sort_order").execute().data
+    game_rows = cached_game_rows()
+    event_rows = reference_cache.get(
+        reference_cache.GAME_SCORE_EVENTS,
+        lambda: client.table("game_score_events").select("*").order("sort_order").execute().data,
+        reference_cache.STATIC_TTL,
+    )
 
     events_by_game: dict[str, list[GameScoreEvent]] = {}
     for row in event_rows:
