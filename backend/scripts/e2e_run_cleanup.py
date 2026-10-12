@@ -66,6 +66,8 @@ def main() -> int:
         print("usage: e2e_run_cleanup.py begin|end", file=sys.stderr)
         return 2
     try:
+        # Guard first, so a refused run doesn't even record a marker.
+        dev_test_data.assert_dev_project()
         begin() if sys.argv[1] == "begin" else end()
     except dev_test_data.NotDevProjectError as exc:
         print(f"e2e cleanup SKIPPED: {exc}")

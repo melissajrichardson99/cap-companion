@@ -1,6 +1,9 @@
 """Shared, DEV-ONLY selection/counting/deletion of test data -- used by the
 manual cleanup_dev_test_data.py and by the e2e run's setup/teardown
-(e2e_run_cleanup.py). Never imported by the app itself.
+(e2e_run_cleanup.py) -- plus the production guard every dev-only script in
+this directory runs behind (run_dev_only: reset_demo_data.py,
+e2e_collision_fixture.py, verify_session_cleanup.py). Never imported by the
+app itself.
 
 Production guard (assert_dev_project): refuses to run unless SUPABASE_URL's
 project ref (the `<ref>` in https://<ref>.supabase.co) is listed in the
@@ -225,6 +228,20 @@ def delete(client, selection: Selection) -> dict[str, int]:
         or 0
     )
     return deleted
+
+
+def run_dev_only(entry, *args) -> None:
+    """Entry-point wrapper for the other dev-only scripts in this directory
+    (reset_demo_data.py, e2e_collision_fixture.py, verify_session_cleanup.py):
+    runs entry(*args) only when assert_dev_project() passes -- checked before
+    the script makes any database call -- otherwise prints why and exits 2,
+    which also stops an e2e run whose global setup calls the script."""
+    try:
+        assert_dev_project()
+    except NotDevProjectError as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    entry(*args)
 
 
 def client_for_dev() -> object:

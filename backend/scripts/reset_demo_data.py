@@ -58,6 +58,8 @@ from app.services.passport import BUCKET as PASSPORT_BUCKET  # noqa: E402
 from app.services.photos import BUCKET  # noqa: E402
 from app.supabase_client import get_supabase_client  # noqa: E402
 
+import dev_test_data  # noqa: E402
+
 DEMO_CARD_OWNER_LABEL = "Demo Family"
 
 
@@ -187,5 +189,8 @@ def reset_demo_data() -> None:
     print(f"Deleted {len(deleted_passport_rows)} passport session(s) and their storage object(s).")
 
 
+# Production guard (dev_test_data.run_dev_only): refuses -- before any
+# database call -- unless SUPABASE_URL's project ref is in
+# DEV_SUPABASE_PROJECT_REFS (backend/.env, dev machines only).
 if __name__ == "__main__":
-    reset_demo_data()
+    dev_test_data.run_dev_only(reset_demo_data)

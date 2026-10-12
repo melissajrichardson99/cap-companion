@@ -238,6 +238,27 @@ The frontend runs at `http://localhost:5173` and talks to the backend at
 `frontend/public/games/` — see `CLAUDE.md`), so a local checkout will run
 the full app minus playable minigames unless that step is done too.
 
+### Dev machine setup: `DEV_SUPABASE_PROJECT_REFS`
+
+The e2e suite (`cd frontend && npx playwright test`) and the dev-only
+scripts in `backend/scripts/` (`reset_demo_data.py`,
+`cleanup_dev_test_data.py`, `e2e_run_cleanup.py`, `e2e_collision_fixture.py`,
+`verify_session_cleanup.py`) wipe and reseed data with the service-role key.
+They refuse to touch the database unless the project ref in `SUPABASE_URL`
+(the `<ref>` in `https://<ref>.supabase.co`) is listed in
+`DEV_SUPABASE_PROJECT_REFS`, so set it in your local `backend/.env`:
+
+```bash
+DEV_SUPABASE_PROJECT_REFS=<your-dev-project-ref>   # comma-separate several
+```
+
+Without it the e2e run stops at setup ("REFUSED") before any test runs.
+**Never set this variable on Render or anywhere production runs.** Its
+absence is what keeps these scripts from ever wiping the production
+project. `migrate_animal_photos.py` is a real data migration rather than a
+dev script, so it isn't behind this check: it prints its plan and asks for
+`--yes` or a typed confirmation instead.
+
 Full deployment ops notes (Cloudflare/Render/R2 setup, gotchas encountered
 along the way) live in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 

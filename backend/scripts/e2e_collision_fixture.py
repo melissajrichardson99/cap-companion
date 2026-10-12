@@ -22,6 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.supabase_client import get_supabase_client  # noqa: E402
 
+import dev_test_data  # noqa: E402
+
 # An existing Scoring Sheet slug (see seed.sql) -- reused as the colliding
 # scannable_codes.code below, so the test's collision is between two *real*
 # rows, not two synthetic ones.
@@ -45,8 +47,11 @@ def remove() -> None:
     print(f'Removed colliding scannable_codes row for "{COLLIDING_TEXT}".')
 
 
+# Production guard (dev_test_data.run_dev_only): refuses -- before any
+# database call -- unless SUPABASE_URL's project ref is in
+# DEV_SUPABASE_PROJECT_REFS (backend/.env, dev machines only).
 if __name__ == "__main__":
     if len(sys.argv) != 2 or sys.argv[1] not in ("insert", "remove"):
         print(__doc__)
         raise SystemExit(1)
-    (insert if sys.argv[1] == "insert" else remove)()
+    dev_test_data.run_dev_only(insert if sys.argv[1] == "insert" else remove)

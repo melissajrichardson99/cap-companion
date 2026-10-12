@@ -37,6 +37,8 @@ from app.services import session_cleanup  # noqa: E402
 from app.services.passport import BUCKET as PASSPORT_BUCKET  # noqa: E402
 from app.supabase_client import get_supabase_client  # noqa: E402
 
+import dev_test_data  # noqa: E402
+
 FAR_PAST_DAYS = 40  # comfortably past session_cleanup.INACTIVITY_THRESHOLD (14 days)
 RECENT_DAYS = 1
 
@@ -385,5 +387,8 @@ def main() -> None:
     print(f"\nAll {len(SCENARIOS)} scenario(s) passed.")
 
 
+# Production guard (dev_test_data.run_dev_only): refuses -- before any
+# database call -- unless SUPABASE_URL's project ref is in
+# DEV_SUPABASE_PROJECT_REFS (backend/.env, dev machines only).
 if __name__ == "__main__":
-    main()
+    dev_test_data.run_dev_only(main)
