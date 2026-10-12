@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { api, type HeatmapSource, type HeatmapSummary, type MapNode } from '../api'
 import { clearStaffToken } from '../staffAuth'
 import { ClipboardIcon } from './NavIcons'
 import { StaffAuthGate } from './StaffAuthGate'
 import { StaffDateRangePicker, useStaffDateRange } from './StaffDateRangePicker'
+import { StaffSidebar } from './StaffSidebar'
 // Reuses the guest Map screen's frame/image classes (.map-frame,
 // .map-image-wrap, .map-image) so the heatmap sits on the exact same
 // background at the exact same x_pct/y_pct positions. The pins themselves are
@@ -53,6 +53,23 @@ const RAMP_LOW = [253, 214, 170] // #fdd6aa
 const RAMP_HIGH = [168, 36, 12] // #a8240c
 const ZERO_COLOR = '#9a958c'
 
+// Soft line-break opportunity after each "/" in combined location names
+// ("Kangaroos/Wallaroos"), so the narrow phone table breaks them there
+// rather than mid-word. <wbr> adds no text, so cell text is unchanged.
+function breakableName(name: string): ReactNode {
+  const parts = name.split('/')
+  return parts.map((part, i) => (
+    <Fragment key={i}>
+      {part}
+      {i < parts.length - 1 && (
+        <>
+          /<wbr />
+        </>
+      )}
+    </Fragment>
+  ))
+}
+
 function heatColor(t: number): string {
   const c = RAMP_LOW.map((lo, i) => Math.round(lo + (RAMP_HIGH[i] - lo) * t))
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
@@ -63,7 +80,6 @@ export function StaffHeatmapPage() {
 }
 
 function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
-  const navigate = useNavigate()
   const range = useStaffDateRange()
   const { start, end } = range
   const [day, setDay] = useState('')
@@ -131,10 +147,10 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
           <ClipboardIcon className="staff-mode-badge-icon" />
           Staff Mode
         </span>
+        {/* No "Back to Staff Page" button any more: the Staff sidebar
+            below is on this page too (72px rail at phone widths), and its
+            tabs open /staff on the chosen tab. */}
         <div className="staff-page-header-actions">
-          <button type="button" className="btn btn-secondary" onClick={() => navigate('/staff')}>
-            Back to Staff Page
-          </button>
           <button
             type="button"
             className="btn btn-secondary"
@@ -148,6 +164,10 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
         </div>
       </div>
 
+      <div className="staff-page-body">
+        <StaffSidebar currentPage="heatmap" />
+
+        <div className="staff-page-content">
       <section className="staff-heatmap">
         <h1 className="staff-heatmap-title">Visit Heatmap</h1>
         <p className="staff-heatmap-subtitle">
@@ -295,7 +315,7 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
             <tbody>
               {ranked.map(({ node, visits, checkIns, scans }) => (
                 <tr key={node.id} data-node-name={node.name}>
-                  <td>{node.name}</td>
+                  <td>{breakableName(node.name)}</td>
                   <td>{visits}</td>
                   <td>{checkIns}</td>
                   <td>{scans}</td>
@@ -305,6 +325,8 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
           </table>
         )}
       </section>
+        </div>
+      </div>
     </div>
   )
 }

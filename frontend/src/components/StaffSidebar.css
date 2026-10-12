@@ -181,8 +181,8 @@
 /* Standalone-page links (currently just the Visit Heatmap) -- same item
    styling as the tabs above, set apart by a divider plus a small up-right
    arrow in the badge corner so they read as "opens a page", not another
-   in-page tab. Never gets the active state: the sidebar isn't shown on
-   those pages. */
+   in-page tab. Gets the same active state as a tab only on its own page
+   (where the sidebar is rendered with currentPage). */
 .staff-sidebar-pages {
   display: flex;
   flex-direction: column;

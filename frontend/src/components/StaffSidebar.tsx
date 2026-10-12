@@ -14,21 +14,48 @@ import {
 } from './NavIcons'
 import './StaffSidebar.css'
 
-export type StaffTab =
-  | 'photos'
-  | 'requests'
-  | 'announcements'
-  | 'attractions'
-  | 'animal-photos'
-  | 'analytics'
-  | 'qr-codes'
+export const STAFF_TABS = [
+  'photos',
+  'requests',
+  'announcements',
+  'attractions',
+  'animal-photos',
+  'analytics',
+  'qr-codes',
+] as const
 
-interface StaffSidebarProps {
-  tab: StaffTab
-  onSelectTab: (tab: StaffTab) => void
-  pendingPhotosCount: number
-  openRequestsCount: number
+export type StaffTab = (typeof STAFF_TABS)[number]
+
+export function isStaffTab(value: unknown): value is StaffTab {
+  return typeof value === 'string' && (STAFF_TABS as readonly string[]).includes(value)
 }
+
+// Router state key /staff reads its initial tab from (StaffPage.tsx) -- set
+// when a tab is picked from the sidebar on a standalone staff page.
+export interface StaffNavState {
+  staffTab?: StaffTab
+}
+
+// Two modes: on /staff itself (tab + onSelectTab) the tabs switch in place;
+// on a standalone staff page (currentPage, no onSelectTab) they navigate to
+// /staff with the chosen tab open, no tab is selected, and that page's own
+// link is the current one. Badge counts are optional -- standalone pages
+// don't fetch the photo/request lists just for them.
+type StaffSidebarProps =
+  | {
+      tab: StaffTab
+      onSelectTab: (tab: StaffTab) => void
+      pendingPhotosCount: number
+      openRequestsCount: number
+      currentPage?: undefined
+    }
+  | {
+      tab?: undefined
+      onSelectTab?: undefined
+      pendingPhotosCount?: undefined
+      openRequestsCount?: undefined
+      currentPage: 'heatmap'
+    }
 
 interface SidebarItem {
   key: StaffTab
@@ -41,8 +68,13 @@ interface SidebarItem {
 // analytics feature plan) plus the new Analytics dashboard -- deliberately
 // excludes the mockup's Dashboard/Reports/Settings/Quick Actions/Food Trucks,
 // none of which have a real staff-manageable backing feature.
-export function StaffSidebar({ tab, onSelectTab, pendingPhotosCount, openRequestsCount }: StaffSidebarProps) {
+export function StaffSidebar({ tab, onSelectTab, pendingPhotosCount, openRequestsCount, currentPage }: StaffSidebarProps) {
   const navigate = useNavigate()
+  const selectTab = (key: StaffTab) => {
+    if (onSelectTab) onSelectTab(key)
+    else navigate('/staff', { state: { staffTab: key } satisfies StaffNavState })
+  }
+  const heatmapCurrent = currentPage === 'heatmap'
 
   const items: SidebarItem[] = [
     { key: 'photos', label: 'Photo Queue', icon: <CameraIcon />, badge: pendingPhotosCount },
@@ -73,7 +105,7 @@ export function StaffSidebar({ tab, onSelectTab, pendingPhotosCount, openRequest
               role="tab"
               aria-selected={tab === item.key}
               className={`staff-sidebar-tab ${tab === item.key ? 'staff-sidebar-tab-active' : ''}`}
-              onClick={() => onSelectTab(item.key)}
+              onClick={() => selectTab(item.key)}
             >
               {/* Label before the icon+badge group in DOM order (accessible
                   name / textContent must stay "<label><badge digits>", exactly
@@ -97,10 +129,14 @@ export function StaffSidebar({ tab, onSelectTab, pendingPhotosCount, openRequest
         {/* Separate standalone pages (own routes, not in-page tabs) -- kept
             outside the tablist so it only ever contains real tabs, below a
             divider and marked with an arrow so it doesn't read as one more
-            tab. Same staff token, so no second login; the page's own "Back
-            to Staff Page" button returns here. */}
+            tab. Same staff token, so no second login either way. On the
+            page itself it's marked current (aria-current + active style). */}
         <div className="staff-sidebar-pages">
-          <Link to="/staff/heatmap" className="staff-sidebar-tab staff-sidebar-page-link">
+          <Link
+            to="/staff/heatmap"
+            aria-current={heatmapCurrent ? 'page' : undefined}
+            className={`staff-sidebar-tab staff-sidebar-page-link ${heatmapCurrent ? 'staff-sidebar-tab-active' : ''}`}
+          >
             <span className="staff-sidebar-tab-label">Heatmap</span>
             <span className="staff-sidebar-tab-icon-wrap">
               <span className="staff-sidebar-tab-icon">

@@ -148,3 +148,31 @@
   text-align: center;
   color: var(--cap-color-body-text);
 }
+
+/* Phone widths: with the Staff sidebar's 72px rail beside it, the content
+   column is only ~250-280px at 360-390px. .staff-page clips overflow, so a
+   too-wide table would silently lose its last (QR scans) column rather than
+   scroll -- tighten the table so all four columns fit, and let long
+   location names wrap instead of setting the table's minimum width. */
+@media (max-width: 720px) {
+  .staff-heatmap-table {
+    font-size: 13px;
+  }
+
+  .staff-heatmap-table th,
+  .staff-heatmap-table td {
+    padding: 6px 4px;
+  }
+
+  .staff-heatmap-table td:first-child {
+    overflow-wrap: anywhere;
+  }
+
+  .staff-heatmap-legend-bar {
+    width: 96px;
+  }
+
+  .staff-heatmap-legend-scale > span:not(.staff-heatmap-legend-bar) {
+    white-space: nowrap;
+  }
+}

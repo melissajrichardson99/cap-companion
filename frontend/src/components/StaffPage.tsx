@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { api, type AnimalPhoto, type Announcement, type MapNode, type PhotoSubmission, type StaffRequest } from '../api'
 import { ANIMALS } from '../animalContent'
 import { clearStaffToken } from '../staffAuth'
@@ -9,7 +10,7 @@ import { StaffAnalytics } from './StaffAnalytics'
 import { StaffAuthGate } from './StaffAuthGate'
 import { StaffNameModal } from './StaffNameModal'
 import { StaffQrDirectory } from './StaffQrDirectory'
-import { StaffSidebar, type StaffTab } from './StaffSidebar'
+import { isStaffTab, StaffSidebar, type StaffNavState, type StaffTab } from './StaffSidebar'
 import './StaffPage.css'
 
 // Simple polling refresh rather than websockets -- fine for a POC-scale
@@ -44,7 +45,23 @@ export function StaffPage() {
 }
 
 function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
-  const [tab, setTab] = useState<Tab>('photos')
+  const location = useLocation()
+  const navigate = useNavigate()
+  // A tab picked from the sidebar on a standalone staff page (e.g. the
+  // heatmap) arrives as router state; a plain visit to /staff has none and
+  // opens Photo Queue as always.
+  const [tab, setTab] = useState<Tab>(() => {
+    const requested = (location.state as StaffNavState | null)?.staffTab
+    return isStaffTab(requested) ? requested : 'photos'
+  })
+
+  // Consume that state once, so a later reload of /staff (after switching
+  // tabs in place) doesn't jump back to the tab it was opened on.
+  useEffect(() => {
+    if ((location.state as StaffNavState | null)?.staffTab !== undefined) {
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.state, location.pathname, navigate])
 
   // Prompted once per device -- see StaffNameModal.tsx. Lazily initialized
   // from localStorage so a fresh session (no name stored yet) opens straight

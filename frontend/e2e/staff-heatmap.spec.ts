@@ -177,33 +177,33 @@ test('/staff/heatmap shows the staff login screen without a staff session, then 
 })
 
 test('the Analytics tab links to the Visit Heatmap', async ({ page }) => {
-  // The link only renders once GET /analytics/summary has loaded. That
-  // summary makes many sequential, paginated Supabase calls over every
-  // device session ever created, so it slows as e2e data accumulates on the
-  // dev DB (~17s at the time of writing). Hence a larger timeout for this
-  // test only, rather than a global one.
-  test.setTimeout(90_000)
+  // The link only renders once GET /analytics/summary has loaded -- one
+  // SQL function call since migration 044, so default timeouts are enough.
   await loginAsStaff(page)
   await page.getByRole('tab', { name: 'Analytics' }).click()
-  await page.getByRole('link', { name: 'Open Visit Heatmap' }).click({ timeout: 75_000 })
+  await page.getByRole('link', { name: 'Open Visit Heatmap' }).click()
   await expect(page).toHaveURL(/\/staff\/heatmap$/)
   await expect(page.getByRole('heading', { name: 'Visit Heatmap' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Back to Staff Page' }).click()
+  // Back via the heatmap page's own Staff sidebar (the old "Back to Staff
+  // Page" button is gone) -- lands on the tab picked there.
+  await page.getByRole('navigation', { name: 'Staff sections' }).getByRole('tab', { name: 'Photo Queue' }).click()
   await expect(page).toHaveURL(/\/staff$/)
-  await expect(page.getByRole('tab', { name: 'Photo Queue' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Photo Queue' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByLabel('Password')).toHaveCount(0)
 })
 
 // The sidebar entry is a real link to the standalone page (not an in-page
-// tab), at both a phone width (72px rail) and desktop (88px rail). The staff
-// token carries over both ways: no login prompt on the heatmap, none on the
-// way back.
+// tab), at both a phone width (72px rail) and desktop (88px rail). The same
+// sidebar is shown on the heatmap page, with Heatmap as the current page;
+// its tabs return to /staff with the chosen tab open. The staff token
+// carries over both ways: no login prompt on the heatmap, none on the way
+// back.
 for (const viewport of [
   { width: 390, height: 844 },
   { width: 1280, height: 900 },
 ]) {
-  test(`the Staff sidebar's Heatmap link opens the Visit Heatmap and Back returns to the Staff page (${viewport.width}px)`, async ({
+  test(`the Staff sidebar's Heatmap link opens the Visit Heatmap, which shows the same sidebar with working tabs (${viewport.width}px)`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport)
@@ -218,6 +218,7 @@ for (const viewport of [
     expect(box).not.toBeNull()
     expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width)
     expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height)
+    const staffRailBox = (await sidebar.boundingBox())!
 
     await heatmapLink.click()
     await expect(page).toHaveURL(/\/staff\/heatmap$/)
@@ -227,10 +228,53 @@ for (const viewport of [
     await expect(page.getByRole('group', { name: 'Date range' })).toBeVisible()
     await expect(page.getByTestId('heatmap-total')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Back to Staff Page' }).click()
+    // Same sidebar on the heatmap page: same rail width, same tabs in the
+    // same order, the Heatmap link marked as the current page and no tab
+    // claiming to be selected.
+    const heatmapSidebar = page.getByRole('navigation', { name: 'Staff sections' })
+    await expect(heatmapSidebar).toBeVisible()
+    const heatmapRailBox = (await heatmapSidebar.boundingBox())!
+    expect(heatmapRailBox.x).toBe(staffRailBox.x)
+    expect(heatmapRailBox.width).toBe(staffRailBox.width)
+    await expect(heatmapSidebar.getByRole('tab')).toHaveText([
+      'Photo Queue',
+      'Contact Requests',
+      'Announcements',
+      'Attractions',
+      'Animal Photos',
+      'Analytics',
+      'QR Codes',
+    ])
+    await expect(heatmapSidebar.getByRole('tab', { selected: true })).toHaveCount(0)
+    const currentLink = heatmapSidebar.getByRole('link', { name: 'Heatmap', exact: true })
+    await expect(currentLink).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('button', { name: 'Back to Staff Page' })).toHaveCount(0)
+    // The heatmap's widest content still fits beside the rail.
+    await expect(page.locator('.staff-heatmap-table')).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width)
+    const tableBox = await page.locator('.staff-heatmap-table').boundingBox()
+    expect(tableBox!.x).toBeGreaterThanOrEqual(heatmapRailBox.x + heatmapRailBox.width)
+    expect(tableBox!.x + tableBox!.width).toBeLessThanOrEqual(viewport.width)
+
+    // A tab opens /staff on that tab (not the Photo Queue default).
+    await heatmapSidebar.getByRole('tab', { name: 'QR Codes' }).click()
     await expect(page).toHaveURL(/\/staff$/)
-    await expect(page.getByRole('tab', { name: 'Photo Queue' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'QR Codes' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('tab', { name: 'Photo Queue' })).toHaveAttribute('aria-selected', 'false')
     await expect(page.getByLabel('Password')).toHaveCount(0)
+    await expect(heatmapLink).not.toHaveAttribute('aria-current')
+
+    // The requested tab is consumed on arrival: reloading /staff opens the
+    // default tab, exactly like a direct visit.
+    await page.reload()
+    await expect(page.getByRole('tab', { name: 'Photo Queue' })).toHaveAttribute('aria-selected', 'true')
+
+    // And the Heatmap link goes back again.
+    await heatmapLink.click()
+    await expect(page).toHaveURL(/\/staff\/heatmap$/)
+    await expect(page.getByRole('heading', { name: 'Visit Heatmap' })).toBeVisible()
+    await expect(page.getByLabel('Password')).toHaveCount(0)
+    await expect(currentLink).toHaveAttribute('aria-current', 'page')
   })
 }
 

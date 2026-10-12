@@ -66,6 +66,51 @@ test.describe('Map pin legend colors', () => {
     await expect(page.locator('.map-pin[aria-label^="Arcade Pad"] .map-pin-shape-text')).toHaveText('1')
   })
 
+  // LEGEND_NUMBER (MapScreen.tsx) is keyed by node name, so a node added in
+  // the DB without a matching entry used to render a blank pin and an
+  // unnumbered legend row (Cornhole Mini Golf, migration 043) -- and the
+  // "first pin" checks above only caught it when that node happened to sort
+  // first. This walks EVERY node in the four numbered legend categories.
+  test('every legend-category node has a unique legend number, and its not-visited pin shows that number', async ({ page }) => {
+    await openMapTab(page)
+    await page.waitForSelector('.map-pin')
+
+    for (const category of ['attraction', 'animal', 'service', 'food']) {
+      const toggle = page.locator(`.map-legend-category-toggle[aria-controls="map-legend-list-${category}"]`)
+      if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
+      const rows = await page.locator(`#map-legend-list-${category} > li`).evaluateAll((lis) =>
+        lis.map((li) => ({
+          // The row's own text node is the node name (children are in a nested <ul>).
+          name: [...li.childNodes]
+            .filter((n) => n.nodeType === Node.TEXT_NODE)
+            .map((n) => n.textContent)
+            .join('')
+            .trim(),
+          number: li.querySelector(':scope > .map-legend-item-number')?.textContent ?? null,
+        })),
+      )
+      expect(rows.length, `${category} legend rows`).toBeGreaterThan(0)
+      for (const row of rows) expect(row.number ?? '(none)', `legend number for ${row.name}`).toMatch(/^\d+$/)
+      const numbers = rows.map((r) => r.number)
+      expect(new Set(numbers).size, `${category} legend numbers are unique`).toBe(numbers.length)
+      const legendNumber = new Map(rows.map((r) => [r.name, r.number]))
+
+      const pins = await page.locator(`.map-pin.map-pin-${category}`).evaluateAll((els) =>
+        els.map((el) => ({
+          name: (el.getAttribute('aria-label') ?? '').replace(/ \([^)]*\)$/, ''),
+          text: el.querySelector('.map-pin-shape-text')?.textContent ?? '',
+        })),
+      )
+      expect(pins.length, `${category} pins`).toBeGreaterThan(0)
+      for (const pin of pins) {
+        // Fresh device session, so nothing is visited; a staff-closed node
+        // shows the lock instead of its number by design.
+        if (pin.text === '\u{1F512}') continue
+        expect(pin.text, `pin number for ${pin.name}`).toBe(legendNumber.get(pin.name))
+      }
+    }
+  })
+
   test('visiting a node turns its pin green with a checkmark, and the badge is blue at the general -11px offset', async ({
     page,
   }) => {

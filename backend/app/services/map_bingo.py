@@ -391,7 +391,9 @@ def _guest_bingo_map_reset_at(client, guest_id: UUID) -> str | None:
     return rows[0]["bingo_map_reset_at"] if rows else None
 
 
-def _check_map_exploration_bonus(client, node_id: UUID, session_id: UUID, guest_id: UUID | None = None) -> int:
+def _check_map_exploration_bonus(
+    client, node_id: UUID, session_id: UUID, guest_id: UUID | None = None, all_nodes: list[dict] | None = None
+) -> int:
     """Award the one-time 50-coin Map Exploration bonus once the calling
     session (or, as of Guest Accounts Phase 3, the calling guest across
     every linked session) has visited every currently-open top-level node.
@@ -426,9 +428,14 @@ def _check_map_exploration_bonus(client, node_id: UUID, session_id: UUID, guest_
     Start Fresh (guests.bingo_map_reset_at, set by start_fresh_bingo_map) --
     that column is what actually makes the bonus re-earnable post-Start-
     Fresh, not the node_visits delete alone.
+
+    all_nodes: every map_nodes row (needs id, is_open, parent_node_id), if
+    the caller already has them -- visit_node does, so it passes them in
+    rather than paying for the same read twice.
     """
     session_ids = _resolve_session_ids(session_id, guest_id)
-    all_nodes = client.table("map_nodes").select("id,is_open,parent_node_id").execute().data
+    if all_nodes is None:
+        all_nodes = client.table("map_nodes").select("id,is_open,parent_node_id").execute().data
     top_level_open_ids = {n["id"] for n in all_nodes if n["is_open"] and n["parent_node_id"] is None}
     if not top_level_open_ids:
         return 0
@@ -491,27 +498,34 @@ def visit_node(
     client = get_supabase_client()
     session_ids = _resolve_session_ids(session_id, guest_id)
 
-    node_rows = client.table("map_nodes").select("*").eq("id", str(node_id)).execute().data
-    if not node_rows:
+    # One read of every node (a few dozen rows) serves the node itself, its
+    # children and the exploration-bonus check below, instead of three
+    # separate map_nodes queries. Ordered by name in SQL so the children
+    # keep the database's collation order, exactly as their own
+    # .order("name") query returned them before.
+    all_nodes = client.table("map_nodes").select("*").order("name").execute().data
+    node_row = next((n for n in all_nodes if n["id"] == str(node_id)), None)
+    if node_row is None:
         raise NotFoundError(f"Map node {node_id} not found")
-    node_row = node_rows[0]
 
-    child_rows = (
-        client.table("map_nodes")
-        .select("id,name")
-        .eq("parent_node_id", str(node_id))
-        .order("name")
-        .execute()
-        .data
-    )
+    child_rows = [n for n in all_nodes if n["parent_node_id"] == str(node_id)]
     # A parent's linked tiles include its children's tiles too, so confirming
     # them here must recognize child-linked tile ids, not just the node's own.
     relevant_node_ids = [str(node_id)] + [c["id"] for c in child_rows]
 
-    linked_tile_rows = (
-        client.table("bingo_tiles").select("id").in_("linked_map_node_id", relevant_node_ids).execute().data
+    # Read once: these ids gate which confirmed tiles get completed, and the
+    # same rows (with labels) build the response's linked_tiles below.
+    # Completing a tile never changes bingo_tiles (completion state lives in
+    # session_tile_completions), so one read before completing is the same
+    # data the old second read returned.
+    tiles = (
+        client.table("bingo_tiles")
+        .select("id,label")
+        .in_("linked_map_node_id", relevant_node_ids)
+        .execute()
+        .data
     )
-    linked_ids = {r["id"] for r in linked_tile_rows}
+    linked_ids = {t["id"] for t in tiles}
 
     tile_completions = [
         complete_tile(tile_id, session_id, guest_id) for tile_id in completed_tile_ids if str(tile_id) in linked_ids
@@ -538,15 +552,8 @@ def visit_node(
     # heatmap.log_visit_event as a background task once this returns, so
     # analytics logging never sits on the guest's request path.
 
-    map_exploration_bonus = _check_map_exploration_bonus(client, node_id, session_id, guest_id)
+    map_exploration_bonus = _check_map_exploration_bonus(client, node_id, session_id, guest_id, all_nodes)
 
-    tiles = (
-        client.table("bingo_tiles")
-        .select("id,label")
-        .in_("linked_map_node_id", relevant_node_ids)
-        .execute()
-        .data
-    )
     # Per-Device Sessions Phase 6a: completed status for this response is
     # this session's (or guest's, Phase 3) own session_tile_completions rows,
     # not a global column.

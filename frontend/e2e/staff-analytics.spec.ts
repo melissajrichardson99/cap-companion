@@ -46,11 +46,9 @@ test('Analytics loads via the sidebar, reflects a real Contact Staff request, an
   await staffPage.getByRole('button', { name: '7D' }).click()
 
   const totalUsersValue = staffPage.locator('.staff-analytics-stat-card', { hasText: 'Total App Users' }).locator('.staff-analytics-stat-value')
-  // Generous timeout: this dev Supabase project has accumulated 1000+
-  // device_sessions rows from repeated e2e runs, so even a 7D cohort here is
-  // larger (and the chunked queries built off it slower) than a real
-  // single-park deployment would see in the same window.
-  await expect(totalUsersValue).toBeVisible({ timeout: 20_000 })
+  // Default wait: the summary is one SQL function call (migration 044),
+  // well under a second however many sessions the dev DB has accumulated.
+  await expect(totalUsersValue).toBeVisible()
   const totalUsersText = await totalUsersValue.textContent()
   expect(totalUsersText).not.toBeNull()
   expect(Number.isNaN(Number(totalUsersText))).toBe(false)

@@ -203,6 +203,10 @@ const STATE_ICON: Record<NodeDisplayState, string> = {
 // a future in-app legend popup). Derived from frontend/public/park-map.png:
 // each category's markers are numbered 1..N in the exact order the map
 // nodes' x_pct/y_pct were given in, verified against the source image.
+// Keyed by node name, so a NEW top-level node (or a rename) needs an entry
+// here too, or its pin renders blank and its legend row unnumbered --
+// map-legend-colors.spec.ts asserts every legend-category pin has a number.
+// Nodes added after the printed map continue their category's sequence.
 const LEGEND_NUMBER: Record<string, number> = {
   // Attractions (star)
   'Arcade Pad': 1,
@@ -223,6 +227,8 @@ const LEGEND_NUMBER: Record<string, number> = {
   'Slide Tower': 16,
   'Rope Maze': 17,
   'Soccer Game': 18,
+  // Added in migration 043 (not on the printed map yet).
+  'Cornhole Mini Golf': 19,
   // Services (square)
   'Ticket Booth': 1,
   Restrooms: 2,

@@ -102,6 +102,9 @@ create table if not exists device_sessions (
 );
 
 create index if not exists device_sessions_guest_id_idx on device_sessions(guest_id);
+-- Migration 044: the Staff Analytics cohort filter (analytics_summary(),
+-- defined in that migration only -- run migrations in order after this file).
+create index if not exists device_sessions_created_at_idx on device_sessions(created_at);
 
 -- Per-Device Sessions Phase 3 (migration 026): a guest's visited-status for a
 -- node, one row per (session, node) pair -- replaces the old global
@@ -535,6 +538,8 @@ create table if not exists coin_awards (
 );
 
 create index if not exists coin_awards_source_type_idx on coin_awards(source_type);
+-- Migration 044 (analytics_summary() joins on it).
+create index if not exists coin_awards_session_id_idx on coin_awards(session_id);
 
 -- Collectible Cards (migration 022) -- append-only spend ledger, sibling to
 -- coin_awards rather than negative rows in it (that table's `amount > 0`

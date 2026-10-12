@@ -12,6 +12,12 @@ const backendPython = path.join(backendDir, 'venv', 'Scripts', 'python.exe')
 // a prior spec already visited that node). Reset once, up front, so a full
 // `npx playwright test` run doesn't depend on the developer remembering to
 // run the reset script by hand between files.
+//
+// Also records this run's start for global-teardown.ts, which deletes the
+// sessions/guests/heatmap events the run creates -- and, if the previous run
+// was interrupted before its teardown, cleans that run's leftovers first
+// (backend/scripts/e2e_run_cleanup.py).
 export default function globalSetup(): void {
+  execFileSync(backendPython, ['scripts/e2e_run_cleanup.py', 'begin'], { cwd: backendDir, stdio: 'inherit' })
   execFileSync(backendPython, ['scripts/reset_demo_data.py'], { cwd: backendDir, stdio: 'inherit' })
 }
