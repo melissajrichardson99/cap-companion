@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { minigameFrame, postFromMinigame } from './minigameHelper'
+import { openTab } from './navMenuHelper'
 
 // Covers MinigameOverlay's per-launch behaviour when more than one minigame is
 // queued. Marking Arcade Pad visited and confirming two of its child tiles is
@@ -9,8 +10,7 @@ import { minigameFrame, postFromMinigame } from './minigameHelper'
 
 async function visitArcadePadConfirmingTwoTiles(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Map' }).click()
+  await openTab(page, 'Map')
   await page.locator('.map-pin[aria-label^="Arcade Pad"]').click()
   await page.getByRole('button', { name: 'Mark Visited' }).click()
   await page.getByRole('button', { name: 'Yes' }).click()

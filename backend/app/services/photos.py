@@ -18,6 +18,7 @@ from app import reference_cache
 from app.errors import ConflictError, NotFoundError, ValidationError
 from app.models import EMAIL_RE, PhotoStatus, PhotoSubmission
 from app.supabase_client import get_supabase_client
+from app.uploads import ValidatedImage
 
 BUCKET = "favorite-photos"
 
@@ -50,18 +51,17 @@ def _row_to_submission(row: dict, session_id: UUID | None = None, include_email:
     )
 
 
-def submit_photo(
-    guest_label: str | None, email: str | None, filename: str, content_type: str, file_bytes: bytes
-) -> PhotoSubmission:
+def submit_photo(guest_label: str | None, email: str | None, image: ValidatedImage) -> PhotoSubmission:
     stripped_email = email.strip() if email else None
     if stripped_email and not re.match(EMAIL_RE, stripped_email):
         raise ValidationError("email must be a valid email address")
 
     client = get_supabase_client()
     submission_id = uuid4()
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
-    storage_path = f"{submission_id}.{suffix}"
-    client.storage.from_(BUCKET).upload(storage_path, file_bytes, {"content-type": content_type})
+    # Unguessable (uuid4) key in a public bucket: nothing lists the bucket,
+    # and a pending photo's URL is only ever returned to staff.
+    storage_path = f"{submission_id}.{image.extension}"
+    client.storage.from_(BUCKET).upload(storage_path, image.content, {"content-type": image.content_type})
     row = (
         client.table("photo_submissions")
         .insert(

@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
+import { openNavMenu } from './navMenuHelper'
 
 // Covers the Cobb Coins spend side (migration 022_collectible_cards.sql):
 // purchasing a Collectible Card deducts coins and adds it to the gallery,
@@ -17,10 +18,6 @@ import { seedDeviceSession, withSession } from './deviceSessionHelper'
 // looking at the same session's ledger/gallery.
 
 const API = 'http://localhost:8000'
-
-async function openNavMenu(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Open menu' }).click()
-}
 
 async function expectCoinTotal(page: Page, total: number): Promise<void> {
   await openNavMenu(page)

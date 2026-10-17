@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { FAQ_ENTRIES } from '../src/faqContent'
 import { PAGE_SUBHEADERS } from '../src/pageSubheaderContent'
+import { openTab } from './navMenuHelper'
 
 // Covers the FAQ page: an expandable Q&A accordion (faqContent.ts, same
 // frontend-only static-content pattern as foodTruckContent.ts) plus a
@@ -14,8 +15,7 @@ import { PAGE_SUBHEADERS } from '../src/pageSubheaderContent'
 
 async function openFaqTab(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'FAQ' }).click()
+  await openTab(page, 'FAQ')
 }
 
 function faqItem(page: Page, question: string) {

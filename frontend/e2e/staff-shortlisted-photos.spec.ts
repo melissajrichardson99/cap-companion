@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
+import { openTab } from './navMenuHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -12,8 +13,7 @@ const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
 // Shortlisted section's individual Remove and bulk Clear All.
 
 async function openFavoritePhoto(page: Page) {
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
+  await openTab(page, 'Favorite Photo')
 }
 
 async function submitAndShortlist(guestPage: Page, staffPage: Page, label: string) {

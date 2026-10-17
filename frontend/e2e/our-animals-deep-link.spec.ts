@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { ANIMALS } from '../src/animalContent'
+import { openTab } from './navMenuHelper'
 
 // Covers the /animals/:slug direct deep link (QR signage at each enclosure),
 // added alongside backend/scripts/generate_animal_qr_codes.py. Deliberately a
@@ -43,8 +44,7 @@ test.describe('/animals/:slug direct deep link', () => {
     const deepLinkFacts = await page.locator('.animal-detail-facts-table').textContent()
 
     await page.goto('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
+    await openTab(page, 'Our Animals')
     await page.locator('.animal-card', { hasText: 'Capybara' }).click()
     await expect(page.getByRole('heading', { name: 'Capybara', exact: true })).toBeVisible()
     const browsedDescription = await page.locator('.animal-detail-description').textContent()
@@ -75,10 +75,8 @@ test.describe('/animals/:slug direct deep link', () => {
 
     // Switch away and back to the Our Animals tab -- should show the list,
     // not bounce back to Goat (the deep-link slug must only apply once).
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Map' }).click()
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
+    await openTab(page, 'Map')
+    await openTab(page, 'Our Animals')
     await expect(page.locator('.animals-grid')).toBeVisible()
     await expect(page.locator('.animal-card')).toHaveCount(ANIMALS.length)
   })
@@ -93,8 +91,7 @@ test.describe('/animals/:slug direct deep link', () => {
     // starts locked, that visiting its Our Animals deep link has no effect
     // on that Hunt state, and that /scan/:code is unaffected.
     await page.goto('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Scavenger Hunt' }).click()
+    await openTab(page, 'Scavenger Hunt')
     const capybaraCard = page.locator('[data-hunt-character="capybara"]')
     await expect(capybaraCard).toHaveClass(/hunt-character-locked/)
 
@@ -103,8 +100,7 @@ test.describe('/animals/:slug direct deep link', () => {
     await expect(page.getByText('Coming soon!')).toHaveCount(0)
 
     await page.goto('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Scavenger Hunt' }).click()
+    await openTab(page, 'Scavenger Hunt')
     await expect(capybaraCard).toHaveClass(/hunt-character-locked/)
 
     // /scan/:code still resolves to its own, entirely separate flow.

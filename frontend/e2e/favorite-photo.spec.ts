@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { test, expect, type APIRequestContext, type BrowserContext, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
+import { openNavMenu, openTab } from './navMenuHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -21,8 +22,7 @@ const API = 'http://localhost:8000'
 async function openFavoritePhoto(page: Page, token: string = crypto.randomUUID()): Promise<string> {
   await seedDeviceSession(page, token)
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
+  await openTab(page, 'Favorite Photo')
   return token
 }
 
@@ -77,6 +77,40 @@ test('the submission form shows the email consent line with a working /privacy l
   await expect(privacyLink).toHaveAttribute('href', '/privacy')
   await privacyLink.click()
   await expect(page).toHaveURL(/\/privacy$/)
+})
+
+// Upload hardening (backend/app/uploads.py): the guest sees the backend's
+// plain-language reason, not a raw status line.
+test('a file that is not really a photo is turned away with a plain-language message', async ({ page }) => {
+  await openFavoritePhoto(page)
+  await page.locator('.photo-submit-form input[type="file"]').setInputFiles({
+    name: 'holiday.jpg',
+    mimeType: 'image/jpeg',
+    buffer: Buffer.from('<!doctype html><script>alert(1)</script>'),
+  })
+  await page.getByRole('button', { name: 'Submit Photo' }).click()
+  await expect(page.locator('.photo-submit .screen-error')).toHaveText(
+    "That file isn't a supported photo. Please choose a JPEG, PNG or WebP image.",
+  )
+  await expect(page.getByText('Thanks! Your photo is in for staff review.')).toHaveCount(0)
+})
+
+test('a photo over 15 MB is turned away before uploading, with a plain-language message', async ({ page }) => {
+  await openFavoritePhoto(page)
+  let uploadRequests = 0
+  page.on('request', (req) => {
+    if (req.url().endsWith('/photos/submit')) uploadRequests += 1
+  })
+  await page.locator('.photo-submit-form input[type="file"]').setInputFiles({
+    name: 'huge.jpg',
+    mimeType: 'image/jpeg',
+    buffer: Buffer.alloc(15 * 1024 * 1024 + 1),
+  })
+  await page.getByRole('button', { name: 'Submit Photo' }).click()
+  await expect(page.locator('.photo-submit .screen-error')).toHaveText(
+    'That photo is too large to upload. Please choose one under 15 MB.',
+  )
+  expect(uploadRequests).toBe(0)
 })
 
 test('a submitted email never appears on the guest-facing gallery, even after the photo is shortlisted', async ({
@@ -211,7 +245,7 @@ test('Reset Session deletes this session\'s own vote so it can vote again, under
   const tokenBeforeReset = await page.evaluate(() => localStorage.getItem('cap-device-session-id'))
   expect(tokenBeforeReset).toBe(token)
 
-  await page.getByRole('button', { name: 'Open menu' }).click()
+  await openNavMenu(page)
   await page.getByRole('button', { name: 'Reset Session' }).click()
   const resetConfirmDialog = page.getByRole('dialog', { name: 'Reset Session' })
   await resetConfirmDialog.getByRole('button', { name: 'Reset Session' }).click()

@@ -7,8 +7,9 @@ from app.errors import ConflictError, NotFoundError, ValidationError
 from app.models import DeviceSession, PhotoSubmission
 from app.services import photos as photos_service
 from app.staff_auth import require_staff
+from app.uploads import LimitedUploadRoute, read_image_upload
 
-router = APIRouter(prefix="/photos", tags=["photos"])
+router = APIRouter(prefix="/photos", tags=["photos"], route_class=LimitedUploadRoute)
 
 
 @router.post("/submit", response_model=PhotoSubmission)
@@ -17,11 +18,9 @@ async def submit(
     guest_label: str | None = Form(default=None),
     email: str | None = Form(default=None),
 ) -> PhotoSubmission:
-    content = await file.read()
+    image = await read_image_upload(file)
     try:
-        return photos_service.submit_photo(
-            guest_label, email, file.filename or "photo.jpg", file.content_type or "application/octet-stream", content
-        )
+        return photos_service.submit_photo(guest_label, email, image)
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

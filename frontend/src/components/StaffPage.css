@@ -88,29 +88,6 @@
   margin-bottom: var(--cap-space-4);
 }
 
-/* Narrow widths don't have room for the badge and both buttons on one row
-   (4-column grid above would clip "Log Out" against .staff-page's own
-   overflow:hidden) -- stack them as two centered rows within the space
-   after the rail instead. */
-@media (max-width: 720px) {
-  .staff-page-header {
-    grid-template-columns: 1fr;
-    row-gap: var(--cap-space-3);
-    padding-left: calc(72px + var(--cap-space-4));
-  }
-
-  .staff-mode-badge,
-  .staff-page-header-actions {
-    grid-column: 1;
-    justify-self: center;
-  }
-
-  .staff-page-header-actions {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-}
-
 .staff-page-header-actions {
   grid-column: 4;
   justify-self: end;
@@ -159,6 +136,38 @@
 .staff-name-edit-btn {
   padding: 4px 10px;
   font-size: 12px;
+}
+
+/* Header buttons ("Log Out", "Refresh", "Change") are short fixed labels --
+   never let a squeezed row break them onto two lines. */
+.staff-page-header-actions .btn {
+  white-space: nowrap;
+}
+
+/* Narrow widths don't have room for the badge and both buttons on one row
+   (4-column grid above would clip "Log Out" against .staff-page's own
+   overflow:hidden) -- stack them as two centered rows within the space
+   after the rail instead. Must stay BELOW the base .staff-mode-badge /
+   .staff-page-header-actions rules: same specificity, so if it comes first
+   their grid-column 3/4 wins, the single-column grid grows implicit
+   columns, and the buttons get squeezed (Log Out wrapped at 360px). */
+@media (max-width: 720px) {
+  .staff-page-header {
+    grid-template-columns: 1fr;
+    row-gap: var(--cap-space-3);
+    padding-left: calc(72px + var(--cap-space-4));
+  }
+
+  .staff-mode-badge,
+  .staff-page-header-actions {
+    grid-column: 1;
+    justify-self: center;
+  }
+
+  .staff-page-header-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 
 /* Sidebar + content layout (replaces the old horizontal .staff-page-tabs

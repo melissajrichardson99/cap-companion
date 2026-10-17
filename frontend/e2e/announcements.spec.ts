@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiStaffLogin, loginAsStaff } from './staffAuthHelper'
+import { openNavMenu } from './navMenuHelper'
 
 // Every announcement this file creates is prefixed so afterEach can clean up
 // by content match alone, regardless of which test (or a failed one) created
@@ -147,7 +148,7 @@ test('dismissal is per-announcement: dismissing one never suppresses another or 
   // Reset Session (NavMenu -> Reset Session -> confirm) clears the shared
   // kiosk's dismissed-ids state -- previously-dismissed announcements (all
   // three still exist in the DB) must reappear without a full page reload.
-  await page.getByRole('button', { name: 'Open menu' }).click()
+  await openNavMenu(page)
   await page.getByRole('button', { name: 'Reset Session' }).click()
   const resetConfirmDialog = page.getByRole('dialog', { name: 'Reset Session' })
   await resetConfirmDialog.getByRole('button', { name: 'Reset Session' }).click()

@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { apiStaffLogin, loginAsStaff } from './staffAuthHelper'
 import { withSession } from './deviceSessionHelper'
+import { openNavMenu } from './navMenuHelper'
 
 const API = 'http://localhost:8000'
 
@@ -14,7 +15,7 @@ const API = 'http://localhost:8000'
 
 async function openContactStaff(page: Page) {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
+  await openNavMenu(page)
   await page.getByRole('button', { name: 'Contact Staff' }).click()
   return page.getByRole('dialog')
 }
@@ -248,7 +249,7 @@ test.describe('Contact Staff', () => {
     await dialog.getByRole('button', { name: 'Submit Question' }).click()
     await dialog.getByRole('button', { name: 'Close' }).click()
 
-    await page.getByRole('button', { name: 'Open menu' }).click()
+    await openNavMenu(page)
     await expect(page.getByRole('button', { name: 'Contact Staff — request open' })).toBeVisible()
 
     const staffPage = await context.newPage()

@@ -1,6 +1,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { seedDeviceSession } from './deviceSessionHelper'
 import { announceResultSupport, dismissMinigameOverlay, postMinigameResult, serveAsLegacyBuild } from './minigameHelper'
+import { openNavMenu } from './navMenuHelper'
 
 // Covers the Scavenger Hunt: the 5-character select screen, the lock/unlock
 // gate (migration 014_hunt_unlock.sql -- characters start locked and are
@@ -67,10 +68,6 @@ function huntDialog(page: Page): Locator {
 // card never renders its name, so name-text matching can't find it.
 function characterCard(page: Page, name: string): Locator {
   return page.locator(`.hunt-character-card[data-hunt-character="${CHARACTER_SLUGS[name]}"]`)
-}
-
-async function openNavMenu(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Open menu' }).click()
 }
 
 async function openHuntTab(page: Page): Promise<void> {

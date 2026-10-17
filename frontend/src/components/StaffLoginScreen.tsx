@@ -23,7 +23,17 @@ export function StaffLoginScreen({ onLoggedIn }: StaffLoginScreenProps) {
         setStaffToken(token)
         onLoggedIn()
       })
-      .catch(() => setError('Incorrect password.'))
+      // A 429 is the per-IP lockout after repeated wrong passwords
+      // (backend/app/routers/staff_auth.py) -- say so rather than
+      // "Incorrect password.", which would be wrong (even the right
+      // password is refused until the lockout ends).
+      .catch((err) =>
+        setError(
+          String(err).includes('-> 429:')
+            ? 'Too many incorrect password attempts. Please wait a few minutes and try again.'
+            : 'Incorrect password.',
+        ),
+      )
       .finally(() => setSubmitting(false))
   }
 

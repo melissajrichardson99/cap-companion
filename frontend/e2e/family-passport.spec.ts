@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect, type APIRequestContext, type Page, type Response } from '@playwright/test'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
+import { openNavMenu } from './navMenuHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -63,10 +64,6 @@ function passportDialog(page: Page) {
 // page load and re-closes itself after every selection -- see
 // cap-companion-nav-menu-e2e-regression memory. Every nav-driven navigation
 // below needs this clicked immediately first.
-async function openMenu(page: Page) {
-  await page.getByRole('button', { name: 'Open menu' }).click()
-}
-
 // Seeds a device-session token before first navigation (must happen before
 // page.goto -- see deviceSessionHelper.ts) and returns it, so a test that
 // also needs raw API calls (e.g. the isolation test below) can attach the
@@ -100,7 +97,7 @@ async function getCoinsTotal(request: APIRequestContext, token: string): Promise
 }
 
 async function generatePassport(page: Page, familyLabel: string, photoPath?: string): Promise<PassportSession> {
-  await openMenu(page)
+  await openNavMenu(page)
   await page.getByRole('button', { name: 'Generate Passport' }).click()
   const dialog = passportDialog(page)
   await dialog.locator('.passport-family-label-input').fill(familyLabel)
@@ -161,7 +158,7 @@ test.describe('Family Passport', () => {
 
     // Bingo: complete any one open tile (+2 coins, same "first open tile"
     // approach as cobb-coins.spec.ts -- the exact tile doesn't matter here).
-    await openMenu(page)
+    await openNavMenu(page)
     await page.getByRole('menuitemradio', { name: 'Bingo Card' }).click()
     await page.locator('.bingo-tile-open').first().click()
     await page.getByRole('button', { name: 'Completed Challenge' }).click()
@@ -180,7 +177,7 @@ test.describe('Family Passport', () => {
     // Puzzle Timer: "Right Turn Only" -- untouched by puzzle-timer.spec.ts
     // (which only exercises Math Maze / Big Mystery Maze), so no risk of
     // double-counting an already-completed attempt from that file.
-    await openMenu(page)
+    await openNavMenu(page)
     await page.getByRole('menuitemradio', { name: 'Puzzles' }).click()
     const rightTurnCard = page.locator('.puzzle-card', { hasText: 'Right Turn Only' })
     await rightTurnCard.getByRole('button', { name: 'Standard' }).click()
@@ -194,7 +191,7 @@ test.describe('Family Passport', () => {
     // Scoring Sheet: win "Cornhole Extreme" (first_to 21, auto-locks on
     // win -- no separate Finish Game tap needed) -- untouched by
     // scoring-sheet.spec.ts (Farm Toss/Horse Hoops/Cornhole/Tiki Toss only).
-    await openMenu(page)
+    await openNavMenu(page)
     await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
     const cornholeExtremeCard = page
       .locator('.scoring-game-card')
@@ -242,7 +239,7 @@ test.describe('Family Passport', () => {
   test.describe('review-prompt popup', () => {
     test('appears immediately after generation, before the passport card', async ({ page }) => {
       await openApp(page)
-      await openMenu(page)
+      await openNavMenu(page)
       await page.getByRole('button', { name: 'Generate Passport' }).click()
       const dialog = passportDialog(page)
       await dialog.locator('.passport-family-label-input').fill(`Review Prompt Family ${Date.now()}`)
@@ -263,7 +260,7 @@ test.describe('Family Passport', () => {
       context,
     }) => {
       await openApp(page)
-      await openMenu(page)
+      await openNavMenu(page)
       await page.getByRole('button', { name: 'Generate Passport' }).click()
       const dialog = passportDialog(page)
       await dialog.locator('.passport-family-label-input').fill(`Review CTA Family ${Date.now()}`)
@@ -303,7 +300,7 @@ test.describe('Family Passport', () => {
       await passportDialog(page).getByRole('button', { name: 'Close' }).click()
       await expect(page.getByRole('dialog')).toHaveCount(0)
 
-      await openMenu(page)
+      await openNavMenu(page)
       await page.getByRole('button', { name: 'Generate Passport' }).click()
       const dialog = passportDialog(page)
       await dialog.locator('.passport-family-label-input').fill(`Repeat Family Two ${Date.now()}`)

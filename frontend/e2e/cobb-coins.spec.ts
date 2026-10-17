@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext, type Page } from '@playwright/tes
 import { apiStaffLogin } from './staffAuthHelper'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
 import { postMinigameResult } from './minigameHelper'
+import { openNavMenu } from './navMenuHelper'
 
 // Covers Cobb Coins' earn side (migration 021_cobb_coins_earn_side.sql):
 // Puzzle Timer (unchanged), Bingo milestone tiers (10/25/50, replacing the
@@ -36,10 +37,6 @@ import { postMinigameResult } from './minigameHelper'
 // independent Coins totals.
 
 const API = 'http://localhost:8000'
-
-async function openNavMenu(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Open menu' }).click()
-}
 
 async function expectCoinTotal(page: Page, total: number): Promise<void> {
   await openNavMenu(page)
@@ -401,7 +398,7 @@ test.describe('Cobb Coins', () => {
     expect(await getCoinsTotal(request, token)).toBe(10)
 
     await page.goto('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
+    await openNavMenu(page)
     await page.getByRole('button', { name: 'Reset Session' }).click()
     const resetConfirmDialog = page.getByRole('dialog', { name: 'Reset Session' })
     await resetConfirmDialog.getByRole('button', { name: 'Reset Session' }).click()

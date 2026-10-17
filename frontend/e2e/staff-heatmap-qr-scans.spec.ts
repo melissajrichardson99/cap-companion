@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext, type Page } from '@playwright/tes
 import { apiStaffLogin, loginAsStaff } from './staffAuthHelper'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
 import { ANIMALS } from '../src/animalContent'
+import { openNavMenu, openTab } from './navMenuHelper'
 
 // Staff Visit Heatmap, Phase 2 (migration 042 / POST /scan-events). Covers:
 // - for each of the four QR destination types, a scan through the in-app
@@ -140,7 +141,7 @@ async function freshGuest(page: Page): Promise<{ count: () => number }> {
 
 async function scanViaModal(page: Page, code: string): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
+  await openNavMenu(page)
   await page.locator('#nav-menu-panel').getByRole('button', { name: 'Scan QR' }).click()
   const modal = page.getByRole('dialog')
   await modal.getByLabel("What's on the sign").fill(code)
@@ -202,7 +203,7 @@ test.describe('QR scans on the staff heatmap', () => {
     const posts = await freshGuest(page)
     const openTab = async (name: string) => {
       await page.goto('/')
-      await page.getByRole('button', { name: 'Open menu' }).click()
+      await openNavMenu(page)
       await page.getByRole('menuitemradio', { name }).click()
     }
 
@@ -296,8 +297,7 @@ test.describe('QR scans on the staff heatmap', () => {
     // Browsing to every one of them from inside the app logs nothing.
     const posts = await freshGuest(page)
     await page.goto('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
+    await openTab(page, 'Our Animals')
     for (const animal of newAnimals) {
       await page.locator('.animal-card').filter({ has: page.getByText(animal.name, { exact: true }) }).click()
       await expect(page).toHaveURL(new RegExp(`/animals/${animal.slug}$`))

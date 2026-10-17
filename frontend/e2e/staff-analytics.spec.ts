@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
+import { openNavMenu } from './navMenuHelper'
 
 // Covers the new Analytics dashboard (Staff Page Analytics feature): the
 // sidebar reorg (Part 2) and the dashboard itself (Part 3). Contact Staff's
@@ -9,7 +10,7 @@ import { loginAsStaff } from './staffAuthHelper'
 
 async function submitContactStaffQuestion(page: import('@playwright/test').Page) {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
+  await openNavMenu(page)
   await page.getByRole('button', { name: 'Contact Staff' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('button', { name: 'I have a question' }).click()

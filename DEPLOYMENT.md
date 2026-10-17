@@ -36,13 +36,14 @@ Follow in order — later steps depend on earlier ones.
 
 1. Create a new Supabase project (free tier).
 2. In the SQL editor, run in this exact order:
-   1. `backend/supabase/schema.sql` — creates all base tables and the two
-      Storage buckets (`favorite-photos`, `family-passport-photos`) via
+   1. `backend/supabase/schema.sql` — creates all base tables and the three
+      Storage buckets (`favorite-photos`, `family-passport-photos`,
+      `animal-photos`) via
       `insert into storage.buckets (...)` statements baked into the file
       itself. **No manual "create a bucket" step in the dashboard is
       needed** — schema.sql provisions them.
    2. Everything in `backend/supabase/migrations/`, in **numeric filename
-      order** (002 → the latest, currently 038; there is no 001, numbering
+      order** (002 → the latest, currently 046; there is no 001, numbering
       starts at 002). Most are idempotent (`add column if not exists`,
       `on conflict do nothing`), but **`017_grant_service_role_privileges.sql`
       is not optional** — a fresh Supabase project does not grant
@@ -56,6 +57,37 @@ Follow in order — later steps depend on earlier ones.
       `device_sessions.guest_id` / `passport_sessions.guest_id` link
       columns) — same idempotent, run-in-order treatment as every other
       migration here, no special handling needed beyond ordering.
+      **`044_analytics_summary_rpc.sql` must be applied before deploying
+      any backend that includes it** (the Staff Analytics tab calls its
+      `analytics_summary()` function): on an existing database, run 044 in
+      the SQL editor first, then deploy. Deployed without it, every
+      `GET /analytics/summary` fails with "analytics_summary() is missing
+      from the database: run migration 044..." (the rest of the app is
+      unaffected).
+      **`045_storage_bucket_limits.sql`** sets a 15 MiB size limit
+      (15728640 bytes, the same as `MAX_UPLOAD_BYTES` in
+      `backend/app/uploads.py`) and JPEG/PNG/WebP-only types on the three
+      photo buckets. It does **not** need to run before the backend
+      deploys: on an existing database, run it *after* the backend that
+      includes `uploads.py` is live, because an older backend passes the
+      client's own Content-Type to Storage. Objects already stored
+      (including old animal GIFs) are not affected. Limits apply only to
+      new uploads.
+      **`046_enable_rls_all_tables.sql`** turns on row level security,
+      with no policies, on every `public` table, so only `service_role` can
+      read or write them. It does **not** need to run before the backend
+      deploys (the backend uses the service-role key, which bypasses RLS).
+      On an existing database, **test it on the dev project first**. Then
+      run it on production and check its verify queries (all tables
+      `rls_enabled = true`; no anon/authenticated privileges). It refuses
+      to run if `service_role` lacks BYPASSRLS, and fails, changing
+      nothing, if any `public` table would be left without RLS.
+      **New tables from now on:** a migration that creates a table must
+      also run `alter table <name> enable row level security;` in the same
+      file and add no policies, unless anon access is genuinely intended.
+      Re-running 046's verify query A afterwards should still show every
+      table `true`. (It needs no grant either; 017's default privileges
+      already cover `service_role`.)
    3. `backend/supabase/seed.sql` — inserts map nodes, minigames, puzzles,
       scoring games, hunt characters, etc.
 3. Why this order: schema.sql must exist before migrations can `alter
@@ -106,6 +138,15 @@ Follow in order — later steps depend on earlier ones.
      `INTERNAL_CLEANUP_SECRET` GitHub Actions repo secret (see section 6) —
      the two must match exactly, or the scheduled cleanup workflow gets a
      401 on every run.
+   - `REFERENCE_CACHE_ENABLED` — optional; leave unset (cache on). Set to
+     `0` only as the kill switch described in section 7.
+   - **Never set `DEV_SUPABASE_PROJECT_REFS` on Render.** It is the
+     allow-list that lets the destructive dev-only scripts
+     (`cleanup_dev_test_data.py`, `e2e_run_cleanup.py`,
+     `reset_demo_data.py`, `e2e_collision_fixture.py`,
+     `verify_session_cleanup.py`) run against a project; it belongs only in
+     a dev machine's `backend/.env`. It is deliberately not in
+     `render.yaml`.
 3. Deploy. Render builds and starts the service; note its public URL
    (`https://cap-companion-backend.onrender.com`-style).
 
@@ -233,12 +274,15 @@ Follow in order — later steps depend on earlier ones.
    so the practical order is: deploy Render with placeholder values →
    deploy Cloudflare → come back and update Render's env vars → Render
    redeploys automatically on env var change.
-2. Regenerate QR codes (`backend/scripts/generate_qr_codes.py` and
-   `generate_hunt_qr_codes.py`) **after** `FRONTEND_BASE_URL` is finalized.
-   Each code encodes `<FRONTEND_BASE_URL>/scan/<code>` (see
-   `backend/app/services/qr.py`) baked in at generation time — codes
-   generated against a placeholder URL, or before an environment's final
-   domain is known, will point at the wrong place once printed.
+2. Regenerate QR codes (`backend/scripts/generate_qr_codes.py`,
+   `generate_hunt_qr_codes.py` and `generate_animal_qr_codes.py`) **after**
+   `FRONTEND_BASE_URL` is finalized. The first two encode
+   `<FRONTEND_BASE_URL>/scan/<code>` (see `backend/app/services/qr.py`);
+   the animal signs encode `<FRONTEND_BASE_URL>/animals/<slug>`, a
+   separate deep link into Our Animals. Either way the URL is baked in at
+   generation time — codes generated against a placeholder URL, or before
+   an environment's final domain is known, will point at the wrong place
+   once printed.
 
 ## 3. Gotchas
 
@@ -318,25 +362,42 @@ Follow in order — later steps depend on earlier ones.
   Cloudflare dashboard, not represented in this repo, so they can't be
   verified here. Confirm they're still active from the dashboard directly
   rather than trusting this doc if it's been a while.
-- **The base app has no per-user auth — it's a shared-kiosk session model.**
-  There is one live bingo card and one shared set of map-node states (see
-  `backend/scripts/reset_demo_data.py`'s docstring: "every map_nodes row —
-  all cards share the same map"), plus a guest-facing **Reset Session**
-  action (`frontend/src/components/ResetSessionModal.tsx`,
-  `backend/app/routers/session.py`) that wipes progress for *this device
-  only* (per-device scoping was completed by the Per-Device Sessions
-  migration referenced throughout the codebase; this note previously
-  described an earlier, fully-shared-state version of Reset Session that no
-  longer reflects the live code). If you stand up a second environment for
-  concurrent testing/demoing, know that per-device isolation depends on each
-  tester's browser actually holding a distinct `X-Device-Session` token —
-  there's no per-family isolation beyond that.
+- **The base app has no login — each device is its own anonymous
+  session.** The browser generates an `X-Device-Session` token on first
+  visit and every guest's progress (Bingo, Map visits, Hunt, Coins,
+  Collectibles, Scoring, Puzzles, votes) is stored against it. What is
+  shared by everyone is the park content itself: one live bingo card
+  layout and one set of map nodes, including each attraction's open/closed
+  status (see `backend/scripts/reset_demo_data.py`'s docstring). The
+  guest-facing **Reset Session** action
+  (`frontend/src/components/ResetSessionModal.tsx`,
+  `backend/app/routers/session.py`) wipes progress for *this device only*.
+  If you stand up a second environment for concurrent testing/demoing,
+  per-device isolation depends on each tester's browser actually holding
+  a distinct `X-Device-Session` token — there's no per-family isolation
+  beyond that, and the token is not a credential (a client can send any
+  value).
 - **Guest Accounts (optional, on top of the above) is a real per-user auth
   layer** — email/password sign-up, bcrypt-hashed, bearer tokens
   (`X-Guest-Auth`), see section 5. It does not replace the anonymous
   per-device model; a guest opts in from the nav to make their Coins/
   Collectibles/Bingo/Map/Passport history follow them across devices and
   visits instead of resetting per device.
+- **Staff login is rate-limited per client IP.** `POST /staff/login` allows
+  5 wrong passwords per IP in any 10 minutes, then answers 429 ("Too many
+  incorrect password attempts. Please wait N minutes...") until the oldest
+  failure is 10 minutes old; a correct password clears the count, so normal
+  logins and the odd typo are unaffected (`backend/app/rate_limit.py`). The
+  IP is the **last** `X-Forwarded-For` entry, the one Render's proxy adds
+  itself; earlier entries are client-supplied and ignored. Same caveat as
+  the reference cache (section 7): the counts live in memory, reset on every
+  deploy/restart/spin-down, and are per instance, so this only holds while
+  the backend runs as a single instance. Each lockout logs
+  `Staff login locked out for client <ip>` — after deploying, check that
+  two different networks (e.g. phone on mobile data and a laptop on Wi-Fi)
+  show different IPs there; if every lockout shows the same address,
+  Render's proxy chain differs from what's assumed and the key needs
+  revisiting. To unlock early, restart the service.
 
 ## 5. Guest Accounts
 
@@ -353,7 +414,7 @@ existing anonymous flow is unaffected either way.
   password change can revoke every other active session), and short-lived
   (1 hour) single-use password-reset tokens. Login and password-reset-request
   responses are deliberately generic (never reveal whether an email has an
-  account); signup and password-reset-request/signup are all rate-limited
+  account); signup, login and password-reset-request are all rate-limited
   in-process (5 attempts / 15 min, keyed by normalized email —
   `backend/app/rate_limit.py`). That limiter is per-process, in-memory state
   — it resets on every deploy/restart and does **not** share state across

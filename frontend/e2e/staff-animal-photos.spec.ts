@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
+import { openTab } from './navMenuHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -33,8 +34,7 @@ async function openStaffAnimalPhotos(page: Page): Promise<void> {
 
 async function openPublicAnimalPhotos(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
+  await openTab(page, 'Our Animals')
   await page.locator('.animal-card', { hasText: ANIMAL_NAME }).click()
   await page.getByRole('tab', { name: 'Photos' }).click()
 }

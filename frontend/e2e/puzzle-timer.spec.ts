@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
+import { openTab } from './navMenuHelper'
 
 // Covers the Puzzle Solving Timer (Plan.md 2.3): the description-only start
 // screen, start/stop timer per challenge, the 3-tap progressive hint button,
@@ -26,8 +27,7 @@ const API = 'http://localhost:8000'
 async function openPuzzlesTab(page: Page, token: string = crypto.randomUUID()): Promise<string> {
   await seedDeviceSession(page, token)
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Puzzles' }).click()
+  await openTab(page, 'Puzzles')
   return token
 }
 

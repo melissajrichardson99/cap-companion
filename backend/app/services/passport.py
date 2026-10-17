@@ -27,6 +27,7 @@ from app.models import MilestonesAchieved, PassportSession, PassportStats
 from app.services import coins as coins_service
 from app.services import milestone as milestone_service
 from app.supabase_client import get_supabase_client
+from app.uploads import ValidatedImage
 
 BUCKET = "family-passport-photos"
 
@@ -201,22 +202,16 @@ def _compute_stats(client, device_session_id: UUID, guest_id: UUID | None) -> Pa
 
 def generate_passport(
     family_label: str,
-    filename: str | None,
-    content_type: str | None,
-    file_bytes: bytes | None,
+    image: ValidatedImage | None,
     device_session_id: UUID,
     guest_id: UUID | None = None,
 ) -> PassportSession:
     client = get_supabase_client()
 
     storage_path = None
-    if file_bytes is not None:
-        photo_id = uuid4()
-        suffix = filename.rsplit(".", 1)[-1].lower() if filename and "." in filename else "jpg"
-        storage_path = f"{photo_id}.{suffix}"
-        client.storage.from_(BUCKET).upload(
-            storage_path, file_bytes, {"content-type": content_type or "application/octet-stream"}
-        )
+    if image is not None:
+        storage_path = f"{uuid4()}.{image.extension}"
+        client.storage.from_(BUCKET).upload(storage_path, image.content, {"content-type": image.content_type})
 
     stats = _compute_stats(client, device_session_id, guest_id)
 

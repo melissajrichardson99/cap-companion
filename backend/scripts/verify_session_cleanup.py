@@ -25,6 +25,7 @@ behavior being verified, not test pollution.
 
 from __future__ import annotations
 
+import base64
 import sys
 import traceback
 from datetime import datetime, timedelta, timezone
@@ -41,6 +42,9 @@ import dev_test_data  # noqa: E402
 
 FAR_PAST_DAYS = 40  # comfortably past session_cleanup.INACTIVITY_THRESHOLD (14 days)
 RECENT_DAYS = 1
+_FIXTURE_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+)
 
 
 def _iso(days_ago: float) -> str:
@@ -97,9 +101,11 @@ def _insert_full_session(client, fk: dict, *, guest_id: str | None, last_active_
         .data[0]["id"]
     )
 
-    passport_photo_path = f"cleanup-verify-{uuid4()}.txt"
+    # A real 1x1 PNG, not a text file: migration 045 limits the bucket to
+    # JPEG/PNG/WebP, and Storage refuses any other content type.
+    passport_photo_path = f"cleanup-verify-{uuid4()}.png"
     client.storage.from_(PASSPORT_BUCKET).upload(
-        passport_photo_path, b"verification fixture", {"content-type": "text/plain"}
+        passport_photo_path, _FIXTURE_PNG, {"content-type": "image/png"}
     )
     passport_id = (
         client.table("passport_sessions")

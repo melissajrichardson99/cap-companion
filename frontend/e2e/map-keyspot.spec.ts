@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { openTab } from './navMenuHelper'
 
 // Covers the Map screen's "Take Me There" card: 6 guest-facing key-spot
 // buttons that highlight the matching pin(s) on the map above. Node-to-
@@ -8,8 +9,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 async function openMapTab(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Map' }).click()
+  await openTab(page, 'Map')
 }
 
 test.describe('Take Me There card', () => {

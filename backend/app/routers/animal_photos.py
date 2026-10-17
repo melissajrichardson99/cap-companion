@@ -6,8 +6,9 @@ from app.errors import NotFoundError, ValidationError
 from app.models import AnimalPhoto, ReorderAnimalPhotosRequest
 from app.services import animal_photos as animal_photos_service
 from app.staff_auth import require_staff
+from app.uploads import LimitedUploadRoute, read_image_upload
 
-router = APIRouter(prefix="/animal-photos", tags=["animal-photos"])
+router = APIRouter(prefix="/animal-photos", tags=["animal-photos"], route_class=LimitedUploadRoute)
 
 
 @router.get("", response_model=list[AnimalPhoto])
@@ -17,11 +18,9 @@ def list_all() -> list[AnimalPhoto]:
 
 @router.post("/{animal_slug}", response_model=AnimalPhoto, dependencies=[Depends(require_staff)])
 async def upload(animal_slug: str, file: UploadFile = File(...)) -> AnimalPhoto:
-    content = await file.read()
+    image = await read_image_upload(file)
     try:
-        return animal_photos_service.upload(
-            animal_slug, file.filename or "photo.jpg", file.content_type or "application/octet-stream", content
-        )
+        return animal_photos_service.upload(animal_slug, image)
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

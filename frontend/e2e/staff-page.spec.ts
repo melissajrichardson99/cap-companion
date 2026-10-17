@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect, type Page } from '@playwright/test'
 import { loginAsStaff, readStaffPassword } from './staffAuthHelper'
+import { openNavMenu } from './navMenuHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -17,13 +18,13 @@ const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
 // panel, which starts closed on every fresh page load -- open it first.
 async function openContactStaff(page: Page) {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
+  await openNavMenu(page)
   await page.getByRole('button', { name: 'Contact Staff' }).click()
   return page.getByRole('dialog')
 }
 
 async function openFavoritePhoto(page: Page) {
-  await page.getByRole('button', { name: 'Open menu' }).click()
+  await openNavMenu(page)
   // The tab list uses role="menuitemradio" (NavMenu.tsx), not the button
   // tag's implicit "button" role.
   await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
@@ -54,6 +55,27 @@ test.describe('Staff Page auth', () => {
 
     await page.reload()
     await expect(page.getByRole('tab', { name: 'Photo Queue' })).toBeVisible()
+  })
+
+  test('a login lockout (429) says to wait, not "Incorrect password."', async ({ page }) => {
+    // Mocked: a real lockout would block this machine's staff logins for
+    // the rest of the suite (the limiter itself is covered by
+    // backend/tests/test_staff_login_rate_limit.py).
+    await page.route('**/staff/login', (route) =>
+      route.fulfill({
+        status: 429,
+        contentType: 'application/json',
+        headers: { 'Access-Control-Allow-Origin': '*', 'Retry-After': '600' },
+        body: JSON.stringify({ detail: 'Too many incorrect password attempts. Please wait 10 minutes and try again.' }),
+      }),
+    )
+    await page.goto('/staff')
+    await page.getByLabel('Password').fill('anything')
+    await page.getByRole('button', { name: 'Log In' }).click()
+    await expect(
+      page.getByText('Too many incorrect password attempts. Please wait a few minutes and try again.'),
+    ).toBeVisible()
+    await expect(page.getByText('Incorrect password.')).toHaveCount(0)
   })
 
   test('a fresh browsing context with no stored session sees the login screen, not staff data', async ({
@@ -90,7 +112,7 @@ test.describe('Staff Page auth', () => {
 
 test('the Staff nav link is visible in the guest nav menu and navigates to /staff', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
+  await openNavMenu(page)
   await page.getByRole('button', { name: 'Staff', exact: true }).click()
   await expect(page).toHaveURL(/\/staff$/)
 })
@@ -306,4 +328,22 @@ test('a staff session with no display name yet is prompted once; the name then a
   await expect(staffPage.locator('.staff-name-badge-label')).toHaveText('Priya B')
 
   await staffContext.close()
+})
+
+// Regression: at phone widths the header's narrow-layout media query used to
+// sit above the base grid-column rules and lose to them, squeezing "Log Out"
+// onto two lines at 360px. One text line == same height as the one-word
+// Refresh button (Staff page) or a single line box (Heatmap, no Refresh).
+test('the Staff header Log Out button stays on one line at 360px on the Staff page and the Heatmap', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+  await loginAsStaff(page)
+  const actions = page.locator('.staff-page-header-actions')
+  const logOutBox = await actions.getByRole('button', { name: 'Log Out' }).boundingBox()
+  const refreshBox = await actions.getByRole('button', { name: 'Refresh' }).boundingBox()
+  expect(logOutBox!.height).toBeCloseTo(refreshBox!.height, 0)
+
+  await page.goto('/staff/heatmap')
+  const heatmapLogOut = page.locator('.staff-page-header-actions').getByRole('button', { name: 'Log Out' })
+  await heatmapLogOut.waitFor()
+  expect((await heatmapLogOut.boundingBox())!.height).toBeCloseTo(refreshBox!.height, 0)
 })

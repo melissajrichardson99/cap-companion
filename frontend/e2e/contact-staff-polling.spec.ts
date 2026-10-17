@@ -143,7 +143,7 @@ test.describe('Contact Staff status polling', () => {
     await page.clock.runFor(2 * 60_000)
     await expectCount(mine, mine.n)
 
-    await page.getByRole('button', { name: 'Open menu' }).click()
+    await openNavMenu(page)
     await page.getByRole('button', { name: 'Contact Staff' }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByRole('button', { name: 'I have a question' }).click()

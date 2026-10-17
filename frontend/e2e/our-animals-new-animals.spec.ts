@@ -1,5 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { ANIMALS, PLACEHOLDER_PHOTO_SRC } from '../src/animalContent'
+import { openTab } from './navMenuHelper'
 
 // Covers the 11 animals added after the original 9 (first-version general
 // content, no photos yet): each one opens by direct URL and from the list,
@@ -33,8 +34,7 @@ function contentFor(slug: string) {
 
 async function openAnimalsTab(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
+  await openTab(page, 'Our Animals')
 }
 
 // The placeholder must actually have loaded (naturalWidth > 0) -- a broken

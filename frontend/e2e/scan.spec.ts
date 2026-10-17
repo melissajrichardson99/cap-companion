@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect, type Page } from '@playwright/test'
 import { seedDeviceSession } from './deviceSessionHelper'
+import { openNavMenu, openTab } from './navMenuHelper'
 
 // Covers QR/manual-code scanning (migration 009_scan_codes.sql) and the
 // Scavenger Hunt lock/unlock gate built on top of it (migration
@@ -55,7 +56,7 @@ test.beforeEach(async ({ page }) => {
 
 async function openScanEntry(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
+  await openNavMenu(page)
   // Scoped to the nav panel -- Home's Choose Your Adventure section
   // (HomePage.tsx) has its own "Scan QR" quicknav button with the same
   // accessible name, so an unscoped getByRole here is ambiguous whenever
@@ -101,8 +102,7 @@ test.describe('QR / manual code scanning', () => {
     // The unlock persists -- Kangaroo shows unlocked (not "Scan to unlock")
     // back on the Scavenger Hunt tab.
     await page.goto('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Scavenger Hunt' }).click()
+    await openTab(page, 'Scavenger Hunt')
     const kangarooCard = page.locator('.hunt-character-card', { hasText: 'Kangaroo' })
     await expect(kangarooCard).not.toHaveClass(/hunt-character-locked/)
   })
@@ -199,7 +199,7 @@ test.describe('QR / manual code scanning', () => {
 
     await expect(page.getByText(/couldn't find a code matching/i)).toBeVisible()
     await page.getByRole('button', { name: 'Back to the app' }).click()
-    await page.getByRole('button', { name: 'Open menu' }).click()
+    await openNavMenu(page)
     await expect(page.locator('#nav-menu-panel').getByRole('button', { name: 'Scan QR' })).toBeVisible()
   })
 
@@ -213,7 +213,7 @@ test.describe('QR / manual code scanning', () => {
 
     await page.getByRole('button', { name: 'Back to the app' }).click()
     await expect(page).toHaveURL('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
+    await openNavMenu(page)
     await expect(page.locator('#nav-menu-panel').getByRole('button', { name: 'Scan QR' })).toBeVisible()
   })
 
@@ -229,8 +229,7 @@ test.describe('QR / manual code scanning', () => {
     await expect(page.getByText('Capybara — Challenge 1')).toBeVisible()
 
     await page.goto('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Scavenger Hunt' }).click()
+    await openTab(page, 'Scavenger Hunt')
     const capybaraCard = page.locator('.hunt-character-card', { hasText: 'Capybara' })
     await expect(capybaraCard).not.toHaveClass(/hunt-character-locked/)
   })

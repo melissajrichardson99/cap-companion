@@ -5,15 +5,16 @@ petting-zoo/entertainment venue — an interactive map, scavenger hunt, bingo
 card, minigames, and an in-app currency for guests, plus a full staff
 administration and analytics system behind it. Built solo, end to end
 (React/TypeScript frontend, FastAPI backend, Postgres database, 10 custom
-Godot minigames, ~30 Playwright end-to-end specs), across many development
+Godot minigames, 48 Playwright end-to-end spec files), across many development
 sessions.
 
 **Live demo:** [cap-companion.melissajrichardson99.workers.dev](https://cap-companion.melissajrichardson99.workers.dev/)
 
-> No user accounts. Guests are anonymous, identified only by a per-device
-> session token — there's nothing to sign up for, walk up and start playing.
-> Staff features sit behind a single shared password, separate from the
-> guest session system entirely.
+> No sign-up needed. Guests are anonymous by default, identified by a
+> per-device session token — walk up and start playing. An optional guest
+> account (email + password) lets a family keep their coins, collectibles
+> and progress across devices and visits. Staff features sit behind a single
+> shared password, separate from both.
 
 ## Screenshots
 
@@ -70,19 +71,22 @@ volume — all with a date-range filter.
 - **Minigames** — 10 custom Godot 4.x projects exported to HTML5/WebGL,
   served from Cloudflare R2 through a small Worker (Godot's `.wasm` exports
   exceed Cloudflare's per-file static-asset cap).
-- **Testing** — Playwright end-to-end (32 specs), pytest for the backend.
-- **Auth model** — no accounts. Guests get an anonymous per-device session
+- **Testing** — Playwright end-to-end (48 spec files, 363 tests), pytest
+  for the backend (316 tests).
+- **Auth model** — anonymous by default. Guests get a per-device session
   token (`X-Device-Session` header, generated client-side, stored in
-  `localStorage`) that every stateful route reads/writes against. Staff
-  auth is a completely separate system: one shared password, signed session
-  tokens via `itsdangerous`.
+  `localStorage`) that every stateful route reads/writes against. Optional
+  guest accounts (email/password, bcrypt-hashed, `X-Guest-Auth` bearer
+  token) link those device sessions so progress follows the guest across
+  devices. Staff auth is a completely separate system: one shared password,
+  signed session tokens via `itsdangerous`.
 
 ## Architecture
 
 ```
 Browser (guest)          Browser (staff)
       |                        |
-      | X-Device-Session       | staff session cookie
+      | X-Device-Session       | Authorization: Bearer <staff token>
       v                        v
         React SPA (Cloudflare Workers Static Assets)
                      |
@@ -210,7 +214,8 @@ enough to expose it.
 
 ## Running it locally
 
-Requires Node.js, Python 3.13, and a Supabase project (free tier is fine).
+Requires Node.js 24 (pinned in `frontend/.nvmrc`), Python 3.13, and a
+Supabase project (free tier is fine).
 
 ```bash
 # 1. Database
@@ -223,14 +228,31 @@ Requires Node.js, Python 3.13, and a Supabase project (free tier is fine).
 cd backend
 python -m venv venv && venv\Scripts\activate   # or `source venv/bin/activate` on macOS/Linux
 pip install -r requirements.txt
-cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_KEY, STAFF_PASSWORD, STAFF_SESSION_SECRET
+cp .env.example .env   # see the variable list below
 uvicorn app.main:app --reload
+python -m pytest       # backend tests (no database needed)
 
 # 3. Frontend (separate terminal)
 cd frontend
 npm install
 npm run dev
 ```
+
+`backend/.env` (every key is described in `backend/.env.example`):
+
+| Variable | Needed for |
+| --- | --- |
+| `SUPABASE_URL`, `SUPABASE_KEY` | Required. Project URL and its `service_role` key. |
+| `STAFF_PASSWORD`, `STAFF_SESSION_SECRET` | Required for the `/staff` area. |
+| `CORS_ALLOWED_ORIGINS` | Optional locally (defaults to `http://localhost:5173`). |
+| `FRONTEND_BASE_URL` | QR codes and password-reset email links. |
+| `RESEND_API_KEY`, `RESEND_FROM_ADDRESS` | Password-reset emails (optional guest accounts). |
+| `INTERNAL_CLEANUP_SECRET` | The scheduled session-cleanup endpoint. |
+| `REFERENCE_CACHE_ENABLED` | Optional; unset means the reference cache is on. |
+| `DEV_SUPABASE_PROJECT_REFS` | Dev machines only — see below. |
+
+The frontend needs no `.env` locally: `VITE_API_BASE_URL` is optional and
+defaults to `http://localhost:8000`.
 
 The frontend runs at `http://localhost:5173` and talks to the backend at
 `http://localhost:8000` by default. Minigames are exported separately from

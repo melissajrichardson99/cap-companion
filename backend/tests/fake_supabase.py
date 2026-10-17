@@ -31,6 +31,8 @@ _DEFAULTS = {
     "device_sessions": lambda: {"created_at": _now_iso(), "guest_id": None},
     "announcements": lambda: {"created_at": _now_iso(), "updated_at": _now_iso()},
     "photo_submissions": lambda: {"submitted_at": _now_iso(), "status": "pending_review", "email": None},
+    "passport_sessions": lambda: {"generated_at": _now_iso()},
+    "animal_photos": lambda: {"created_at": _now_iso()},
     "session_tile_completions": lambda: {"completed_at": _now_iso()},
     "node_visits": lambda: {"visited_at": _now_iso()},
     "coin_awards": lambda: {"created_at": _now_iso()},
@@ -204,6 +206,7 @@ class _Bucket:
 
     def upload(self, path, content, options=None):
         self.db.storage_objects.add((self.name, path))
+        self.db.storage_content_types[(self.name, path)] = (options or {}).get("content-type")
 
     def remove(self, paths):
         for p in paths:
@@ -224,6 +227,7 @@ class FakeSupabase:
         self.reads: collections.Counter = collections.Counter()
         self.writes: collections.Counter = collections.Counter()
         self.storage_objects: set = set()
+        self.storage_content_types: dict = {}
         self.storage = _Storage(self)
 
     def table(self, name):

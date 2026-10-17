@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
 import { ANIMAL_SHOW_TIMES, TRACTOR_RIDE_TIMES_EAST, TRACTOR_RIDE_TIMES_WEST } from '../src/homePageContent'
+import { openTab } from './navMenuHelper'
 
 // Fri Sep 4 2026 -- an ordinary open day under the real seasonal schedule
 // (Sept/Oct is Fri-Sun) and not a holiday, used by the status-text tests
@@ -31,8 +32,7 @@ function scheduleChips(page: Page, headingSubstring: string) {
 // The Favorite Photo tab lives inside the guest nav's dropdown panel, which
 // starts closed on every fresh page load -- same gotcha as favorite-photo.spec.ts.
 async function openFavoritePhoto(page: Page) {
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
+  await openTab(page, 'Favorite Photo')
 }
 
 async function submitPhoto(page: Page, label: string) {
@@ -184,8 +184,7 @@ test('navbar logo returns to Home from another screen', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Bingo Card' }).click()
+  await openTab(page, 'Bingo Card')
   await expect(page.getByRole('heading', { name: HOME_HEADING })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Go to home page' }).click()

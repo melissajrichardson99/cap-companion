@@ -23,3 +23,12 @@ services:
         sync: false
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_ADDRESS
+        sync: false
+      # Reference-cache kill switch (DEPLOYMENT.md section 7). Unset means on;
+      # sync: false rather than a value here so a blueprint sync can never
+      # reset a "0" set in the dashboard during an incident.
+      - key: REFERENCE_CACHE_ENABLED
+        sync: false

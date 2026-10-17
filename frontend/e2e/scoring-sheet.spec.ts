@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
+import { openTab } from './navMenuHelper'
 
 const API = 'http://localhost:8000'
 
@@ -46,8 +47,7 @@ async function openGame(
   // Guest nav is a closed-by-default hamburger dropdown; tab buttons use an
   // explicit menuitemradio role, not the implicit button role -- see
   // cap-companion-nav-menu-e2e-regression memory.
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
+  await openTab(page, 'Scoring Sheets')
   await gameCard(page, gameName).getByRole('button', { name: 'Start Scoring' }).click()
   return { dialog: page.getByRole('dialog'), token }
 }
@@ -102,8 +102,7 @@ test.describe('Scoring Sheet', () => {
     page,
   }) => {
     await page.goto('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
+    await openTab(page, 'Scoring Sheets')
 
     for (const name of ['Farm Toss', 'Horse Hoops', 'Cornhole', 'Cornhole Extreme', 'Tiki Toss / Ring & Hook']) {
       await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()

@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { apiStaffLogin, loginAsStaff } from './staffAuthHelper'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
+import { openNavMenu, openTab } from './navMenuHelper'
 
 // Staff-managed open/closed status (map_nodes.is_open) -- purely visual/
 // informational on the guest Map, backed by a column independent of a
@@ -17,8 +18,7 @@ const API = 'http://localhost:8000'
 
 async function openMapTab(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Map' }).click()
+  await openTab(page, 'Map')
 }
 
 interface MapNodeRow {
@@ -134,7 +134,7 @@ test.describe('Attraction open/closed status', () => {
 
     // Reset Session (NavMenu -> Reset Session -> confirm), same flow as
     // announcements.spec.ts's precedent.
-    await page.getByRole('button', { name: 'Open menu' }).click()
+    await openNavMenu(page)
     await page.getByRole('button', { name: 'Reset Session' }).click()
     const resetConfirmDialog = page.getByRole('dialog', { name: 'Reset Session' })
     await resetConfirmDialog.getByRole('button', { name: 'Reset Session' }).click()

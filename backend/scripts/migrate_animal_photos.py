@@ -58,7 +58,9 @@ from app.supabase_client import SUPABASE_URL, get_supabase_client  # noqa: E402
 
 ANIMALS_DIR = Path(__file__).resolve().parents[2] / "frontend" / "public" / "animals"
 
-_NUMBERED_FILE_RE = re.compile(r"^(\d+)\.(jpg|jpeg|png|webp|gif)$", re.IGNORECASE)
+# Same types the animal-photos bucket accepts (migration 045). A GIF would be
+# refused by Storage only AFTER this animal's existing rows were deleted.
+_NUMBERED_FILE_RE = re.compile(r"^(\d+)\.(jpg|jpeg|png|webp)$", re.IGNORECASE)
 
 
 def _numbered_photos(animal_dir: Path) -> list[Path]:
@@ -77,7 +79,6 @@ def _content_type_for(path: Path) -> str:
         ".jpeg": "image/jpeg",
         ".png": "image/png",
         ".webp": "image/webp",
-        ".gif": "image/gif",
     }[path.suffix.lower()]
 
 

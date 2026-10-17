@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { openTab } from './navMenuHelper'
 
 // Covers the new parent/child map node behavior: Cornhole, Cornhole Extreme,
 // Horse Hoops, and Tiki Toss/Ring & Hook are sub-games of Arcade Pad and
@@ -19,8 +20,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 async function openMapTab(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Map' }).click()
+  await openTab(page, 'Map')
 }
 
 test.describe('Arcade Pad parent/child interconnectivity', () => {
@@ -97,8 +97,7 @@ test.describe('Arcade Pad parent/child interconnectivity', () => {
     }
     await expect(page.locator('.minigame-overlay')).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Bingo Card' }).click()
+    await openTab(page, 'Bingo Card')
     await expect(page.locator('.bingo-tile', { hasText: 'Win a round at Cornhole' })).toHaveClass(/bingo-tile-completed/)
     await expect(page.locator('.bingo-tile', { hasText: 'Take on Cornhole Extreme' })).toHaveClass(/bingo-tile-completed/)
     await expect(page.locator('.bingo-tile', { hasText: 'Score big at Horse Hoops' })).toHaveClass(/bingo-tile-open/)

@@ -13,10 +13,12 @@ in-memory fake Supabase, tests/fake_supabase.py):
 
 from __future__ import annotations
 
+import io
 import uuid
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app import device_session, reference_cache, supabase_client
 from app.main import app
@@ -336,7 +338,9 @@ def test_animal_photo_upload_delete_reorder_are_live_immediately(client, db):
     before = _get(client, "/animal-photos")
     assert len(before) == 2
 
-    res = client.post("/animal-photos/goat", files={"file": ("new.jpg", b"jpegbytes", "image/jpeg")})
+    jpeg = io.BytesIO()
+    Image.new("RGB", (8, 8)).save(jpeg, "JPEG")
+    res = client.post("/animal-photos/goat", files={"file": ("new.jpg", jpeg.getvalue(), "image/jpeg")})
     assert res.status_code == 200, res.text
     uploaded = res.json()
     after_upload = _get(client, "/animal-photos")

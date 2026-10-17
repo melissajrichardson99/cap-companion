@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { ANIMALS } from '../src/animalContent'
+import { openTab } from './navMenuHelper'
 
 // Covers the "Our Animals" feature (rebranded Encyclopedia, Plan.md 2.5/5):
 // the full animal list + name search, the individual animal detail page's
@@ -25,8 +26,7 @@ import { ANIMALS } from '../src/animalContent'
 
 async function openAnimalsTab(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
+  await openTab(page, 'Our Animals')
 }
 
 function animalCard(page: Page, name: string) {

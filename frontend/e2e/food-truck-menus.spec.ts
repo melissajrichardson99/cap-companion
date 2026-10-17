@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { FOOD_TRUCKS } from '../src/foodTruckContent'
 import { PAGE_SUBHEADERS } from '../src/pageSubheaderContent'
+import { openTab } from './navMenuHelper'
 
 // Covers the "Food Truck Menus" page -- the last major unbuilt item from the
 // original app plan. All content is frontend-only (foodTruckContent.ts, no
@@ -12,8 +13,7 @@ import { PAGE_SUBHEADERS } from '../src/pageSubheaderContent'
 
 async function openFoodTrucksTab(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Food Truck Menus' }).click()
+  await openTab(page, 'Food Truck Menus')
 }
 
 function truckCard(page: Page, slug: string) {

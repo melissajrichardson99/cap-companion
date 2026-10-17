@@ -1,4 +1,8 @@
-fastapi==0.115.6
+fastapi==0.133.0
+# Transitive (via fastapi), pinned because fastapi 0.133 still allows starlette
+# >=0.40.0: 1.3.1 is the first release patched for both multipart-upload
+# advisories (CVE-2025-54121, CVE-2026-54283).
+starlette==1.3.1
 uvicorn[standard]==0.34.0
 supabase==2.31.0
 httpx==0.28.1

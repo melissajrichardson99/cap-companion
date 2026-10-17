@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { openTab } from './navMenuHelper'
 
 // Covers the Map screen legend-color rework: not-visited pins render as real
 // SVG shapes (star/circle/square/diamond) whose stroke traces the actual
@@ -26,8 +27,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 async function openMapTab(page: Page): Promise<void> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Map' }).click()
+  await openTab(page, 'Map')
 }
 
 test.describe('Map pin legend colors', () => {

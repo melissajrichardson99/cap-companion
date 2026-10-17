@@ -52,8 +52,9 @@ async def catch_unhandled_exceptions(request: Request, call_next):
         return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 
-# Comma-separated list of allowed frontend origins, e.g.
-# "https://cap-companion.pages.dev,https://staff-test.cap-companion.pages.dev".
+# Comma-separated list of allowed frontend origins, each with its scheme, e.g.
+# "https://your-app.workers.dev,https://companion.example.com" (the frontend
+# is a Cloudflare Worker -- see wrangler.jsonc and DEPLOYMENT.md).
 # Defaults to the local Vite dev server so `.env` doesn't need to set this for
 # local development; set it explicitly once the frontend is deployed.
 _cors_origins_env = os.environ.get("CORS_ALLOWED_ORIGINS")

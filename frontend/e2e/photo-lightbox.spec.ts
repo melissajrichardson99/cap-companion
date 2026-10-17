@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect, type Page } from '@playwright/test'
 import { loginAsStaff } from './staffAuthHelper'
+import { openNavMenu } from './navMenuHelper'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
@@ -13,10 +14,6 @@ const FIXTURE_PHOTO = path.join(__dirname, 'fixtures', 'test-photo.jpg')
 // the lightbox (its own Card X of Y nav already covers that image, and
 // stacking a second navigation scheme on the same image would confuse the
 // two) -- untouched, so no interference risk there.
-
-async function openMenu(page: Page) {
-  await page.getByRole('button', { name: 'Open menu' }).click()
-}
 
 function lightbox(page: Page) {
   return page.getByRole('dialog', { name: 'Photo viewer' })
@@ -30,7 +27,7 @@ test.describe('PhotoLightbox', () => {
   test.describe('Our Animals', () => {
     async function openAnimal(page: Page, name: string) {
       await page.goto('/')
-      await openMenu(page)
+      await openNavMenu(page)
       await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
       await page.locator('.animal-card', { hasText: name }).click()
     }
@@ -161,7 +158,7 @@ test.describe('PhotoLightbox', () => {
 
       for (const label of [labelA, labelB]) {
         await page.goto('/')
-        await openMenu(page)
+        await openNavMenu(page)
         await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
         await page.locator('.photo-submit-form input[type="file"]').setInputFiles(FIXTURE_PHOTO)
         await page.getByPlaceholder('Your name (optional)').fill(label)
@@ -180,7 +177,7 @@ test.describe('PhotoLightbox', () => {
       }
 
       await page.goto('/')
-      await openMenu(page)
+      await openNavMenu(page)
       await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
       const cardA = page.locator('.photo-card', { hasText: labelA })
       await expect(cardA).toBeVisible()
@@ -220,7 +217,7 @@ test.describe('PhotoLightbox', () => {
     test('single-photo context: opens with no prev/next arrows or counter', async ({ page, context }) => {
       const label = `E2E Home Lightbox ${Date.now()}`
       await page.goto('/')
-      await openMenu(page)
+      await openNavMenu(page)
       await page.getByRole('menuitemradio', { name: 'Favorite Photo' }).click()
       await page.locator('.photo-submit-form input[type="file"]').setInputFiles(FIXTURE_PHOTO)
       await page.getByPlaceholder('Your name (optional)').fill(label)
@@ -258,7 +255,7 @@ test.describe('PhotoLightbox', () => {
   test.describe('Food Truck Menus', () => {
     test('truck photo opens a single-photo lightbox', async ({ page }) => {
       await page.goto('/')
-      await openMenu(page)
+      await openNavMenu(page)
       await page.getByRole('menuitemradio', { name: 'Food Truck Menus' }).click()
       const card = page.locator('[data-truck="granny-anns-kitchen"]')
       const photoSrc = await card.locator('.foodtruck-photo').getAttribute('src')
@@ -277,7 +274,7 @@ test.describe('PhotoLightbox', () => {
     test('renders correctly at desktop width', async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 800 })
       await page.goto('/')
-      await openMenu(page)
+      await openNavMenu(page)
       await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
       await page.locator('.animal-card', { hasText: 'Capybara' }).click()
       await page.locator('.animal-detail-hero').click()
@@ -290,7 +287,7 @@ test.describe('PhotoLightbox', () => {
     test('renders correctly at mobile width', async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 })
       await page.goto('/')
-      await openMenu(page)
+      await openNavMenu(page)
       await page.getByRole('menuitemradio', { name: 'Our Animals' }).click()
       await page.locator('.animal-card', { hasText: 'Capybara' }).click()
       await page.locator('.animal-detail-hero').click()

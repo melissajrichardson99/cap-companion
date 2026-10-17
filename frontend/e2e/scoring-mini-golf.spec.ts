@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { seedDeviceSession, withSession } from './deviceSessionHelper'
+import { openNavMenu, openTab } from './navMenuHelper'
 
 // Stroke-play Scoring Sheet (mini golf, migration 043): Blacklight Mini Golf
 // and Cornhole Mini Golf. Covers the guided keypad entry (real taps), the
@@ -66,8 +67,7 @@ async function prefillRound(
 
 async function openViaMenu(page: Page, gameName: string): Promise<Locator> {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Open menu' }).click()
-  await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
+  await openTab(page, 'Scoring Sheets')
   await page
     .locator('.scoring-game-card')
     .filter({ has: page.getByRole('heading', { name: gameName, exact: true }) })
@@ -141,8 +141,7 @@ test.describe('Mini golf (stroke play) Scoring Sheet', () => {
       expect(game.hole_count).toBe(9)
     }
     await page.goto('/')
-    await page.getByRole('button', { name: 'Open menu' }).click()
-    await page.getByRole('menuitemradio', { name: 'Scoring Sheets' }).click()
+    await openTab(page, 'Scoring Sheets')
     for (const name of [BLACKLIGHT.name, CORNHOLE_GOLF.name, 'Cornhole', 'Cornhole Extreme']) {
       await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
     }
@@ -481,7 +480,7 @@ test.describe('Mini golf QR arrival', () => {
     test(`${course.name}: in-app scan modal (manual entry) opens its sheet`, async ({ page }) => {
       await freshGuest(page)
       await page.goto('/')
-      await page.getByRole('button', { name: 'Open menu' }).click()
+      await openNavMenu(page)
       await page.locator('#nav-menu-panel').getByRole('button', { name: 'Scan QR' }).click()
       const modal = page.getByRole('dialog')
       await modal.getByLabel("What's on the sign").fill(course.slug)

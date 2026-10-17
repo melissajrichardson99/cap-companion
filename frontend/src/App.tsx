@@ -359,9 +359,10 @@ function App() {
   // Contact Staff status: one check on load. window.__capReloadContactStatus
   // is a test-only hook (same spirit as main.tsx's window.__capWhoami) so
   // e2e can force an immediate check instead of waiting out the interval.
+  // Dev server only (what e2e runs against), never in a production build.
   useEffect(() => {
     reloadMyRequestStatus()
-    window.__capReloadContactStatus = reloadMyRequestStatus
+    if (import.meta.env.DEV) window.__capReloadContactStatus = reloadMyRequestStatus
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

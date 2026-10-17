@@ -610,6 +610,42 @@ export interface AnalyticsSummary {
   staff_ops: AnalyticsStaffOps
 }
 
+// Photo uploads (submitPhoto, uploadAnimalPhoto, generatePassport): the
+// backend turns a photo away as too large (413), not a supported image type
+// (415) or unreadable (422) with a guest-facing message in `detail` -- see
+// backend/app/uploads.py. This error carries just that message, and its
+// toString() drops the usual "Error: " prefix, since every upload screen
+// renders String(err) as-is. Anything else keeps the existing raw-status
+// error. The size limit is also checked here first (same 15 MB as the
+// backend) so a guest on park Wi-Fi isn't left waiting on an upload that
+// can only be rejected.
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+const UPLOAD_TOO_LARGE_MESSAGE = 'That photo is too large to upload. Please choose one under 15 MB.'
+
+class UploadRejectedError extends Error {
+  toString() {
+    return this.message
+  }
+}
+
+function checkUploadSize(file: File) {
+  if (file.size > MAX_UPLOAD_BYTES) throw new UploadRejectedError(UPLOAD_TOO_LARGE_MESSAGE)
+}
+
+async function uploadError(label: string, res: Response): Promise<Error> {
+  const responseBody = await res.text()
+  if (res.status === 413 || res.status === 415 || res.status === 422) {
+    try {
+      const detail = (JSON.parse(responseBody) as { detail?: unknown }).detail
+      if (typeof detail === 'string') return new UploadRejectedError(detail)
+    } catch {
+      // Not the backend's JSON (e.g. a proxy's own 413 page) -- fall through.
+    }
+    if (res.status === 413) return new UploadRejectedError(UPLOAD_TOO_LARGE_MESSAGE)
+  }
+  return new Error(`${label} -> ${res.status}: ${responseBody}`)
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const guestToken = getGuestAuthToken()
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -773,6 +809,7 @@ export const api = {
       body: JSON.stringify({ animal_slug: animalSlug, guest_name: guestName }),
     }),
   submitPhoto: async (file: File, guestLabel: string | null, email: string | null) => {
+    checkUploadSize(file)
     const body = new FormData()
     body.append('file', file)
     if (guestLabel) body.append('guest_label', guestLabel)
@@ -785,10 +822,7 @@ export const api = {
       headers: { 'X-Device-Session': getDeviceSessionId() },
       body,
     })
-    if (!res.ok) {
-      const responseBody = await res.text()
-      throw new Error(`POST /photos/submit -> ${res.status}: ${responseBody}`)
-    }
+    if (!res.ok) throw await uploadError('POST /photos/submit', res)
     return res.json() as Promise<PhotoSubmission>
   },
   listPendingPhotos: () => staffRequest<PhotoSubmission[]>('/photos/pending'),
@@ -804,6 +838,7 @@ export const api = {
   getPhotoOfTheDay: () => request<PhotoSubmission | null>('/photos/of-the-day'),
   listAnimalPhotos: () => request<AnimalPhoto[]>('/animal-photos'),
   uploadAnimalPhoto: async (animalSlug: string, file: File) => {
+    checkUploadSize(file)
     const body = new FormData()
     body.append('file', file)
     // Not routed through request(): same multipart-vs-JSON-Content-Type
@@ -814,10 +849,7 @@ export const api = {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body,
     })
-    if (!res.ok) {
-      const responseBody = await res.text()
-      throw new Error(`POST /animal-photos/${animalSlug} -> ${res.status}: ${responseBody}`)
-    }
+    if (!res.ok) throw await uploadError(`POST /animal-photos/${animalSlug}`, res)
     return res.json() as Promise<AnimalPhoto>
   },
   deleteAnimalPhoto: (photoId: string) => staffRequest<void>(`/animal-photos/${photoId}`, { method: 'DELETE' }),
@@ -827,6 +859,7 @@ export const api = {
       body: JSON.stringify({ photo_ids: photoIds }),
     }),
   generatePassport: async (familyLabel: string, file: File | null) => {
+    if (file) checkUploadSize(file)
     const body = new FormData()
     body.append('family_label', familyLabel)
     if (file) body.append('file', file)
@@ -844,10 +877,7 @@ export const api = {
       },
       body,
     })
-    if (!res.ok) {
-      const responseBody = await res.text()
-      throw new Error(`POST /passport/generate -> ${res.status}: ${responseBody}`)
-    }
+    if (!res.ok) throw await uploadError('POST /passport/generate', res)
     return res.json() as Promise<PassportSession>
   },
   resetSession: () => request<ResetSessionResult>('/session/reset', { method: 'POST' }),

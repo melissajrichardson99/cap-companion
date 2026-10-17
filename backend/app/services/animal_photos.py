@@ -17,11 +17,9 @@ from app import reference_cache
 from app.errors import NotFoundError, ValidationError
 from app.models import AnimalPhoto
 from app.supabase_client import get_supabase_client
+from app.uploads import ValidatedImage
 
 BUCKET = "animal-photos"
-
-ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-MAX_FILE_BYTES = 10 * 1024 * 1024
 
 
 def _photo_url(storage_path: str) -> str:
@@ -59,12 +57,7 @@ def _get_row(photo_id: UUID) -> dict:
     return rows[0]
 
 
-def upload(animal_slug: str, filename: str, content_type: str, file_bytes: bytes) -> AnimalPhoto:
-    if content_type not in ALLOWED_CONTENT_TYPES:
-        raise ValidationError(f"Unsupported file type '{content_type}' -- must be one of {sorted(ALLOWED_CONTENT_TYPES)}")
-    if len(file_bytes) > MAX_FILE_BYTES:
-        raise ValidationError(f"File is too large -- max {MAX_FILE_BYTES // (1024 * 1024)}MB")
-
+def upload(animal_slug: str, image: ValidatedImage) -> AnimalPhoto:
     client = get_supabase_client()
     existing = (
         client.table("animal_photos")
@@ -77,9 +70,8 @@ def upload(animal_slug: str, filename: str, content_type: str, file_bytes: bytes
     )
     next_order = (existing[0]["display_order"] + 1) if existing else 1
 
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
-    storage_path = f"{animal_slug}/{uuid4()}.{suffix}"
-    client.storage.from_(BUCKET).upload(storage_path, file_bytes, {"content-type": content_type})
+    storage_path = f"{animal_slug}/{uuid4()}.{image.extension}"
+    client.storage.from_(BUCKET).upload(storage_path, image.content, {"content-type": image.content_type})
     try:
         row = (
             client.table("animal_photos")
