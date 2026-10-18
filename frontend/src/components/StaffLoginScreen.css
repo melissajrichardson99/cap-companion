@@ -113,6 +113,8 @@
   color: #fff;
   font-weight: 700;
   padding: 10px 18px;
+  /* Measured 43px -- a hair under the ~44px touch floor. */
+  min-height: 44px;
   box-shadow: var(--cap-shadow-pop-sm);
 }
 

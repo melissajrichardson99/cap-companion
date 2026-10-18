@@ -320,9 +320,14 @@
   opacity: 0.6;
 }
 
+/* flex-wrap + max-width: at 320px "Acknowledge" + "Mark Resolved" are
+   wider than the content column, and .staff-page's overflow:hidden clipped
+   "Mark Resolved" off the right edge with no scrollbar. */
 .staff-request-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  max-width: 100%;
 }
 
 .staff-photos-loading,
@@ -391,7 +396,9 @@
 
 .staff-attraction-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  max-width: 100%;
 }
 
 .staff-photos-subheading {
@@ -403,10 +410,16 @@
 
 .staff-shortlisted-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--cap-space-3);
   margin-top: var(--cap-space-5);
+}
+
+/* Wraps below the heading on a phone instead of squeezing onto two lines. */
+.staff-shortlisted-header .btn {
+  white-space: nowrap;
 }
 
 .staff-shortlisted-header .staff-photos-subheading {
@@ -438,9 +451,13 @@
   padding: 10px 14px;
 }
 
+/* Fixed 56px box (flex:none so a squeezed row can't shrink or stretch it)
+   -- the uploaded image's own shape/size never affects the row layout. */
 .staff-photo-thumb {
+  flex: none;
   width: 56px;
   height: 56px;
+  max-width: 100%;
   object-fit: cover;
   border-radius: var(--cap-radius-sm);
   border: 1.5px solid var(--cap-color-outline);
@@ -475,9 +492,17 @@
   white-space: nowrap;
 }
 
+/* flex-wrap + max-width: below ~400px Approve/Reject/Delete are wider than
+   the content column beside the sidebar rail, and without wrapping
+   .staff-page's overflow:hidden silently clipped Delete off the right edge
+   (no horizontal scrollbar, so it was unreachable). The row itself already
+   wraps, so this group drops to its own line first and only then wraps
+   internally. */
 .staff-photo-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  max-width: 100%;
 }
 
 .staff-page .btn {
@@ -600,8 +625,10 @@
 
 .staff-announcement-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   flex-shrink: 0;
+  max-width: 100%;
 }
 
 .staff-announcement-edit {
@@ -645,4 +672,31 @@
   gap: 12px;
   flex-wrap: wrap;
   margin-top: var(--cap-space-5);
+}
+
+/* The native file input has a wide intrinsic width -- at 320px it ran past
+   the content column and got clipped. */
+.staff-animal-photo-upload-form input[type='file'] {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Touch-size floor (~44px) for the small controls on touch / phone-width
+   screens only, so the desktop layout stays exactly as it was. Covers the
+   animal picker and date-range pills (StaffDateRangePicker reuses
+   .staff-animal-picker-btn), the QR Codes / Heatmap selects, the custom
+   date inputs, the header "Change" button and the Contact Requests
+   checkbox row. */
+@media (max-width: 720px), (pointer: coarse) {
+  .staff-page .staff-animal-picker-btn,
+  .staff-page select,
+  .staff-page input[type='date'],
+  .staff-page .staff-name-edit-btn,
+  .staff-animal-photo-upload-form input[type='file'] {
+    min-height: 44px;
+  }
+
+  .staff-resolved-toggle {
+    min-height: 44px;
+  }
 }

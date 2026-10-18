@@ -6,8 +6,11 @@
   margin-bottom: var(--cap-space-4);
 }
 
+/* flex-wrap: at 320px "From [date] to [date]" is wider than the content
+   column and the end date got clipped (Analytics and the Heatmap page). */
 .staff-analytics-custom-range {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   font-size: 13px;
