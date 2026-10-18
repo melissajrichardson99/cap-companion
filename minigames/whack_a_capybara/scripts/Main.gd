@@ -59,7 +59,18 @@ const CAPY_CROP_CENTER := Vector2(110, 105)
 const CAPY_CROP_RADII := Vector2(112, 120)
 const CAPY_CROP_STROKE := 3.0
 const CAPY_OUTLINE := Color("#26110c")
-const COLOR_DIRT_LIP := Color("#7a5a37")
+# porcupine_face.png has the same kind of hard crop, along its left edge and
+# its whole bottom edge; the same load-time trim rounds it off (and drops a
+# paw fragment that would otherwise poke out past the hole's front rim).
+const PORC_CROP_CENTER := Vector2(160, 128)
+const PORC_CROP_RADII := Vector2(160, 128)
+
+# Critters are contain-fit into a square no wider than the hole opening
+# (64% of the cell), centred on the hole, with their bottom edge tucked just
+# behind the hole's front rim.
+const CRITTER_MAX_SIDE := 64.0
+const CRITTER_LIFT := 3.0
+const RIM_THICKNESS := 7.0
 
 @onready var score_caption_label: Label = $UI/StatsBar/ScorePill/CaptionLabel
 @onready var score_value_label: Label = $UI/StatsBar/ScorePill/ValueLabel
@@ -83,10 +94,12 @@ var spawn_cooldown: float = 0.0
 var game_clock: float = 0.0
 
 var capybara_texture: Texture2D = CAPYBARA_TEXTURE
+var porcupine_texture: Texture2D = PORCUPINE_TEXTURE
 
 func _ready() -> void:
 	randomize()
 	capybara_texture = _crop_to_ellipse(CAPYBARA_TEXTURE, CAPY_CROP_CENTER, CAPY_CROP_RADII, CAPY_CROP_STROKE)
+	porcupine_texture = _crop_to_ellipse(PORCUPINE_TEXTURE, PORC_CROP_CENTER, PORC_CROP_RADII, CAPY_CROP_STROKE)
 	_style_ui()
 	holes.assign(hole_grid.get_children())
 	for i in range(holes.size()):
@@ -232,10 +245,10 @@ func _draw_holes() -> void:
 		_draw_mound(rect)
 		match hole_state[i]:
 			Critter.CAPYBARA:
-				_draw_capybara_in_hole(rect)
+				_draw_critter_in_hole(capybara_texture, rect)
 			Critter.DECOY:
-				_draw_porcupine(rect)
-		_draw_hole_lip(rect)
+				_draw_critter_in_hole(porcupine_texture, rect)
+		_draw_front_rim(rect)
 
 func _hole_rect(index: int) -> Rect2:
 	var col := index % HOLE_COLS
@@ -244,42 +257,51 @@ func _hole_rect(index: int) -> Rect2:
 	return Rect2(pos, Vector2(HOLE_CELL, HOLE_CELL))
 
 func _draw_mound(rect: Rect2) -> void:
-	var center := rect.position + rect.size * 0.5
 	var mound_sb := StyleBoxFlat.new()
 	mound_sb.bg_color = COLOR_DIRT_LIGHT
 	mound_sb.set_corner_radius_all(int(rect.size.x * 0.3))
 	mound_sb.border_width_bottom = 3
 	mound_sb.border_color = COLOR_DIRT_DARK
 	draw_style_box(mound_sb, rect)
-	draw_circle(center + Vector2(0, rect.size.y * 0.12), rect.size.x * 0.32, COLOR_HOLE_SHADOW)
+	draw_circle(_hole_center(rect), _hole_radius(rect), COLOR_HOLE_SHADOW)
+
+func _hole_center(rect: Rect2) -> Vector2:
+	return rect.position + Vector2(rect.size.x * 0.5, rect.size.y * 0.62)
+
+func _hole_radius(rect: Rect2) -> float:
+	return rect.size.x * 0.32
 
 func _draw_capybara(rect: Rect2) -> void:
 	_draw_texture_contain(capybara_texture, rect, 0.9)
 
-func _draw_capybara_in_hole(rect: Rect2) -> void:
-	# Scaled to fit the cell with an 8px side / 6px top margin, anchored at
-	# the bottom centre so its lower edge sits behind the hole's front lip.
-	var tex_size := capybara_texture.get_size()
-	var fit := Vector2(rect.size.x - 16.0, _lip_center_y(rect) - rect.position.y - 6.0)
-	var fit_scale: float = min(fit.x / tex_size.x, fit.y / tex_size.y)
+func _draw_critter_in_hole(tex: Texture2D, rect: Rect2) -> void:
+	# Contain-fit into a CRITTER_MAX_SIDE square, centred on the hole, with the
+	# bottom edge sitting inside the front rim's band so the rim hides it.
+	var hc := _hole_center(rect)
+	var tex_size := tex.get_size()
+	var fit_scale: float = min(CRITTER_MAX_SIDE / tex_size.x, CRITTER_MAX_SIDE / tex_size.y)
 	var draw_size := tex_size * fit_scale
-	var bottom_center := Vector2(rect.position.x + rect.size.x * 0.5, _lip_center_y(rect))
-	draw_texture_rect(capybara_texture, Rect2(bottom_center - Vector2(draw_size.x * 0.5, draw_size.y), draw_size), false)
+	var bottom_y := hc.y + _hole_radius(rect) - RIM_THICKNESS * 0.5 - CRITTER_LIFT
+	draw_texture_rect(tex, Rect2(Vector2(hc.x - draw_size.x * 0.5, bottom_y - draw_size.y), draw_size), false)
 
-func _lip_center_y(rect: Rect2) -> float:
-	return rect.position.y + rect.size.y * 0.82
-
-func _draw_hole_lip(rect: Rect2) -> void:
-	# Front rim of the hole, drawn over the critter so whatever is below the
-	# rim reads as still underground.
-	var center := Vector2(rect.position.x + rect.size.x * 0.5, _lip_center_y(rect))
-	var radii := Vector2(rect.size.x * 0.44, rect.size.y * 0.15)
+func _draw_front_rim(rect: Rect2) -> void:
+	# Front lip of the hole, drawn over the critter: a crescent hugging the
+	# lower half of the hole, RIM_THICKNESS thick at the bottom and tapering
+	# to nothing at the sides, filled with the mound colour the hole is cut
+	# into so it reads as the hole's own edge rather than a separate object.
+	var hc := _hole_center(rect)
+	var ro := _hole_radius(rect) + 1.0
 	var points := PackedVector2Array()
+	var inner := PackedVector2Array()
 	for k in range(33):
-		var ang := TAU * k / 32.0
-		points.append(center + Vector2(cos(ang) * radii.x, sin(ang) * radii.y))
-	draw_colored_polygon(points, COLOR_DIRT_LIP)
-	draw_polyline(points.slice(16, 33), COLOR_DIRT_DARK, 2.0, true)
+		var ang := PI * k / 32.0
+		points.append(hc + Vector2(cos(ang) * ro, sin(ang) * ro))
+	for k in range(31, 0, -1):
+		var ang := PI * k / 32.0
+		inner.append(hc + Vector2(cos(ang) * ro, sin(ang) * (ro - RIM_THICKNESS)))
+	points.append_array(inner)
+	draw_colored_polygon(points, COLOR_DIRT_LIGHT)
+	draw_polyline(inner, COLOR_DIRT_DARK, 1.5, true)
 
 # Returns src with everything outside an ellipse (in src pixel space) made
 # transparent and an outline stroke px wide along the cut, so the cut edge
@@ -305,7 +327,7 @@ func _crop_to_ellipse(src: Texture2D, center: Vector2, radii: Vector2, stroke: f
 	return ImageTexture.create_from_image(img.get_region(img.get_used_rect()))
 
 func _draw_porcupine(rect: Rect2) -> void:
-	_draw_texture_contain(PORCUPINE_TEXTURE, rect, 0.9)
+	_draw_texture_contain(porcupine_texture, rect, 0.9)
 
 func _draw_texture_contain(tex: Texture2D, rect: Rect2, scale_factor: float = 1.0) -> void:
 	var tex_size := tex.get_size()
