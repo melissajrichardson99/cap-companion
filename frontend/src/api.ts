@@ -613,35 +613,68 @@ export interface AnalyticsSummary {
 // Photo uploads (submitPhoto, uploadAnimalPhoto, generatePassport): the
 // backend turns a photo away as too large (413), not a supported image type
 // (415) or unreadable (422) with a guest-facing message in `detail` -- see
-// backend/app/uploads.py. This error carries just that message, and its
-// toString() drops the usual "Error: " prefix, since every upload screen
-// renders String(err) as-is. Anything else keeps the existing raw-status
-// error. The size limit is also checked here first (same 15 MB as the
-// backend) so a guest on park Wi-Fi isn't left waiting on an upload that
-// can only be rejected.
+// backend/app/uploads.py. A 429 from a per-device limit (Contact Staff,
+// uploads, votes -- backend/app/rate_limit.py) carries one too; see
+// withLimitMessage below. GuestMessageError carries just that message, and
+// its toString()
+// drops the usual "Error: " prefix, since every screen renders String(err)
+// as-is. Anything else keeps the existing raw-status error. The size limit
+// is also checked here first (same 15 MB as the backend) so a guest on park
+// Wi-Fi isn't left waiting on an upload that can only be rejected.
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 const UPLOAD_TOO_LARGE_MESSAGE = 'That photo is too large to upload. Please choose one under 15 MB.'
 
-class UploadRejectedError extends Error {
+class GuestMessageError extends Error {
   toString() {
     return this.message
   }
 }
 
 function checkUploadSize(file: File) {
-  if (file.size > MAX_UPLOAD_BYTES) throw new UploadRejectedError(UPLOAD_TOO_LARGE_MESSAGE)
+  if (file.size > MAX_UPLOAD_BYTES) throw new GuestMessageError(UPLOAD_TOO_LARGE_MESSAGE)
+}
+
+// The backend's `detail` string, or null for anything else (e.g. a proxy's
+// own HTML error page).
+function detailMessage(responseBody: string): string | null {
+  try {
+    const detail = (JSON.parse(responseBody) as { detail?: unknown }).detail
+    return typeof detail === 'string' ? detail : null
+  } catch {
+    return null
+  }
+}
+
+// request()'s error for a non-2xx response. Its message is unchanged (some
+// screens read it, e.g. StaffLoginScreen looks for "-> 429:"); status and
+// the backend's detail ride along for callers that want them.
+class ApiError extends Error {
+  readonly status: number
+  readonly detail: string | null
+
+  constructor(message: string, status: number, detail: string | null) {
+    super(message)
+    this.status = status
+    this.detail = detail
+  }
+}
+
+// For the per-device-limited guest writes (Contact Staff, votes): a 429
+// shows the backend's own sentence ("Please wait 12 minutes...") instead
+// of the raw "POST /x -> 429: {...}". Every other error is left as it was.
+function withLimitMessage<T>(pending: Promise<T>): Promise<T> {
+  return pending.catch((err: unknown) => {
+    if (err instanceof ApiError && err.status === 429 && err.detail) throw new GuestMessageError(err.detail)
+    throw err
+  })
 }
 
 async function uploadError(label: string, res: Response): Promise<Error> {
   const responseBody = await res.text()
-  if (res.status === 413 || res.status === 415 || res.status === 422) {
-    try {
-      const detail = (JSON.parse(responseBody) as { detail?: unknown }).detail
-      if (typeof detail === 'string') return new UploadRejectedError(detail)
-    } catch {
-      // Not the backend's JSON (e.g. a proxy's own 413 page) -- fall through.
-    }
-    if (res.status === 413) return new UploadRejectedError(UPLOAD_TOO_LARGE_MESSAGE)
+  if (res.status === 413 || res.status === 415 || res.status === 422 || res.status === 429) {
+    const detail = detailMessage(responseBody)
+    if (detail) return new GuestMessageError(detail)
+    if (res.status === 413) return new GuestMessageError(UPLOAD_TOO_LARGE_MESSAGE)
   }
   return new Error(`${label} -> ${res.status}: ${responseBody}`)
 }
@@ -663,7 +696,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   })
   if (!res.ok) {
     const body = await res.text()
-    throw new Error(`${init?.method ?? 'GET'} ${path} -> ${res.status}: ${body}`)
+    throw new ApiError(`${init?.method ?? 'GET'} ${path} -> ${res.status}: ${body}`, res.status, detailMessage(body))
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
@@ -764,10 +797,12 @@ export const api = {
     name: string | null,
     description: string | null,
   ) =>
-    request<StaffRequest>('/staff-requests', {
-      method: 'POST',
-      body: JSON.stringify({ type, location_node_id: locationNodeId, name, description }),
-    }),
+    withLimitMessage(
+      request<StaffRequest>('/staff-requests', {
+        method: 'POST',
+        body: JSON.stringify({ type, location_node_id: locationNodeId, name, description }),
+      }),
+    ),
   listStaffRequests: (includeClosed = false) =>
     staffRequest<StaffRequest[]>(`/staff-requests?include_closed=${includeClosed}`),
   acknowledgeStaffRequest: (requestId: string) =>
@@ -834,7 +869,8 @@ export const api = {
     staffRequest<PhotoSubmission>(`/photos/${submissionId}/reject`, { method: 'POST' }),
   deletePhoto: (submissionId: string) => staffRequest<void>(`/photos/${submissionId}`, { method: 'DELETE' }),
   listPhotoGallery: () => request<PhotoSubmission[]>('/photos/gallery'),
-  votePhoto: (submissionId: string) => request<PhotoSubmission>(`/photos/${submissionId}/vote`, { method: 'POST' }),
+  votePhoto: (submissionId: string) =>
+    withLimitMessage(request<PhotoSubmission>(`/photos/${submissionId}/vote`, { method: 'POST' })),
   getPhotoOfTheDay: () => request<PhotoSubmission | null>('/photos/of-the-day'),
   listAnimalPhotos: () => request<AnimalPhoto[]>('/animal-photos'),
   uploadAnimalPhoto: async (animalSlug: string, file: File) => {

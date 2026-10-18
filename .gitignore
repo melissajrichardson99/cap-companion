@@ -165,3 +165,5 @@ playwright/.cache/
 
 # --- Wrangler local dev state (local R2/KV simulation, logs) ---
 /.wrangler/
+
+docs/handover/

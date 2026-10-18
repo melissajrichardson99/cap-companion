@@ -230,6 +230,9 @@ test.describe('PhotoLightbox', () => {
       const row = staffPage.locator('.staff-photo-row', { hasText: label })
       await expect(row).toBeVisible()
       await row.getByRole('button', { name: 'Approve' }).click()
+      // The row leaves the pending list only once the approve has landed --
+      // loading Home before then can read (and show) no Photo of the Day.
+      await expect(row).toHaveCount(0)
 
       await page.goto('/')
       const homeImage = page.locator('.home-photo-image')

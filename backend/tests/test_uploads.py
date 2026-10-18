@@ -7,8 +7,11 @@ POST /photos/submit, POST /passport/generate and staff POST
 - anything that isn't really a JPEG/PNG/WebP is turned away by content,
   whatever its filename or Content-Type claims (415), and a damaged one
   of an allowed type gets a 422;
-- valid photos are stored under the extension/content type the server
-  picked, never the client's.
+- valid photos are re-encoded and always stored as .jpg / image/jpeg with
+  a year-long Cache-Control, whatever type or name the client sent;
+- process_image() itself: size cap per route, never upscaled, EXIF
+  orientation applied, EXIF/GPS/ICC gone, transparency onto white, and
+  everything a guest's phone actually sends (progressive JPEG, WebP, PNG).
 """
 
 from __future__ import annotations
@@ -18,7 +21,8 @@ import io
 
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image
+from fastapi import HTTPException
+from PIL import Image, ImageCms
 
 from app import device_session, supabase_client, uploads
 from app.main import app
@@ -40,6 +44,12 @@ def _image(fmt: str, size=(64, 48), **save_kwargs) -> bytes:
     buf = io.BytesIO()
     Image.effect_noise(size, 40).convert("RGB").save(buf, fmt, **save_kwargs)
     return buf.getvalue()
+
+
+def _with_claimed_size(jpeg: bytes, width: int, height: int) -> bytes:
+    """Rewrites a baseline JPEG's SOF0 frame header to claim another size."""
+    sof = jpeg.index(b"\xff\xc0")
+    return jpeg[: sof + 5] + height.to_bytes(2, "big") + width.to_bytes(2, "big") + jpeg[sof + 9 :]
 
 
 JPEG = _image("JPEG")
@@ -74,30 +84,34 @@ def _post(client, route, fields, filename, content, content_type):
 
 @pytest.mark.parametrize(("route", "bucket", "fields"), ROUTES, ids=ROUTE_IDS)
 @pytest.mark.parametrize(
-    ("content", "filename", "client_type", "extension", "stored_type"),
+    ("content", "filename", "client_type"),
     [
-        (JPEG, "IMG_0001.JPG", "image/jpeg", "jpg", "image/jpeg"),
-        (PROGRESSIVE_JPEG, "photo.jpeg", "image/jpeg", "jpg", "image/jpeg"),
-        (PNG, "screenshot.png", "image/png", "png", "image/png"),
-        (WEBP, "photo.webp", "image/webp", "webp", "image/webp"),
-        # Spoofed name/type on a genuine image: still accepted, but stored
-        # as what it really is.
-        (PNG, "photo.jpg", "image/jpeg", "png", "image/png"),
-        (JPEG, "evil.html", "text/html", "jpg", "image/jpeg"),
-        (WEBP, "no-extension", "application/octet-stream", "webp", "image/webp"),
+        (JPEG, "IMG_0001.JPG", "image/jpeg"),
+        (PROGRESSIVE_JPEG, "photo.jpeg", "image/jpeg"),
+        (PNG, "screenshot.png", "image/png"),
+        (WEBP, "photo.webp", "image/webp"),
+        # Spoofed name/type on a genuine image: still accepted, and stored
+        # as the JPEG the server made of it.
+        (PNG, "photo.jpg", "image/jpeg"),
+        (JPEG, "evil.html", "text/html"),
+        (WEBP, "no-extension", "application/octet-stream"),
     ],
     ids=["jpeg", "progressive-jpeg", "png", "webp", "png-sent-as-jpeg", "jpeg-sent-as-html", "webp-no-ext"],
 )
-def test_valid_photo_is_stored_under_the_server_chosen_type(
-    client, db, route, bucket, fields, content, filename, client_type, extension, stored_type
-):
+def test_valid_photo_is_stored_as_a_server_made_jpeg(client, db, route, bucket, fields, content, filename, client_type):
     res = _post(client, route, fields, filename, content, client_type)
     assert res.status_code == 200, res.text
     assert len(db.storage_objects) == 1
     (stored_bucket, path) = next(iter(db.storage_objects))
     assert stored_bucket == bucket
-    assert path.endswith(f".{extension}")
-    assert db.storage_content_types[(bucket, path)] == stored_type
+    assert path.endswith(".jpg")
+    assert db.storage_content_types[(bucket, path)] == "image/jpeg"
+    assert db.storage_cache_control[(bucket, path)] == uploads.CACHE_CONTROL
+    stored = db.storage_bytes[(bucket, path)]
+    assert stored != content
+    with Image.open(io.BytesIO(stored)) as out:
+        assert out.format == "JPEG"
+        assert out.size == Image.open(io.BytesIO(content)).size  # small input: not resized
 
 
 @pytest.mark.parametrize(("route", "bucket", "fields"), ROUTES, ids=ROUTE_IDS)
@@ -161,11 +175,46 @@ def test_file_over_the_limit_is_rejected_with_413(client, db, route, bucket, fie
 
 
 @pytest.mark.parametrize(("route", "bucket", "fields"), ROUTES, ids=ROUTE_IDS)
-def test_image_with_too_many_pixels_is_rejected_with_413(client, db, route, bucket, fields, monkeypatch):
-    monkeypatch.setattr(uploads, "MAX_PIXELS", 64 * 48 - 1)
-    res = _post(client, route, fields, "photo.jpg", JPEG, "image/jpeg")
-    assert res.status_code == 413, res.text
+@pytest.mark.parametrize(
+    ("content", "cap"),
+    [(JPEG, "MAX_PIXELS"), (PNG, "MAX_PNG_PIXELS"), (WEBP, "MAX_WEBP_PIXELS")],
+    ids=["jpeg", "png", "webp"],
+)
+def test_image_with_too_many_pixels_is_rejected_with_422(client, db, route, bucket, fields, content, cap, monkeypatch):
+    monkeypatch.setattr(uploads, cap, 64 * 48 - 1)
+    res = _post(client, route, fields, "photo.jpg", content, "image/jpeg")
+    assert res.status_code == 422, res.text
+    assert res.json()["detail"] == uploads.TOO_MANY_PIXELS_MESSAGE
     assert db.storage_objects == set()
+
+
+def test_60mp_header_is_refused_before_any_pixels_are_decoded():
+    # A small JPEG whose frame header claims 9000x6800 (61MP): the cap fires
+    # on the header alone -- decoding would fail on the missing data instead.
+    with pytest.raises(HTTPException) as exc:
+        uploads.validate_image(_with_claimed_size(JPEG, 9000, 6800))
+    assert exc.value.status_code == 422
+    assert exc.value.detail == uploads.TOO_MANY_PIXELS_MESSAGE
+
+
+@pytest.mark.parametrize(
+    ("route", "max_edge"),
+    [("/photos/submit", uploads.GUEST_MAX_EDGE), ("/passport/generate", uploads.GUEST_MAX_EDGE), ("/animal-photos/goat", uploads.ANIMAL_MAX_EDGE)],
+    ids=ROUTE_IDS,
+)
+def test_every_upload_route_goes_through_the_shared_processor(client, db, route, max_edge, monkeypatch):
+    calls = []
+    real = uploads.prepare_image
+
+    def spy(content, edge):
+        calls.append(edge)
+        return real(content, edge)
+
+    monkeypatch.setattr(uploads, "prepare_image", spy)
+    fields = next(f for r, _, f in ROUTES if r == route)
+    res = _post(client, route, fields, "photo.jpg", JPEG, "image/jpeg")
+    assert res.status_code == 200, res.text
+    assert calls == [max_edge]
 
 
 def test_passport_without_a_photo_still_generates(client, db):
@@ -268,3 +317,161 @@ def test_understated_content_length_is_still_cut_off_at_the_cap(db, path):
 def test_non_upload_routes_on_the_same_routers_are_unaffected(client, db):
     assert client.get("/photos/gallery", headers=GUEST).status_code == 200
     assert client.get("/animal-photos").status_code == 200
+
+
+# --- process_image(): what actually gets stored ----------------------------
+
+
+def _process(content: bytes, max_edge: int = uploads.GUEST_MAX_EDGE) -> Image.Image:
+    out = uploads.prepare_image(content, max_edge)
+    assert out.extension == "jpg"
+    assert out.content_type == "image/jpeg"
+    image = Image.open(io.BytesIO(out.content))
+    assert image.format == "JPEG"
+    return image
+
+
+def _halves(size, left, right, mode="RGB") -> Image.Image:
+    image = Image.new(mode, size, left)
+    image.paste(right, (size[0] // 2, 0, size[0], size[1]))
+    return image
+
+
+def _save(image: Image.Image, fmt: str, **kwargs) -> bytes:
+    buf = io.BytesIO()
+    image.save(buf, fmt, **kwargs)
+    return buf.getvalue()
+
+
+@pytest.mark.parametrize(
+    ("size", "max_edge", "expected"),
+    [
+        ((4000, 3000), uploads.GUEST_MAX_EDGE, (1600, 1200)),
+        ((3000, 4000), uploads.GUEST_MAX_EDGE, (1200, 1600)),
+        ((4000, 3000), uploads.ANIMAL_MAX_EDGE, (2000, 1500)),
+        ((2200, 1000), uploads.GUEST_MAX_EDGE, (1600, 727)),
+        # Already within the cap: never upscaled.
+        ((1600, 900), uploads.GUEST_MAX_EDGE, (1600, 900)),
+        ((800, 600), uploads.ANIMAL_MAX_EDGE, (800, 600)),
+        ((10, 10), uploads.GUEST_MAX_EDGE, (10, 10)),
+    ],
+    ids=["landscape", "portrait", "animal-cap", "panorama", "at-cap", "small-animal", "tiny"],
+)
+def test_longest_edge_is_capped_keeping_aspect_ratio(size, max_edge, expected):
+    content = _save(_halves(size, (200, 40, 40), (40, 40, 200)), "JPEG", quality=95)
+    assert _process(content, max_edge).size == expected
+
+
+def test_output_is_a_progressive_jpeg():
+    image = _process(_save(_halves((2000, 1500), "red", "blue"), "PNG"))
+    assert image.info.get("progressive") or image.info.get("progression")
+
+
+def test_exif_orientation_is_applied_then_dropped():
+    # Stored landscape, red left / blue right, tagged "rotate 90 CW to
+    # display" (orientation 6): shown upright it is portrait with red on top.
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    content = _save(_halves((400, 200), (255, 0, 0), (0, 0, 255)), "JPEG", exif=exif.tobytes(), quality=95)
+    image = _process(content)
+    assert image.size == (200, 400)
+    top, bottom = image.getpixel((100, 50)), image.getpixel((100, 350))
+    assert top[0] > 200 and top[2] < 60, top
+    assert bottom[2] > 200 and bottom[0] < 60, bottom
+    assert 0x0112 not in image.getexif()
+
+
+def _phone_photo_with_gps(size=(1200, 900)) -> bytes:
+    exif = Image.Exif()
+    exif[0x010F] = "PhoneMaker"  # Make
+    exif[0x0110] = "PhoneModel 15"  # Model
+    exif[0x0132] = "2026:10:18 12:00:00"  # DateTime
+    gps = exif.get_ifd(0x8825)
+    gps[1] = "N"
+    gps[2] = (51.0, 2.0, 30.5)
+    gps[3] = "W"
+    gps[4] = (114.0, 4.0, 12.25)
+    icc = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    content = _save(
+        Image.effect_noise(size, 30).convert("RGB"), "JPEG", exif=exif.tobytes(), icc_profile=icc, comment=b"secret note"
+    )
+    with Image.open(io.BytesIO(content)) as check:  # the sample really carries it
+        assert check.getexif().get_ifd(0x8825)[2] == (51.0, 2.0, 30.5)
+        assert check.info.get("icc_profile")
+    return content
+
+
+def test_gps_and_all_other_metadata_are_stripped():
+    out = uploads.prepare_image(_phone_photo_with_gps(), uploads.GUEST_MAX_EDGE).content
+    image = Image.open(io.BytesIO(out))
+    assert len(image.getexif()) == 0
+    assert image.getexif().get_ifd(0x8825) == {}
+    for key in ("exif", "icc_profile", "xmp", "comment", "photoshop"):
+        assert key not in image.info, key
+    # Belt and braces: no APP1 Exif/XMP segment, and none of the values.
+    for needle in (b"Exif\x00\x00", b"http://ns.adobe.com/xap", b"PhoneMaker", b"PhoneModel", b"secret note", b"ICC_PROFILE"):
+        assert needle not in out, needle
+
+
+@pytest.mark.parametrize("fmt", ["PNG", "WEBP"])
+def test_transparency_is_flattened_onto_white(fmt):
+    image = Image.new("RGBA", (300, 200), (0, 0, 0, 0))
+    image.paste((0, 128, 0, 255), (150, 0, 300, 200))
+    out = _process(_save(image, fmt, **({"lossless": True} if fmt == "WEBP" else {})))
+    assert out.mode == "RGB"
+    clear, solid = out.getpixel((50, 100)), out.getpixel((250, 100))
+    assert min(clear) > 245, clear
+    assert solid[1] > 100 and solid[0] < 40, solid
+
+
+def test_palette_png_with_transparency_is_flattened_onto_white():
+    image = Image.new("P", (100, 100), 0)
+    image.putpalette([0, 0, 0, 255, 0, 0] + [0] * 762)
+    image.paste(1, (50, 0, 100, 100))
+    content = _save(image, "PNG", transparency=0)
+    out = _process(content)
+    assert min(out.getpixel((10, 50))) > 245
+    assert out.getpixel((90, 50))[0] > 200
+
+
+@pytest.mark.parametrize("mode", ["L", "CMYK", "RGB"])
+def test_other_colour_modes_come_out_rgb(mode):
+    fmt = "PNG" if mode == "L" else "JPEG"
+    out = _process(_save(Image.new(mode, (2400, 1800)), fmt), uploads.GUEST_MAX_EDGE)
+    assert out.mode == "RGB"
+    assert out.size == (1600, 1200)
+
+
+def test_webp_input_is_resized_and_converted():
+    out = _process(_save(Image.effect_noise((2500, 2000), 30).convert("RGB"), "WEBP", quality=90))  # 5MP
+    assert out.size == (1600, 1280)
+
+
+def test_large_progressive_jpeg_input_is_resized():
+    out = _process(_save(Image.effect_noise((3000, 2250), 30).convert("RGB"), "JPEG", progressive=True, quality=95))
+    assert out.size == (1600, 1200)
+
+
+def test_processed_photo_is_far_smaller_than_the_original():
+    # A 12MP phone-camera-quality JPEG (noise is a worst case for JPEG:
+    # real photos shrink further).
+    original = _save(Image.effect_noise((4000, 3000), 25).convert("RGB"), "JPEG", quality=95)
+    processed = uploads.prepare_image(original, uploads.GUEST_MAX_EDGE).content
+    assert len(processed) * 4 < len(original), (len(original), len(processed))
+
+
+def test_processing_runs_off_the_event_loop(monkeypatch):
+    seen = []
+
+    async def spy(func, *args):
+        seen.append(func)
+        return func(*args)
+
+    monkeypatch.setattr(uploads, "run_in_threadpool", spy)
+
+    class _File:
+        async def read(self, n):
+            return JPEG
+
+    asyncio.run(uploads.read_image_upload(_File(), uploads.GUEST_MAX_EDGE))
+    assert seen == [uploads.prepare_image]

@@ -38,9 +38,12 @@ async function openAnimalsTab(page: Page): Promise<void> {
 }
 
 // The placeholder must actually have loaded (naturalWidth > 0) -- a broken
-// image has naturalWidth 0 even when its src attribute looks right.
+// image has naturalWidth 0 even when its src attribute looks right. Grid
+// images are loading="lazy", so it's scrolled into view first: off-screen
+// it would (correctly) not have been fetched yet.
 async function expectPlaceholder(img: Locator): Promise<void> {
   await expect(img).toHaveAttribute('src', PLACEHOLDER_PHOTO_SRC)
+  await img.scrollIntoViewIfNeeded()
   await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true)
 }
 

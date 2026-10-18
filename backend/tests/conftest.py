@@ -1,6 +1,6 @@
 import pytest
 
-from app import reference_cache
+from app import rate_limit, reference_cache
 
 
 @pytest.fixture(autouse=True)
@@ -13,3 +13,13 @@ def _fresh_reference_cache(monkeypatch):
     reference_cache.reset_stats()
     yield
     reference_cache.clear()
+
+
+@pytest.fixture(autouse=True)
+def _fresh_device_rate_limits(monkeypatch):
+    """Per-device write limits on, and empty, for every test -- tests reuse
+    device tokens like "guest-a", so counts would otherwise carry over."""
+    monkeypatch.delenv(rate_limit.RATE_LIMITS_ENABLED_ENV, raising=False)
+    rate_limit.reset_device_limits()
+    yield
+    rate_limit.reset_device_limits()

@@ -6,6 +6,10 @@ interface AnimalImageProps {
   alt: string
   className?: string
   onClick?: () => void
+  // For images below the fold (grids): the browser fetches them only as
+  // they near the viewport. Their boxes are sized by CSS aspect-ratio, so
+  // nothing shifts when they arrive.
+  lazy?: boolean
 }
 
 // Real animal photos vary in extension (.jpg/.png) and aren't all uploaded
@@ -17,7 +21,7 @@ interface AnimalImageProps {
 // onClick is optional (used to open the shared PhotoLightbox) -- when
 // present, the image gets button-equivalent keyboard semantics so it stays
 // reachable without a mouse.
-export function AnimalImage({ candidates, alt, className, onClick }: AnimalImageProps) {
+export function AnimalImage({ candidates, alt, className, onClick, lazy }: AnimalImageProps) {
   const [attempt, setAttempt] = useState(0)
   const src = attempt < candidates.length ? candidates[attempt] : PLACEHOLDER_PHOTO_SRC
 
@@ -26,6 +30,8 @@ export function AnimalImage({ candidates, alt, className, onClick }: AnimalImage
       src={src}
       alt={alt}
       className={className}
+      loading={lazy ? 'lazy' : undefined}
+      decoding={lazy ? 'async' : undefined}
       onError={() => setAttempt((a) => a + 1)}
       onClick={onClick}
       role={onClick ? 'button' : undefined}

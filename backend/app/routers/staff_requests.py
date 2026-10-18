@@ -5,13 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.device_session import get_or_create_session
 from app.errors import ConflictError, NotFoundError
 from app.models import CreateStaffRequestRequest, DeviceSession, StaffRequest
+from app.rate_limit import CONTACT_STAFF, device_rate_limit
 from app.services import staff_requests as staff_requests_service
 from app.staff_auth import get_staff_name, require_staff
 
 router = APIRouter(prefix="/staff-requests", tags=["staff-requests"])
 
 
-@router.post("", response_model=StaffRequest)
+@router.post("", response_model=StaffRequest, dependencies=[Depends(device_rate_limit(CONTACT_STAFF))])
 def create_request(
     body: CreateStaffRequestRequest, session: DeviceSession = Depends(get_or_create_session)
 ) -> StaffRequest:

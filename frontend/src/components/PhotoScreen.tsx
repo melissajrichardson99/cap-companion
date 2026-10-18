@@ -130,6 +130,8 @@ export function PhotoScreen({ gallery, error, onReload }: PhotoScreenProps) {
                   src={photo.photo_url}
                   alt={photo.guest_label ?? 'Guest submitted park photo'}
                   className="photo-card-image"
+                  loading="lazy"
+                  decoding="async"
                   role="button"
                   tabIndex={0}
                   onClick={() => setLightboxIndex(i)}

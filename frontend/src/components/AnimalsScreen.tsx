@@ -187,6 +187,7 @@ function AnimalsListView({
                     candidates={firstPhoto ? [firstPhoto.photo_url] : []}
                     alt=""
                     className="animal-card-photo-img"
+                    lazy
                   />
                 </span>
                 <span className="animal-card-name">{animal.name}</span>

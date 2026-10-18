@@ -8,6 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from app.device_session import get_or_create_session
 from app.errors import NotFoundError
 from app.models import DeviceSession, QrDestinationType, QrLocation, ScanEventRequest, SetQrLocationRequest
+from app.rate_limit import SCAN_EVENT_LOG, device_limit_hit
 from app.services import heatmap as heatmap_service
 from app.services import qr_locations
 from app.staff_auth import require_staff
@@ -47,14 +48,21 @@ def log_scan(
     Fire-and-forget from the guest's side: the destination is resolved (and
     an unknown one rejected with 404) here, but the insert itself runs after
     the response is sent. The device session is used only for the debounce
-    above and is never written to the event row."""
+    above and the logging limit, and is never written to the event row.
+
+    Over SCAN_EVENT_LOG (120/hour per device) the arrival is answered
+    exactly as normal but not logged -- this is analytics only, and the
+    scan itself (GET /scan/..., the deep-linked pages, Mark Visited, coins,
+    Bingo/Map progress) never goes through here."""
     try:
         resolved = qr_locations.resolve_scan(body.type, body.id)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     if resolved is not None:
         destination_type, destination_id, map_node_id = resolved
-        if not _is_duplicate((str(session.id), destination_type.value, destination_id)):
+        if not _is_duplicate((str(session.id), destination_type.value, destination_id)) and (
+            device_limit_hit(SCAN_EVENT_LOG, str(session.id)) is None
+        ):
             background_tasks.add_task(
                 heatmap_service.log_visit_event,
                 heatmap_service.QR_SCAN_SOURCE_TYPE,

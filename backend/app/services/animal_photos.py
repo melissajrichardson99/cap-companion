@@ -71,7 +71,7 @@ def upload(animal_slug: str, image: ValidatedImage) -> AnimalPhoto:
     next_order = (existing[0]["display_order"] + 1) if existing else 1
 
     storage_path = f"{animal_slug}/{uuid4()}.{image.extension}"
-    client.storage.from_(BUCKET).upload(storage_path, image.content, {"content-type": image.content_type})
+    client.storage.from_(BUCKET).upload(storage_path, image.content, image.file_options())
     try:
         row = (
             client.table("animal_photos")

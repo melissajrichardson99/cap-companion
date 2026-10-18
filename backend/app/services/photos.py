@@ -61,7 +61,7 @@ def submit_photo(guest_label: str | None, email: str | None, image: ValidatedIma
     # Unguessable (uuid4) key in a public bucket: nothing lists the bucket,
     # and a pending photo's URL is only ever returned to staff.
     storage_path = f"{submission_id}.{image.extension}"
-    client.storage.from_(BUCKET).upload(storage_path, image.content, {"content-type": image.content_type})
+    client.storage.from_(BUCKET).upload(storage_path, image.content, image.file_options())
     row = (
         client.table("photo_submissions")
         .insert(

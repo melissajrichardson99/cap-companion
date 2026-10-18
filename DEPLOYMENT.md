@@ -274,15 +274,53 @@ Follow in order — later steps depend on earlier ones.
    so the practical order is: deploy Render with placeholder values →
    deploy Cloudflare → come back and update Render's env vars → Render
    redeploys automatically on env var change.
-2. Regenerate QR codes (`backend/scripts/generate_qr_codes.py`,
-   `generate_hunt_qr_codes.py` and `generate_animal_qr_codes.py`) **after**
-   `FRONTEND_BASE_URL` is finalized. The first two encode
-   `<FRONTEND_BASE_URL>/scan/<code>` (see `backend/app/services/qr.py`);
-   the animal signs encode `<FRONTEND_BASE_URL>/animals/<slug>`, a
-   separate deep link into Our Animals. Either way the URL is baked in at
-   generation time — codes generated against a placeholder URL, or before
-   an environment's final domain is known, will point at the wrong place
-   once printed.
+2. Generate the QR codes for printing **only once the park's final domain
+   is decided**. Every QR script needs that address passed explicitly —
+   there is no default, and `FRONTEND_BASE_URL` is never used for signs:
+
+   ```bash
+   # dry check of what's encoded, then confirm by typing the host name:
+   python backend/scripts/generate_all_qr_codes.py --base-url https://<final domain>
+   # or set QR_BASE_URL=https://<final domain> instead of --base-url
+
+   # re-check a folder right before sending it to the printer:
+   python backend/scripts/generate_all_qr_codes.py --verify
+   ```
+
+   - **Which script:** `generate_all_qr_codes.py` writes every sign the
+     Staff QR Code Directory lists into one folder
+     (`backend/scripts/output/all_qr_codes/`): the 20 Our Animals signs
+     (`/animals/<slug>`), each Hunt character (`/scan/<code>`), every
+     scoring sheet (`/scoring/<slug>`, including
+     `/scoring/blacklight-mini-golf` and `/scoring/cornhole-mini-golf` —
+     it refuses to run if either is missing from the database) and every
+     puzzle challenge (`/puzzles/<slug>`). The older per-kind scripts
+     still work the same way: `generate_animal_qr_codes.py`,
+     `generate_hunt_qr_codes.py`, and `generate_qr_codes.py` (every
+     `scannable_codes` row, Encyclopedia placeholders included).
+   - **Checks:** the base URL must be `https://` with a public host name
+     and nothing after it — `localhost`, `127.0.0.1`, private/link-local
+     IPs, `.local`-style and single-label names, paths, queries and
+     `user:password@` are refused. A `*.workers.dev` / `*.pages.dev`
+     address is accepted but warned about: it belongs to one Cloudflare
+     account, so printed signs die with that account. `--allow-insecure`
+     lifts the checks **for local testing only**; `--verify` (without that
+     flag) then refuses the folder, so test codes can't be mistaken for
+     printable ones.
+   - **What's written:** one PNG per sign plus `manifest.csv` (file, kind,
+     name, slug/code, full URL). Every run then decodes every PNG (with
+     jsQR, via Node and `frontend/node_modules` — run `npm install` in
+     `frontend/` first) and checks it against the manifest; it also flags
+     PNGs in the folder that aren't in the manifest. A folder that already
+     holds PNGs is refused unless `--overwrite` is given.
+   - Nothing is written without `--yes` or typing the host name back.
+     Hunt, scoring and puzzle entries are read from the Supabase project
+     `backend/.env` points at (printed first) — generate against
+     production so the codes match production's rows.
+   - Output goes under `backend/scripts/output/`, which is gitignored:
+     never commit generated codes.
+   - `GET /scan/{code}/qr.png` (single code, testing only) still encodes
+     the server's `FRONTEND_BASE_URL`; don't print from it.
 
 ## 3. Gotchas
 
@@ -511,3 +549,45 @@ is always read fresh.
 - **Signed URLs:** nothing cached contains an expiring URL. Animal photos
   and gallery photos use public Storage URLs, built from the stored path
   on every request.
+
+## 8. Per-device limits on public write endpoints
+
+The public endpoints that write something on a guest's behalf are limited
+per **device session** (the `X-Device-Session` identity the rest of the
+backend uses), never per IP — the whole park can share one Wi-Fi address.
+The numbers are far above what a family does in a visit, so they only stop
+scripts and runaway clients (`backend/app/rate_limit.py`):
+
+| Endpoint | Limit per device session | Over the limit |
+| --- | --- | --- |
+| `POST /staff-requests` (Contact Staff) | 5 per hour | 429 + message + `Retry-After` |
+| `POST /photos/submit` (Favorite Photo upload) | 10 per hour | 429 + message + `Retry-After` |
+| `POST /passport/generate` (Family Passport, with or without a photo) | 10 per hour | 429 + message + `Retry-After` |
+| `POST /photos/{id}/vote` | 60 per hour | 429 + message + `Retry-After` |
+| `POST /scan-events` (heatmap logging) | 120 per hour | normal 204, event just not logged |
+
+- **Never limited:** the scan itself (`GET /scan/...` and the deep-linked
+  pages), Mark Visited, Bingo/Map progress, Hunt, coins — anything a
+  guest's progress depends on. The heatmap limit only stops the analytics
+  row being written.
+- **No device session:** a request with no `X-Device-Session` header at
+  all (the app always sends one, so in practice only a hand-made request)
+  shares one small bucket per IP per endpoint (2–20 an hour). The other
+  endpoints already require the header.
+- **Known gap:** a device session is whatever token the client sends, so a
+  script that invents a fresh token per request gets a fresh allowance
+  each time. Closing that needs a per-IP ceiling or server-issued
+  tokens — deliberately not done, because of the shared Wi-Fi.
+- **The guest sees** the backend's sentence (e.g. "Please wait 12 minutes
+  and try again") where that screen already shows errors.
+- **Single instance assumed.** The counts live in memory in the one
+  uvicorn process, like the reference cache (section 7): a deploy,
+  restart or free-tier spin-down resets them, and with several instances
+  (or `--workers N`) each would count separately, multiplying every
+  limit. Move the counts to a shared store (e.g. Redis) before scaling
+  out. Memory is bounded (at most 50,000 tracked keys, each holding at
+  most its limit's worth of timestamps).
+- **Kill switch:** set `RATE_LIMITS_ENABLED=0` (also `false`/`no`/`off`)
+  in the Render dashboard to turn all of these off without a code change;
+  Render restarts the service on an env var change. Unset (the default)
+  means on. It does not affect the staff login limiter (section 4).

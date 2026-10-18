@@ -1,13 +1,14 @@
-"""Generates printable QR PNGs for scan codes and Our Animals deep links.
+"""Generates QR PNGs.
 
-Each Hunt code's QR encodes <FRONTEND_BASE_URL>/scan/<code> -- the same route
-the frontend's /scan/:code screen serves -- so a phone's normal camera app (no
-in-app scanning needed) opens straight into the right challenge/placeholder
-page. Our Animals QRs encode <FRONTEND_BASE_URL>/animals/<slug> instead -- a
-deliberately separate URL scheme (not /scan/<code>) so the 4 animal names
-that are also Hunt characters never collide with a Hunt code. FRONTEND_BASE_URL
-defaults to the local Vite dev server; set it in .env to the real deployed
-frontend origin before printing signage for the park.
+generate_qr_png_for_url() is what the printable-signage scripts use
+(scripts/generate_*_qr_codes.py via scripts/qr_output.py): they build each
+URL from an explicit, checked --base-url / QR_BASE_URL, never from the
+environment default below.
+
+generate_qr_png(code) serves GET /scan/{code}/qr.png, a one-off/testing
+convenience: it encodes <FRONTEND_BASE_URL>/scan/<code>, so it is only as
+right as that server's FRONTEND_BASE_URL (localhost when unset). Don't
+print from it -- use the scripts, which refuse localhost and non-https.
 """
 
 from __future__ import annotations
@@ -22,10 +23,6 @@ FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "http://localhost:5173")
 
 def scan_url(code: str) -> str:
     return f"{FRONTEND_BASE_URL.rstrip('/')}/scan/{code}"
-
-
-def animal_url(slug: str) -> str:
-    return f"{FRONTEND_BASE_URL.rstrip('/')}/animals/{slug}"
 
 
 def generate_qr_png_for_url(url: str) -> bytes:

@@ -207,6 +207,8 @@ class _Bucket:
     def upload(self, path, content, options=None):
         self.db.storage_objects.add((self.name, path))
         self.db.storage_content_types[(self.name, path)] = (options or {}).get("content-type")
+        self.db.storage_cache_control[(self.name, path)] = (options or {}).get("cache-control")
+        self.db.storage_bytes[(self.name, path)] = content
 
     def remove(self, paths):
         for p in paths:
@@ -228,6 +230,8 @@ class FakeSupabase:
         self.writes: collections.Counter = collections.Counter()
         self.storage_objects: set = set()
         self.storage_content_types: dict = {}
+        self.storage_cache_control: dict = {}
+        self.storage_bytes: dict = {}
         self.storage = _Storage(self)
 
     def table(self, name):

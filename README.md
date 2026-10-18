@@ -245,10 +245,11 @@ npm run dev
 | `SUPABASE_URL`, `SUPABASE_KEY` | Required. Project URL and its `service_role` key. |
 | `STAFF_PASSWORD`, `STAFF_SESSION_SECRET` | Required for the `/staff` area. |
 | `CORS_ALLOWED_ORIGINS` | Optional locally (defaults to `http://localhost:5173`). |
-| `FRONTEND_BASE_URL` | QR codes and password-reset email links. |
+| `FRONTEND_BASE_URL` | Password-reset email links. (QR signs take an explicit `--base-url` / `QR_BASE_URL` instead -- see DEPLOYMENT.md 2.5.) |
 | `RESEND_API_KEY`, `RESEND_FROM_ADDRESS` | Password-reset emails (optional guest accounts). |
 | `INTERNAL_CLEANUP_SECRET` | The scheduled session-cleanup endpoint. |
 | `REFERENCE_CACHE_ENABLED` | Optional; unset means the reference cache is on. |
+| `RATE_LIMITS_ENABLED` | Optional; unset means the per-device write limits are on (DEPLOYMENT.md section 8). |
 | `DEV_SUPABASE_PROJECT_REFS` | Dev machines only — see below. |
 
 The frontend needs no `.env` locally: `VITE_API_BASE_URL` is optional and

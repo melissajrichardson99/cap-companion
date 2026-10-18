@@ -113,6 +113,7 @@ export function AnimalDetailScreen({ animal, photos, onBack, onViewCards }: Anim
                   candidates={[photo.photo_url]}
                   alt={`Photo ${i + 1} of ${animal.name}`}
                   className="animal-detail-photo"
+                  lazy
                   onClick={() =>
                     setLightbox({
                       photos: photos.map((p, j) => ({

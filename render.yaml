@@ -32,3 +32,7 @@ services:
       # reset a "0" set in the dashboard during an incident.
       - key: REFERENCE_CACHE_ENABLED
         sync: false
+      # Per-device write-limit kill switch (DEPLOYMENT.md section 8). Unset
+      # means on; sync: false for the same reason as above.
+      - key: RATE_LIMITS_ENABLED
+        sync: false

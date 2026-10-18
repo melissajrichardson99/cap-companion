@@ -5,20 +5,21 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from app.device_session import get_or_create_session
 from app.errors import ConflictError, NotFoundError, ValidationError
 from app.models import DeviceSession, PhotoSubmission
+from app.rate_limit import FAVORITE_PHOTO_UPLOAD, PHOTO_VOTE, device_rate_limit
 from app.services import photos as photos_service
 from app.staff_auth import require_staff
-from app.uploads import LimitedUploadRoute, read_image_upload
+from app.uploads import GUEST_MAX_EDGE, LimitedUploadRoute, read_image_upload
 
 router = APIRouter(prefix="/photos", tags=["photos"], route_class=LimitedUploadRoute)
 
 
-@router.post("/submit", response_model=PhotoSubmission)
+@router.post("/submit", response_model=PhotoSubmission, dependencies=[Depends(device_rate_limit(FAVORITE_PHOTO_UPLOAD))])
 async def submit(
     file: UploadFile = File(...),
     guest_label: str | None = Form(default=None),
     email: str | None = Form(default=None),
 ) -> PhotoSubmission:
-    image = await read_image_upload(file)
+    image = await read_image_upload(file, GUEST_MAX_EDGE)
     try:
         return photos_service.submit_photo(guest_label, email, image)
     except ValidationError as exc:
@@ -89,7 +90,7 @@ def delete(submission_id: UUID) -> None:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/{submission_id}/vote", response_model=PhotoSubmission)
+@router.post("/{submission_id}/vote", response_model=PhotoSubmission, dependencies=[Depends(device_rate_limit(PHOTO_VOTE))])
 def cast_vote(submission_id: UUID, session: DeviceSession = Depends(get_or_create_session)) -> PhotoSubmission:
     try:
         return photos_service.vote(submission_id, session.id)

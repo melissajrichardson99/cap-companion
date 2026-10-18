@@ -383,6 +383,10 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                     src={photo.photo_url}
                     alt={photo.guest_label ?? 'Guest submitted photo'}
                     className="staff-photo-thumb"
+                    width={56}
+                    height={56}
+                    loading="lazy"
+                    decoding="async"
                   />
                   <div className="staff-photo-identity">
                     <span className="staff-photo-label">{photo.guest_label ?? 'A guest'}</span>
@@ -440,6 +444,10 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                     src={photo.photo_url}
                     alt={photo.guest_label ?? 'Guest submitted photo'}
                     className="staff-photo-thumb"
+                    width={56}
+                    height={56}
+                    loading="lazy"
+                    decoding="async"
                   />
                   <span className="staff-photo-label">{photo.guest_label ?? 'A guest'}</span>
                   <span className="staff-photo-vote-count">
@@ -705,7 +713,15 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                 .sort((a, b) => a.display_order - b.display_order)
                 .map((photo, i, photosForAnimal) => (
                   <li key={photo.id} className="staff-photo-row cap-parchment-card" data-photo-id={photo.id}>
-                    <img src={photo.photo_url} alt="" className="staff-photo-thumb" />
+                    <img
+                      src={photo.photo_url}
+                      alt=""
+                      className="staff-photo-thumb"
+                      width={56}
+                      height={56}
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <span className="staff-photo-label">Photo {i + 1}</span>
                     <div className="staff-photo-actions">
                       <button

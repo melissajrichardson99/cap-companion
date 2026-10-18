@@ -211,7 +211,7 @@ def generate_passport(
     storage_path = None
     if image is not None:
         storage_path = f"{uuid4()}.{image.extension}"
-        client.storage.from_(BUCKET).upload(storage_path, image.content, {"content-type": image.content_type})
+        client.storage.from_(BUCKET).upload(storage_path, image.content, image.file_options())
 
     stats = _compute_stats(client, device_session_id, guest_id)
 
