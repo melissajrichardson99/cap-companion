@@ -50,6 +50,17 @@ const COLOR_HOLE_SHADOW := Color("#241a10")
 const CAPYBARA_TEXTURE := preload("res://assets/capybara_face.png")
 const PORCUPINE_TEXTURE := preload("res://assets/porcupine_face.png")
 
+# capybara_face.png's body runs straight off the image's right and bottom
+# edges (a hard crop baked into the art), which reads as a squared-off neck.
+# These describe an ellipse in the PNG's pixel space around the head; pixels
+# outside it are cut away at load time so only a rounded head-and-shoulders
+# shape is drawn. The PNG itself is untouched.
+const CAPY_CROP_CENTER := Vector2(110, 105)
+const CAPY_CROP_RADII := Vector2(112, 120)
+const CAPY_CROP_STROKE := 3.0
+const CAPY_OUTLINE := Color("#26110c")
+const COLOR_DIRT_LIP := Color("#7a5a37")
+
 @onready var score_caption_label: Label = $UI/StatsBar/ScorePill/CaptionLabel
 @onready var score_value_label: Label = $UI/StatsBar/ScorePill/ValueLabel
 @onready var time_caption_label: Label = $UI/StatsBar/TimePill/CaptionLabel
@@ -71,8 +82,11 @@ var time_left: float = ROUND_DURATION
 var spawn_cooldown: float = 0.0
 var game_clock: float = 0.0
 
+var capybara_texture: Texture2D = CAPYBARA_TEXTURE
+
 func _ready() -> void:
 	randomize()
+	capybara_texture = _crop_to_ellipse(CAPYBARA_TEXTURE, CAPY_CROP_CENTER, CAPY_CROP_RADII, CAPY_CROP_STROKE)
 	_style_ui()
 	holes.assign(hole_grid.get_children())
 	for i in range(holes.size()):
@@ -218,9 +232,10 @@ func _draw_holes() -> void:
 		_draw_mound(rect)
 		match hole_state[i]:
 			Critter.CAPYBARA:
-				_draw_capybara(rect)
+				_draw_capybara_in_hole(rect)
 			Critter.DECOY:
 				_draw_porcupine(rect)
+		_draw_hole_lip(rect)
 
 func _hole_rect(index: int) -> Rect2:
 	var col := index % HOLE_COLS
@@ -239,7 +254,55 @@ func _draw_mound(rect: Rect2) -> void:
 	draw_circle(center + Vector2(0, rect.size.y * 0.12), rect.size.x * 0.32, COLOR_HOLE_SHADOW)
 
 func _draw_capybara(rect: Rect2) -> void:
-	_draw_texture_contain(CAPYBARA_TEXTURE, rect, 0.9)
+	_draw_texture_contain(capybara_texture, rect, 0.9)
+
+func _draw_capybara_in_hole(rect: Rect2) -> void:
+	# Scaled to fit the cell with an 8px side / 6px top margin, anchored at
+	# the bottom centre so its lower edge sits behind the hole's front lip.
+	var tex_size := capybara_texture.get_size()
+	var fit := Vector2(rect.size.x - 16.0, _lip_center_y(rect) - rect.position.y - 6.0)
+	var fit_scale: float = min(fit.x / tex_size.x, fit.y / tex_size.y)
+	var draw_size := tex_size * fit_scale
+	var bottom_center := Vector2(rect.position.x + rect.size.x * 0.5, _lip_center_y(rect))
+	draw_texture_rect(capybara_texture, Rect2(bottom_center - Vector2(draw_size.x * 0.5, draw_size.y), draw_size), false)
+
+func _lip_center_y(rect: Rect2) -> float:
+	return rect.position.y + rect.size.y * 0.82
+
+func _draw_hole_lip(rect: Rect2) -> void:
+	# Front rim of the hole, drawn over the critter so whatever is below the
+	# rim reads as still underground.
+	var center := Vector2(rect.position.x + rect.size.x * 0.5, _lip_center_y(rect))
+	var radii := Vector2(rect.size.x * 0.44, rect.size.y * 0.15)
+	var points := PackedVector2Array()
+	for k in range(33):
+		var ang := TAU * k / 32.0
+		points.append(center + Vector2(cos(ang) * radii.x, sin(ang) * radii.y))
+	draw_colored_polygon(points, COLOR_DIRT_LIP)
+	draw_polyline(points.slice(16, 33), COLOR_DIRT_DARK, 2.0, true)
+
+# Returns src with everything outside an ellipse (in src pixel space) made
+# transparent and an outline stroke px wide along the cut, so the cut edge
+# matches the art's own dark outline. Cropped to what's left.
+func _crop_to_ellipse(src: Texture2D, center: Vector2, radii: Vector2, stroke: float) -> Texture2D:
+	var img := src.get_image()
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	var min_radius: float = min(radii.x, radii.y)
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			var col := img.get_pixel(x, y)
+			if col.a == 0.0:
+				continue
+			var n := Vector2((x - center.x) / radii.x, (y - center.y) / radii.y).length()
+			var inside := (1.0 - n) * min_radius
+			if inside <= 0.0:
+				col.a = 0.0
+			elif inside < stroke:
+				col = Color(CAPY_OUTLINE, col.a * clampf(inside, 0.0, 1.0))
+			img.set_pixel(x, y, col)
+	return ImageTexture.create_from_image(img.get_region(img.get_used_rect()))
 
 func _draw_porcupine(rect: Rect2) -> void:
 	_draw_texture_contain(PORCUPINE_TEXTURE, rect, 0.9)

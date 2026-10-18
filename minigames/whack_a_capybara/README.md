@@ -13,5 +13,8 @@ Godot 4.x project (GDScript only). Open `project.godot` in the Godot editor to t
 - Decoys never award points, whether tapped or ignored.
 - Round ends at exactly 0:00, and the exit button (top bar and game-over screen) always closes the round immediately regardless of timer state.
 
-## Not yet done (needs the GUI)
-- Art/theme pass — holes/capybara/decoy currently render as color-tinted buttons with text labels, no textures yet.
+## Art
+- Critters are textures: `assets/capybara_face.png` (226x222) and `assets/porcupine_face.png` (298x260). Holes, the dirt lip and the wood/parchment chrome are drawn with `_draw()`. The nine hole Buttons are transparent hit-boxes (100x100 each); the art is painted underneath them and never changes the hit area.
+- `capybara_face.png` has its body cut off flat at the image's right and bottom edges. Shown as-is, that reads as a squared-off neck. The PNG is not edited: at load, `_crop_to_ellipse()` trims it to a rounded head-and-shoulders shape (`CAPY_CROP_*` constants) with a 3px outline along the cut to match the art. In each hole the capybara is fit to the cell with an 8px side margin, anchored bottom-centre, and a dirt lip (`_draw_hole_lip()`) is drawn in front so the lower body reads as still in the hole.
+- `porcupine_face.png` has the same kind of flat cut on its left and bottom edges. It is drawn unchanged (centred, 90% of the cell) behind the same dirt lip.
+- Critters appear and disappear instantly; there is no pop-up or whack animation.

@@ -18,6 +18,10 @@ Godot 4.x project (GDScript only). Open `project.godot` in the Godot editor to t
 - Timer reaching exactly 0 ends the round as a loss.
 - Round pacing — tune `ROUND_DURATION` if a typical playthrough runs much longer/shorter than the ~30s target (45s was chosen over the spec's default since a 19-step shortest path plus dead-end exploration needs more room than a 30s timer gives).
 
-## Not yet done (needs the GUI)
-- Web export (renderer is pre-set to GL Compatibility for export reliability, per `project.godot`).
-- Art/theme pass — maze board/walls/player/finish currently render as flat shapes via `_draw()`, no textures yet.
+## Art
+- The player is a texture, `assets/emu.png` (634x830, a 12px transparent margin on every side). The same file is also used by Card Flip Pairs, so resize the emu here in code (`EMU_VISIBLE_HEIGHT` in `scripts/Main.gd`), never by editing the PNG.
+- The emu is drawn centred in its cell at 21px of visible height (about 16px wide), so it fits inside the 29px clear corridor (34px cell minus the 5px wall line, `WALL_THICKNESS`) with space on every side. It is purely visual: movement and wall blocking come from `MAZE_DATA`, and start/finish are cell checks, so none of them depend on the sprite size.
+- Board, walls, finish flag and the wood/parchment chrome are drawn with `_draw()`, no other textures.
+
+## Export
+- Web export uses the GL Compatibility renderer (set in `project.godot`). Export and copy steps are in `DEPLOYMENT.md` §2.4.

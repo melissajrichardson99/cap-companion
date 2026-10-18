@@ -65,6 +65,16 @@ const COLOR_MAZE_PEBBLE := Color("#a9834f")
 const COLOR_EXIT_PAD := Color("#3b7801")
 
 const EMU_TEXTURE := preload("res://assets/emu.png")
+# emu.png (634x830) has a 12px transparent margin on every side; the visible
+# bird is 610x806. Sizing works from the visible part so it matches what the
+# player sees.
+const EMU_ART_MARGIN := 12.0
+# Walls are WALL_THICKNESS-px lines centred on the cell edges, so the clear
+# corridor is CELL_SIZE - WALL_THICKNESS = 29px. The emu is taller than wide,
+# so its height is the limit in an east-west corridor: 21px leaves 4px above
+# and below, and makes its widest part ~16px (55% of the corridor).
+const WALL_THICKNESS := 5.0
+const EMU_VISIBLE_HEIGHT := 21.0
 
 @onready var time_caption_label: Label = $UI/StatsBar/TimePill/CaptionLabel
 @onready var time_value_label: Label = $UI/StatsBar/TimePill/ValueLabel
@@ -259,19 +269,18 @@ func _draw_cell_walls(cell: Vector2i, bits: int) -> void:
 func _draw_wall_segment(a: Vector2, b: Vector2) -> void:
 	# Double-line "plank" wall: a thick dark outline with a lighter wood
 	# core drawn on top, echoing the wood-panel chrome used elsewhere.
-	draw_line(a, b, COLOR_MAZE_WALL, 5.0)
+	draw_line(a, b, COLOR_MAZE_WALL, WALL_THICKNESS)
 	draw_line(a, b, COLOR_MAZE_WALL_CORE, 2.0)
 
 func _draw_emu(cell: Vector2i) -> void:
-	# Contain-fit the emu texture into a token slightly taller than one maze
-	# cell (deliberately overflowing above the cell for visibility), anchored
-	# so its feet sit near the cell's bottom edge.
+	# Centre the visible emu in the cell, sized to fit inside the corridor
+	# between the walls (see EMU_VISIBLE_HEIGHT). The margin is symmetric, so
+	# centring the whole texture centres the visible bird.
 	var cell_center := GRID_ORIGIN + Vector2(cell.x * CELL_SIZE, cell.y * CELL_SIZE) + Vector2(CELL_SIZE, CELL_SIZE) * 0.5
 	var tex_size := EMU_TEXTURE.get_size()
-	var h := CELL_SIZE * 1.5
-	var w := h * tex_size.x / tex_size.y
-	var rect := Rect2(cell_center - Vector2(w * 0.5, h * 0.62), Vector2(w, h))
-	draw_texture_rect(EMU_TEXTURE, rect, false)
+	var emu_scale := EMU_VISIBLE_HEIGHT / (tex_size.y - EMU_ART_MARGIN * 2.0)
+	var draw_size := tex_size * emu_scale
+	draw_texture_rect(EMU_TEXTURE, Rect2(cell_center - draw_size * 0.5, draw_size), false)
 
 func _draw_controls_plate() -> void:
 	_draw_parchment_pill(CONTROLS_RECT, 16.0)
