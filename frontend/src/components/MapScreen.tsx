@@ -217,8 +217,9 @@ const LEGEND_NUMBER: Record<string, number> = {
   // Attractions (star)
   'Arcade Pad': 1,
   'Pedal Karts': 2,
-  // Renamed from "Tractor Ride" in migration 047 (same pin, same number).
-  'Tractor Ride - West': 3,
+  // Renamed from "Tractor Ride" in migration 047 (same pin, same number):
+  // the map has east at the top, so the original top pin is the east station.
+  'Tractor Ride - East': 3,
   'Blacklight Mini Golf': 4,
   Archery: 5,
   'Tether Ball': 6,
@@ -237,7 +238,7 @@ const LEGEND_NUMBER: Record<string, number> = {
   // Added in migration 043 (not on the printed map yet).
   'Cornhole Mini Golf': 19,
   // Added in migration 047 (not on the printed map yet).
-  'Tractor Ride - East': 20,
+  'Tractor Ride - West': 20,
   'Bee Maze': 21,
   // Services (square)
   'Ticket Booth': 1,

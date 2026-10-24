@@ -62,7 +62,7 @@ test.describe('Take Me There card', () => {
     await expect(page.locator('.map-pin-keyspot-highlighted')).toHaveCount(5)
   })
 
-  test('Attractions highlights all 21 attraction pins (18 + Cornhole Mini Golf, 043 + Tractor Ride - East and Bee Maze, 047)', async ({ page }) => {
+  test('Attractions highlights all 21 attraction pins (18 + Cornhole Mini Golf, 043 + Tractor Ride - West and Bee Maze, 047)', async ({ page }) => {
     await openMapTab(page)
     await page.getByRole('button', { name: 'Attractions', exact: true }).click()
     await expect(page.locator('.map-pin-attraction.map-pin-keyspot-highlighted')).toHaveCount(21)

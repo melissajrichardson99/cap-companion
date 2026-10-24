@@ -167,3 +167,8 @@ playwright/.cache/
 /.wrangler/
 
 docs/handover/
+
+# --- Wrangler local secrets, local backup copies ---
+.dev.vars*
+backups/
+*.bak

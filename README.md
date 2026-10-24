@@ -5,7 +5,7 @@ petting-zoo/entertainment venue — an interactive map, scavenger hunt, bingo
 card, minigames, and an in-app currency for guests, plus a full staff
 administration and analytics system behind it. Built solo, end to end
 (React/TypeScript frontend, FastAPI backend, Postgres database, 10 custom
-Godot minigames, 48 Playwright end-to-end spec files), across many development
+Godot minigames, 52 Playwright end-to-end spec files), across many development
 sessions.
 
 **Live demo:** [cap-companion.melissajrichardson99.workers.dev](https://cap-companion.melissajrichardson99.workers.dev/)
@@ -71,8 +71,8 @@ volume — all with a date-range filter.
 - **Minigames** — 10 custom Godot 4.x projects exported to HTML5/WebGL,
   served from Cloudflare R2 through a small Worker (Godot's `.wasm` exports
   exceed Cloudflare's per-file static-asset cap).
-- **Testing** — Playwright end-to-end (48 spec files, 363 tests), pytest
-  for the backend (316 tests).
+- **Testing** — Playwright end-to-end (52 spec files, 380 tests), pytest
+  for the backend (435 tests).
 - **Auth model** — anonymous by default. Guests get a per-device session
   token (`X-Device-Session` header, generated client-side, stored in
   `localStorage`) that every stateful route reads/writes against. Optional
@@ -258,8 +258,9 @@ defaults to `http://localhost:8000`.
 The frontend runs at `http://localhost:5173` and talks to the backend at
 `http://localhost:8000` by default. Minigames are exported separately from
 `minigames/` and copied to `frontend/games-dist/` (not
-`frontend/public/games/` — see `CLAUDE.md`), so a local checkout will run
-the full app minus playable minigames unless that step is done too.
+`frontend/public/games/` — see `CLAUDE.md`). The current exports are
+committed there, so a fresh checkout plays every minigame; re-export only
+after changing a game in `minigames/`.
 
 ### Dev machine setup: `DEV_SUPABASE_PROJECT_REFS`
 

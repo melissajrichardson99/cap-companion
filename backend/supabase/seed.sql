@@ -25,9 +25,10 @@
 insert into map_nodes (name, category, description, x_pct, y_pct) values
     ('Arcade Pad',            'attraction', 'Coin-op arcade games.',                                            9.7,  43.7),
     ('Pedal Karts',           'attraction', 'Pedal-powered go-karts on a short track.',                         9.7,  33.4),
-    -- Two tractor ride stations (migration 047): the original node, renamed.
-    ('Tractor Ride - West',   'attraction', 'Guided tractor ride around the park.',                             10.5, 23.1),
-    ('Tractor Ride - East',   'attraction', 'Guided tractor ride around the park. There are two tractor ride stations; this is the east one.', 92.6, 86.4),
+    -- Two tractor ride stations (migration 047). East is the top of the map:
+    -- the original node (renamed, keeps its Bingo tile), and the new West one.
+    ('Tractor Ride - East',   'attraction', 'Guided tractor ride around the park. There are two tractor ride stations; this is the east one.', 10.5, 23.1),
+    ('Tractor Ride - West',   'attraction', 'Guided tractor ride around the park. There are two tractor ride stations; this is the west one.', 92.6, 86.4),
     ('Blacklight Mini Golf',  'attraction', 'Blacklight mini golf course.',                                     28.6, 24.2),
     -- Bottom-right corner (migration 047; was provisional at 76, 70 in 043;
     -- measured at 87.7, 97.4, nudged up 0.1 so the pin isn't clipped at 390 px).
@@ -164,7 +165,7 @@ from new_card nc,
     (2, 2, 'Complete Red, White and Blue',                  'Red White and Blue'),
     (2, 3, 'Find your way through Math Maze',               'Math Maze'),
     (2, 4, 'Finish Right Turn Only in 20 turns',            'Right Turn Only'),
-    (3, 0, 'Take a spin on the Tractor Ride',               'Tractor Ride - West'),
+    (3, 0, 'Take a spin on the Tractor Ride',               'Tractor Ride - East'),
     (3, 1, 'Race the Pedal Karts',                          'Pedal Karts'),
     (3, 2, 'Sink a hole-in-one at Blacklight Mini Golf',     'Blacklight Mini Golf'),
     (3, 3, 'Hit a bullseye at Archery',                     'Archery'),

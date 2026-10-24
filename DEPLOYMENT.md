@@ -90,8 +90,9 @@ Follow in order — later steps depend on earlier ones.
       already cover `service_role`.)
       **`047_map_nodes_farm_toss_and_pins.sql`** adds the 4- and 5-point
       Farm Toss scores, moves the Cornhole Mini Golf pin, renames Tractor
-      Ride to "Tractor Ride - West", adds Tractor Ride - East, Bee Maze and
-      a coming-soon building, and adds `map_nodes.coming_soon`. It can run
+      Ride to "Tractor Ride - East" (same id; east is the top of the map),
+      adds Tractor Ride - West, Bee Maze and a coming-soon building, and
+      adds `map_nodes.coming_soon`. It can run
       before or after the backend deploy (the backend treats a missing
       column as false). Map changes show within 60 s and Farm Toss within
       5 min (reference cache), or at once after a backend restart.

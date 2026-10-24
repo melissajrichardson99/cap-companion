@@ -2,14 +2,15 @@ import { test, expect, type Page } from '@playwright/test'
 import { withSession } from './deviceSessionHelper'
 
 // Migration 047's map changes: Cornhole Mini Golf moved to the bottom-right
-// corner, the old Tractor Ride renamed "Tractor Ride - West" with a new
-// "Tractor Ride - East", a new Bee Maze, and a coming-soon building
+// corner, the old Tractor Ride renamed "Tractor Ride - East" with a new
+// "Tractor Ride - West" (east is the top of the map, west the bottom), a
+// new Bee Maze, and a coming-soon building
 // (map_nodes.coming_soon) that shows a construction icon and can't be
 // visited. Hits the real dev project, no mocking.
 
 const API = 'http://localhost:8000'
 const BUILDING = 'New Building (Coming Soon)'
-const CHANGED_PINS = ['Cornhole Mini Golf', 'Tractor Ride - West', 'Tractor Ride - East', 'Bee Maze', BUILDING]
+const CHANGED_PINS = ['Cornhole Mini Golf', 'Tractor Ride - East', 'Tractor Ride - West', 'Bee Maze', BUILDING]
 
 interface MapNodeRow {
   id: string
@@ -20,6 +21,7 @@ interface MapNodeRow {
   x_pct: number | null
   y_pct: number | null
   parent_node_id: string | null
+  linked_tiles: { label: string }[]
 }
 
 async function openMap(page: Page): Promise<void> {
@@ -62,15 +64,19 @@ const inside = (box: Box, img: Box) => box.l >= img.l - 0.5 && box.t >= img.t - 
 const overlaps = (a: Box, b: Box) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b
 
 test.describe('Map nodes (migration 047)', () => {
-  test('both tractor stations exist, West is the original pin and East is the new one at the far right', async ({ request }) => {
+  test('both tractor stations exist, East is the original pin near the top and West is the new one near the bottom', async ({ request }) => {
     const rows = (await (await request.get(`${API}/map/nodes`, withSession(crypto.randomUUID()))).json()) as MapNodeRow[]
     expect(rows.find((r) => r.name === 'Tractor Ride')).toBeUndefined()
     const west = rows.find((r) => r.name === 'Tractor Ride - West')!
     const east = rows.find((r) => r.name === 'Tractor Ride - East')!
-    expect([west.x_pct, west.y_pct]).toEqual([10.5, 23.1])
-    expect([east.x_pct, east.y_pct]).toEqual([92.6, 86.4])
-    expect(west.x_pct!).toBeLessThan(east.x_pct!)
-    expect(east.category).toBe(west.category)
+    expect([east.x_pct, east.y_pct]).toEqual([10.5, 23.1])
+    expect([west.x_pct, west.y_pct]).toEqual([92.6, 86.4])
+    // The map has east at the top and west at the bottom.
+    expect(east.y_pct!).toBeLessThan(west.y_pct!)
+    expect(west.category).toBe(east.category)
+    // The Bingo tile stays on the original node (same id), now East.
+    expect(east.linked_tiles.map((t) => t.label)).toContain('Take a spin on the Tractor Ride')
+    expect(west.linked_tiles).toEqual([])
     expect(rows.find((r) => r.name === 'Bee Maze')).toMatchObject({ category: 'attraction', x_pct: 71.4, y_pct: 52.9 })
     expect(rows.find((r) => r.name === 'Cornhole Mini Golf')).toMatchObject({ x_pct: 87.7, y_pct: 97.3 })
     expect(rows.find((r) => r.name === BUILDING)).toMatchObject({ x_pct: 43.9, y_pct: 77.2, is_open: false, coming_soon: true })
@@ -78,8 +84,8 @@ test.describe('Map nodes (migration 047)', () => {
 
   test('the tractor stations, Bee Maze and Cornhole Mini Golf have their own legend numbers', async ({ page }) => {
     await openMap(page)
-    await expect(pin(page, 'Tractor Ride - West').locator('.map-pin-shape-text')).toHaveText('3')
-    await expect(pin(page, 'Tractor Ride - East').locator('.map-pin-shape-text')).toHaveText('20')
+    await expect(pin(page, 'Tractor Ride - East').locator('.map-pin-shape-text')).toHaveText('3')
+    await expect(pin(page, 'Tractor Ride - West').locator('.map-pin-shape-text')).toHaveText('20')
     await expect(pin(page, 'Bee Maze').locator('.map-pin-shape-text')).toHaveText('21')
     await expect(pin(page, 'Cornhole Mini Golf').locator('.map-pin-shape-text')).toHaveText('19')
 
