@@ -663,7 +663,7 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                       <span
                         className={`staff-attraction-status-badge staff-attraction-status-badge-${node.is_open ? 'open' : 'closed'}`}
                       >
-                        {node.is_open ? 'Open' : 'Closed'}
+                        {node.is_open ? 'Open' : node.coming_soon ? 'Coming soon' : 'Closed'}
                       </span>
                     </div>
                     <div className="staff-attraction-actions">
@@ -673,7 +673,8 @@ function StaffPageContent({ onLoggedOut }: { onLoggedOut: () => void }) {
                         disabled={pendingAttractionActionId === node.id}
                         onClick={() => toggleNodeOpen(node)}
                       >
-                        {node.is_open ? 'Close' : 'Reopen'}
+                        {/* Opening a coming-soon node also clears coming_soon (set_node_open_status). */}
+                        {node.is_open ? 'Close' : node.coming_soon ? 'Open' : 'Reopen'}
                       </button>
                     </div>
                   </li>

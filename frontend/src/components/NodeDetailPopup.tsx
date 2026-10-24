@@ -152,8 +152,10 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
             informational, additive to whatever else this popup already
             shows. Does not gate Mark Visited below: closed attractions stay
             fully scannable/completable. */}
-        {!node.is_open && (
-          <p className="node-detail-closed-info">This attraction is currently closed.</p>
+        {node.coming_soon ? (
+          <p className="node-detail-closed-info">Coming soon. Not open yet.</p>
+        ) : (
+          !node.is_open && <p className="node-detail-closed-info">This attraction is currently closed.</p>
         )}
 
         {error && <p className="screen-error">{error}</p>}
@@ -166,15 +168,18 @@ export function NodeDetailPopup({ node, onClose, onVisitResult }: NodeDetailPopu
               logs one raw visit occurrence for the Staff Visit Heatmap
               (map_node_visit_events). The backend's node_visits upsert and
               Map Exploration bonus guard already no-op on a repeat, so a
-              re-check-in never changes Bingo/Map completion state. */}
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={startMarkVisited}
-            disabled={step === 'submitting'}
-          >
-            {node.visited ? 'Check In Again' : 'Mark Visited'}
-          </button>
+              re-check-in never changes Bingo/Map completion state. A
+              coming-soon node can't be visited (the backend refuses it). */}
+          {!node.coming_soon && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={startMarkVisited}
+              disabled={step === 'submitting'}
+            >
+              {node.visited ? 'Check In Again' : 'Mark Visited'}
+            </button>
+          )}
         </div>
         {/* Only reachable here when there was nothing to confirm (queue stayed
             empty) -- startMarkVisited went straight to submit(). */}

@@ -28,7 +28,7 @@ Confirmed from official park rule sheets — scoring is **variable point-per-sho
 
 | Game | Win Condition | Scoring |
 |---|---|---|
-| **Farm Toss** | First to 21 | Ring toss at animal targets, each worth different points (values observed: 2, 3, 6) |
+| **Farm Toss** | First to 21 | Ring toss at animal targets, each worth different points (2, 3, 4, 5 or 6 per throw, plus Miss; migration 047) |
 | **Horse Hoops** | Team play, first to 10 (bonus round on tie) | Hit horse with hoop = 1 pt; hoop around blue horse's neck = 2; yellow = 3; red = 4 |
 | **Cornhole** | First to 21 | Innings-based, each player pitches all 4 bags per inning. "Woody" (bag rests on board) = 1 pt; "Cornhole" (bag through the hole) = 3 pts |
 | **Cornhole Extreme** | First to 21 | Three-hole variant. Woody = 1 pt; first hole = 2, second hole = 3, third hole = 4 |

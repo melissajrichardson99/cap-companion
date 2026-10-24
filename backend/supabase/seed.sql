@@ -20,16 +20,18 @@
 -- popup lists the games underneath.
 
 -- ---------------------------------------------------------------------------
--- map_nodes — Attractions (29)
+-- map_nodes — Attractions (32)
 -- ---------------------------------------------------------------------------
 insert into map_nodes (name, category, description, x_pct, y_pct) values
     ('Arcade Pad',            'attraction', 'Coin-op arcade games.',                                            9.7,  43.7),
     ('Pedal Karts',           'attraction', 'Pedal-powered go-karts on a short track.',                         9.7,  33.4),
-    ('Tractor Ride',          'attraction', 'Guided tractor ride around the park.',                             10.5, 23.1),
+    -- Two tractor ride stations (migration 047): the original node, renamed.
+    ('Tractor Ride - West',   'attraction', 'Guided tractor ride around the park.',                             10.5, 23.1),
+    ('Tractor Ride - East',   'attraction', 'Guided tractor ride around the park. There are two tractor ride stations; this is the east one.', 92.6, 86.4),
     ('Blacklight Mini Golf',  'attraction', 'Blacklight mini golf course.',                                     28.6, 24.2),
-    -- Provisional position (migration 043); move with:
-    --   update map_nodes set x_pct = 76.0, y_pct = 70.0 where name = 'Cornhole Mini Golf';
-    ('Cornhole Mini Golf',    'attraction', 'Cornhole-themed mini golf course.',                                76.0, 70.0),
+    -- Bottom-right corner (migration 047; was provisional at 76, 70 in 043;
+    -- measured at 87.7, 97.4, nudged up 0.1 so the pin isn't clipped at 390 px).
+    ('Cornhole Mini Golf',    'attraction', 'Cornhole-themed mini golf course.',                                87.7, 97.3),
     ('Archery',               'attraction', 'Supervised archery range.',                                        25.5, 31.6),
     ('Tether Ball',           'attraction', 'Tether ball court.',                                                58.1, 20.5),
     ('Chicken Bowl',          'attraction', 'Chicken-themed bowling game.',                                     63.9, 22.4),
@@ -38,6 +40,7 @@ insert into map_nodes (name, category, description, x_pct, y_pct) values
     ('Fort Slide',            'attraction', 'Play fort with slides.',                                           65.9, 29.1),
     ('Playground',            'attraction', 'General playground equipment.',                                    69.0, 44.1),
     ('Mystery Maze',          'attraction', 'Walk-through maze attraction.',                                    71.3, 65.0),
+    ('Bee Maze',              'attraction', 'A maze to walk through.',                                          71.4, 52.9),
     ('Blaster Balls',         'attraction', 'Foam ball blaster arena.',                                         43.7, 67.3),
     ('Ground Games',          'attraction', 'Assorted lawn games area.',                                        47.7, 31.1),
     ('Climbing Wall',         'attraction', 'Supervised climbing wall.',                                        36.8, 35.6),
@@ -83,7 +86,7 @@ insert into map_nodes (name, category, description, x_pct, y_pct) values
 on conflict (name) do nothing;
 
 -- ---------------------------------------------------------------------------
--- map_nodes — Services & Food (10)
+-- map_nodes — Services & Food (10, plus the coming-soon building below)
 -- ---------------------------------------------------------------------------
 insert into map_nodes (name, category, description, x_pct, y_pct) values
     ('Ticket Booth',          'service', 'Park entry ticketing.',                35.2, 70.2),
@@ -96,6 +99,14 @@ insert into map_nodes (name, category, description, x_pct, y_pct) values
     ('Granny Ann''s Kitchen', 'food',    'Kitchen and dining stand.',            31.4, 55.9),
     ('Sugar Shack',           'food',    'Snacks and sweets stand.',             33.7, 53.0),
     ('General Store',         'food',    'Park gift and snack store.',           26.3, 70.8)
+on conflict (name) do nothing;
+
+-- Under construction (migration 047): closed and coming_soon, so it has no
+-- visit path, isn't counted by Map Exploration and isn't on the heatmap.
+-- Staff open it from the Staff Page Attractions tab, which clears
+-- coming_soon. The name lives only here -- rename it with one update.
+insert into map_nodes (name, category, description, x_pct, y_pct, is_open, coming_soon) values
+    ('New Building (Coming Soon)', 'service', 'Under construction. Coming soon.', 43.9, 77.2, false, true)
 on conflict (name) do nothing;
 
 -- ---------------------------------------------------------------------------
@@ -153,7 +164,7 @@ from new_card nc,
     (2, 2, 'Complete Red, White and Blue',                  'Red White and Blue'),
     (2, 3, 'Find your way through Math Maze',               'Math Maze'),
     (2, 4, 'Finish Right Turn Only in 20 turns',            'Right Turn Only'),
-    (3, 0, 'Take a spin on the Tractor Ride',               'Tractor Ride'),
+    (3, 0, 'Take a spin on the Tractor Ride',               'Tractor Ride - West'),
     (3, 1, 'Race the Pedal Karts',                          'Pedal Karts'),
     (3, 2, 'Sink a hole-in-one at Blacklight Mini Golf',     'Blacklight Mini Golf'),
     (3, 3, 'Hit a bullseye at Archery',                     'Archery'),
@@ -412,7 +423,9 @@ from scoring_games g,
 (values
     ('2-Point Ring', 2, 1),
     ('3-Point Ring', 3, 2),
-    ('6-Point Ring', 6, 3)
+    ('4-Point Ring', 4, 3),
+    ('5-Point Ring', 5, 4),
+    ('6-Point Ring', 6, 5)
 ) as e(label, point_value, sort_order)
 where g.name = 'Farm Toss'
 on conflict (game_id, label) do nothing;

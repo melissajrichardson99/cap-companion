@@ -25,6 +25,7 @@ interface MapNodeRow {
   name: string
   visited: boolean
   is_open: boolean
+  coming_soon: boolean
   parent_node_id: string | null
 }
 
@@ -62,7 +63,9 @@ test.describe('Map visited-status, per device session', () => {
   test.afterEach(async ({ request }) => {
     const staffToken = await apiStaffLogin(request)
     const rows = await getMapNodes(request, crypto.randomUUID())
-    const closedTopLevel = rows.filter((r) => r.parent_node_id === null && !r.is_open)
+    // Not the coming-soon building (migration 047): it is closed on purpose,
+    // and opening it would also clear coming_soon for good.
+    const closedTopLevel = rows.filter((r) => r.parent_node_id === null && !r.is_open && !r.coming_soon)
     await Promise.all(closedTopLevel.map((r) => setNodeOpen(request, staffToken, r.id, true)))
   })
 

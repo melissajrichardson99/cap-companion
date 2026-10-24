@@ -198,6 +198,9 @@ const STATE_ICON: Record<NodeDisplayState, string> = {
   closed: '\u{1F512}',
 }
 
+// Shown in place of the legend number / lock on a coming-soon node.
+const COMING_SOON_ICON = '\u{1F6A7}'
+
 // Per-category number matching the physical park map's legend, so a
 // not-visited pin's shape shows the same number as the printed map (prep for
 // a future in-app legend popup). Derived from frontend/public/park-map.png:
@@ -207,11 +210,15 @@ const STATE_ICON: Record<NodeDisplayState, string> = {
 // here too, or its pin renders blank and its legend row unnumbered --
 // map-legend-colors.spec.ts asserts every legend-category pin has a number.
 // Nodes added after the printed map continue their category's sequence.
+// A coming-soon node (map_nodes.coming_soon) gets no number: it shows the
+// construction icon instead, so its name lives only in the database and
+// staff can rename it without a code change.
 const LEGEND_NUMBER: Record<string, number> = {
   // Attractions (star)
   'Arcade Pad': 1,
   'Pedal Karts': 2,
-  'Tractor Ride': 3,
+  // Renamed from "Tractor Ride" in migration 047 (same pin, same number).
+  'Tractor Ride - West': 3,
   'Blacklight Mini Golf': 4,
   Archery: 5,
   'Tether Ball': 6,
@@ -229,6 +236,9 @@ const LEGEND_NUMBER: Record<string, number> = {
   'Soccer Game': 18,
   // Added in migration 043 (not on the printed map yet).
   'Cornhole Mini Golf': 19,
+  // Added in migration 047 (not on the printed map yet).
+  'Tractor Ride - East': 20,
+  'Bee Maze': 21,
   // Services (square)
   'Ticket Booth': 1,
   Restrooms: 2,
@@ -252,6 +262,7 @@ const LEGEND_NUMBER: Record<string, number> = {
 }
 
 function pinShapeContent(node: MapNode): string {
+  if (node.coming_soon) return COMING_SOON_ICON
   const state = deriveNodeDisplayState(node)
   if (state !== 'not_visited') return STATE_ICON[state]
   const number = LEGEND_NUMBER[node.name]
@@ -604,7 +615,11 @@ export function MapScreen({
               {positioned.map((node) => {
                 const uncompletedCount = node.linked_tiles.filter((t) => !t.completed).length
                 const pinState = deriveNodeDisplayState(node)
-                const stateNote = pinState !== 'not_visited' ? `, ${pinState.replace('_', ' ')}` : ''
+                const stateNote = node.coming_soon
+                  ? ', coming soon'
+                  : pinState !== 'not_visited'
+                    ? `, ${pinState.replace('_', ' ')}`
+                    : ''
                 const nudge = nudges.get(node.id)
                 const pinStyle = {
                   left: `${node.x_pct}%`,
@@ -617,7 +632,7 @@ export function MapScreen({
                   <button
                     type="button"
                     key={node.id}
-                    className={`map-pin map-pin-${node.category} map-pin-${pinState}${isKeySpotHighlighted ? ' map-pin-keyspot-highlighted' : ''}`}
+                    className={`map-pin map-pin-${node.category} map-pin-${pinState}${node.coming_soon ? ' map-pin-coming-soon' : ''}${isKeySpotHighlighted ? ' map-pin-keyspot-highlighted' : ''}`}
                     style={pinStyle}
                     onClick={() => setSelectedNode(node)}
                     aria-label={`${node.name} (${CATEGORY_LABEL[node.category]}${stateNote})`}
@@ -744,12 +759,22 @@ export function MapScreen({
                   {isOpen && (
                     <ul id={`map-legend-list-${category}`} className="map-legend-list">
                       {categoryNodes.map((node) => (
-                        <li key={node.id}>
-                          {LEGEND_NUMBER[node.name] != null && (
-                            <span className="map-legend-item-number">{LEGEND_NUMBER[node.name]}</span>
+                        <li key={node.id} data-coming-soon={node.coming_soon || undefined}>
+                          {node.coming_soon ? (
+                            <span className="map-legend-item-number" aria-hidden="true">
+                              {COMING_SOON_ICON}
+                            </span>
+                          ) : (
+                            LEGEND_NUMBER[node.name] != null && (
+                              <span className="map-legend-item-number">{LEGEND_NUMBER[node.name]}</span>
+                            )
                           )}
                           {node.name}
-                          {!node.is_open && <span className="map-legend-item-closed"> (Closed)</span>}
+                          {node.coming_soon ? (
+                            <span className="map-legend-item-closed"> (Coming soon)</span>
+                          ) : (
+                            !node.is_open && <span className="map-legend-item-closed"> (Closed)</span>
+                          )}
                           {node.children.length > 0 && (
                             <ul className="map-legend-children">
                               {node.children.map((child) => (

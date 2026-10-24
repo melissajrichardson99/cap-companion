@@ -34,6 +34,10 @@ export interface MapNode {
   // resolved server-side from the X-Device-Session header -- not global.
   visited: boolean
   is_open: boolean
+  // Under construction (migration 047): construction icon, no Mark Visited,
+  // not counted by Map Exploration or shown on the staff heatmap. Staff
+  // opening the node clears it.
+  coming_soon: boolean
   linked_tiles: LinkedTile[]
   x_pct: number | null
   y_pct: number | null

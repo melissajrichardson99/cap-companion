@@ -78,7 +78,9 @@ test.describe('Map pin legend colors', () => {
     for (const category of ['attraction', 'animal', 'service', 'food']) {
       const toggle = page.locator(`.map-legend-category-toggle[aria-controls="map-legend-list-${category}"]`)
       if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click()
-      const rows = await page.locator(`#map-legend-list-${category} > li`).evaluateAll((lis) =>
+      // The coming-soon building (migration 047) has the construction icon
+      // instead of a number by design -- map-nodes-047.spec.ts covers it.
+      const rows = await page.locator(`#map-legend-list-${category} > li:not([data-coming-soon])`).evaluateAll((lis) =>
         lis.map((li) => ({
           // The row's own text node is the node name (children are in a nested <ul>).
           name: [...li.childNodes]
@@ -95,7 +97,7 @@ test.describe('Map pin legend colors', () => {
       expect(new Set(numbers).size, `${category} legend numbers are unique`).toBe(numbers.length)
       const legendNumber = new Map(rows.map((r) => [r.name, r.number]))
 
-      const pins = await page.locator(`.map-pin.map-pin-${category}`).evaluateAll((els) =>
+      const pins = await page.locator(`.map-pin.map-pin-${category}:not(.map-pin-coming-soon)`).evaluateAll((els) =>
         els.map((el) => ({
           name: (el.getAttribute('aria-label') ?? '').replace(/ \([^)]*\)$/, ''),
           text: el.querySelector('.map-pin-shape-text')?.textContent ?? '',

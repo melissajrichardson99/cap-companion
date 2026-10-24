@@ -267,13 +267,16 @@ function QrLocationPicker({
 }) {
   if (!mapNodes || !locations) return null
   const nameById = new Map(mapNodes.map((n) => [n.id, n.name]))
+  const current = locations.get(locationKey(location.type, location.id)) ?? null
+  // A coming-soon node can't be visited and isn't on the heatmap, so it isn't
+  // offered as a location (unless something already points at it).
   const options = mapNodes
+    .filter((n) => !n.coming_soon || n.id === current)
     .map((n) => ({
       id: n.id,
       label: n.parent_node_id ? `${nameById.get(n.parent_node_id) ?? '?'} › ${n.name}` : n.name,
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
-  const current = locations.get(locationKey(location.type, location.id)) ?? null
 
   return (
     <span className="staff-qr-row-location">

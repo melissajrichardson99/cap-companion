@@ -549,3 +549,86 @@ test.describe('Scoring Sheet', () => {
     await expect(dialogB.getByText('Raw Alice')).toHaveCount(0)
   })
 })
+
+// Migration 047: a Farm Toss throw scores 2, 3, 4, 5 or 6 (plus Miss). The
+// buttons come from game_score_events, so this checks the live data and the
+// layout together. (The turn-based sheet has no undo/edit of a throw.)
+test.describe('Farm Toss scores (migration 047)', () => {
+  const FARM_TOSS_BUTTONS = [
+    '2-Point Ring (+2)',
+    '3-Point Ring (+3)',
+    '4-Point Ring (+4)',
+    '5-Point Ring (+5)',
+    '6-Point Ring (+6)',
+    'Miss',
+  ]
+
+  test('offers 2, 3, 4, 5, 6 and Miss in that order, each adds its points, and a mixed round totals 20', async ({ page }) => {
+    const { dialog } = await openGame(page, 'Farm Toss')
+    await beginSession(dialog, ['Ann'])
+    const buttons = dialog.locator('.scoring-current-player-panel .scoring-event-btn')
+    await expect(buttons).toHaveText(FARM_TOSS_BUTTONS)
+
+    const expected = [2, 5, 9, 14, 20, 20]
+    for (const [i, name] of FARM_TOSS_BUTTONS.entries()) {
+      await takeTurn(dialog, name)
+      await expect(runningScore(dialog, 'Ann')).toHaveText(String(expected[i]))
+    }
+    await expect(dialog.locator('.scoring-turn-result-text')).toHaveCount(0)
+    await expect(currentPlayerName(dialog)).toContainText("Ann's turn")
+  })
+
+  test('the API accepts the 4- and 5-point events and still rejects a score Farm Toss does not have', async ({ request }) => {
+    const token = crypto.randomUUID()
+    const games = (await (await request.get(`${API}/scoring/games`, withSession(token))).json()) as {
+      id: string
+      name: string
+      score_events: { id: string; label: string; point_value: number }[]
+    }[]
+    const farmToss = games.find((g) => g.name === 'Farm Toss')!
+    expect(farmToss.score_events.map((e) => e.point_value)).toEqual([2, 3, 4, 5, 6, 0])
+    const horseHoops = games.find((g) => g.name === 'Horse Hoops')!
+
+    const session = (await (
+      await request.post(`${API}/scoring/sessions`, { ...withSession(token), data: { game_id: farmToss.id, players: ['Ann'] } })
+    ).json()) as { id: string }
+    const throwEvent = (eventId: string) =>
+      request.post(`${API}/scoring/sessions/${session.id}/entries`, {
+        ...withSession(token),
+        data: { player_name: 'Ann', score_event_id: eventId },
+      })
+
+    for (const value of [4, 5]) {
+      const res = await throwEvent(farmToss.score_events.find((e) => e.point_value === value)!.id)
+      expect(res.status(), `${value}-point throw`).toBe(200)
+    }
+    // No 7-point event exists anywhere, so a made-up id stands in for it;
+    // another game's event is rejected the same way.
+    for (const eventId of [crypto.randomUUID(), horseHoops.score_events[0].id]) {
+      const res = await throwEvent(eventId)
+      expect(res.status()).toBe(404)
+      expect((await res.json()).detail).toBe(`Score event ${eventId} not found for this game`)
+    }
+    const after = (await (await request.get(`${API}/scoring/sessions/${session.id}`, withSession(token))).json()) as {
+      totals: Record<string, number>
+    }
+    expect(after.totals).toEqual({ Ann: 9 })
+  })
+
+  test('all six buttons fit a 320 px phone with 44 px tap targets and no horizontal scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 })
+    const { dialog } = await openGame(page, 'Farm Toss')
+    await beginSession(dialog, ['Amy', 'Bo'])
+    const panel = await dialog.locator('.scoring-current-player-panel').boundingBox()
+    const buttons = dialog.locator('.scoring-current-player-panel .scoring-event-btn')
+    await expect(buttons).toHaveCount(6)
+    for (const box of await buttons.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()))) {
+      expect(box.height).toBeGreaterThanOrEqual(44)
+      expect(box.width).toBeGreaterThanOrEqual(44)
+      expect(box.left).toBeGreaterThanOrEqual(panel!.x - 1)
+      expect(box.right).toBeLessThanOrEqual(panel!.x + panel!.width + 1)
+    }
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
+    expect(overflow).toBe(false)
+  })
+})

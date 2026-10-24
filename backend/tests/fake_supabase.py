@@ -17,6 +17,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 _EMBEDS = {("photo_submissions", "photo_votes"): "submission_id"}
+# Many-to-one embeds: the row's own fk column points at the embedded row's id
+# (score_entries.score_event_id -> game_score_events), so PostgREST returns
+# one object, not a list.
+_EMBEDS_ONE = {("score_entries", "game_score_events"): "score_event_id"}
 
 _clock = {"t": datetime(2026, 10, 12, 12, 0, tzinfo=timezone.utc)}
 
@@ -37,6 +41,8 @@ _DEFAULTS = {
     "node_visits": lambda: {"visited_at": _now_iso()},
     "coin_awards": lambda: {"created_at": _now_iso()},
     "hunt_progress": lambda: {"challenges_completed": [], "completed_at": None, "unlocked_at": None},
+    "score_sheet_sessions": lambda: {"created_at": _now_iso(), "completed_at": None, "winner": None},
+    "score_entries": lambda: {"created_at": _now_iso()},
 }
 
 
@@ -145,6 +151,11 @@ class _Query:
             m = re.fullmatch(r"(\w+)\((.*)\)", part)
             if m:
                 child, child_cols = m.group(1), m.group(2)
+                if (self.table, child) in _EMBEDS_ONE:
+                    fk = _EMBEDS_ONE[(self.table, child)]
+                    parent = next((c for c in self.db.tables[child] if c["id"] == row.get(fk)), None)
+                    out[child] = parent and {k: parent.get(k) for k in _split_top_level(child_cols)}
+                    continue
                 fk = _EMBEDS[(self.table, child)]
                 children = [c for c in self.db.tables[child] if c.get(fk) == row["id"]]
                 out[child] = [{k: c.get(k) for k in _split_top_level(child_cols)} for c in children]

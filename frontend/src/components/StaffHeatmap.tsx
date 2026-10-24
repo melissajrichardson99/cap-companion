@@ -99,7 +99,8 @@ function StaffHeatmap({ onLoggedOut }: { onLoggedOut: () => void }) {
   useEffect(() => {
     api
       .listMapNodes()
-      .then((rows) => setNodes(rows.filter((n) => n.parent_node_id == null)))
+      // A coming-soon node can't be visited, so it has no dot or ranking row.
+      .then((rows) => setNodes(rows.filter((n) => n.parent_node_id == null && !n.coming_soon)))
       .catch((err) => setNodesError(String(err)))
   }, [])
 

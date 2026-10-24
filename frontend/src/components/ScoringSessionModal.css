@@ -390,6 +390,13 @@
   background: color-mix(in srgb, var(--cap-color-sunset-orange) 30%, transparent);
 }
 
+/* Farm Toss has six options (2-6 + Miss, migration 047), so its buttons get
+   full 44 px tap targets. Scoped to that game so the other sheets look the
+   same as before. */
+.scoring-modal-inner .scoring-event-buttons[data-game-slug='farm-toss'] .scoring-event-btn {
+  min-height: 44px;
+}
+
 /* Muted/outline treatment so Miss reads as distinct from a real score. */
 .scoring-modal-inner .scoring-miss-btn {
   background: transparent;

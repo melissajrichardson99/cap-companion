@@ -26,7 +26,7 @@ from uuid import UUID
 
 from app import reference_cache
 from app.device_session import list_guest_session_ids
-from app.errors import NotFoundError
+from app.errors import ConflictError, NotFoundError
 from app.models import (
     BingoCard,
     BingoCardSummary,
@@ -69,6 +69,9 @@ def _row_to_map_node(
         description=row["description"],
         visited=visited,
         is_open=row["is_open"],
+        # .get: the column arrives with migration 047, and this backend may
+        # be deployed before it runs.
+        coming_soon=row.get("coming_soon", False),
         linked_tiles=linked_tiles,
         x_pct=row["x_pct"],
         y_pct=row["y_pct"],
@@ -448,7 +451,8 @@ def _check_map_exploration_bonus(
     sub-nodes) render no pin/card of their own in MapScreen.tsx and are never
     visited directly through any code path, so including them here would
     make the bonus permanently unreachable by default. Closed nodes
-    (is_open false) don't count, and the `top_level_open_ids` guard below
+    (is_open false) and coming-soon nodes (migration 047, which can't be
+    visited at all) don't count, and the `top_level_open_ids` guard below
     avoids vacuously awarding when every top-level node is closed.
 
     Per-Device Sessions Phase 3: both halves of this check -- the
@@ -482,7 +486,11 @@ def _check_map_exploration_bonus(
     session_ids = _resolve_session_ids(session_id, guest_id)
     if all_nodes is None:
         all_nodes = _all_map_nodes(client)
-    top_level_open_ids = {n["id"] for n in all_nodes if n["is_open"] and n["parent_node_id"] is None}
+    top_level_open_ids = {
+        n["id"]
+        for n in all_nodes
+        if n["is_open"] and not n.get("coming_soon", False) and n["parent_node_id"] is None
+    }
     if not top_level_open_ids:
         return 0
 
@@ -555,6 +563,10 @@ def visit_node(
     node_row = next((n for n in all_nodes if n["id"] == str(node_id)), None)
     if node_row is None:
         raise NotFoundError(f"Map node {node_id} not found")
+    # Under construction (migration 047): no visit, so no heatmap event,
+    # Bingo tile or Map Exploration credit either.
+    if node_row.get("coming_soon", False):
+        raise ConflictError(f"{node_row['name']} isn't open yet.")
 
     child_rows = [n for n in all_nodes if n["parent_node_id"] == str(node_id)]
     # A parent's linked tiles include its children's tiles too, so confirming
@@ -626,13 +638,22 @@ def set_node_open_status(node_id: UUID, is_open: bool) -> MapNode:
     (Per-Device Sessions Phase 6a: completed status is per-session, and staff
     actions carry no session to resolve it from) -- the Staff Page never
     reads that field off this endpoint's response either.
+
+    Opening a coming-soon node (migration 047) also clears coming_soon, so
+    staff turn the under-construction building into a normal attraction
+    with the same Open button. Only sent when the row has it set, so this
+    still works on a database without the column.
     """
     client = get_supabase_client()
 
+    changes: dict = {"is_open": is_open}
+    if is_open:
+        current = next((n for n in _all_map_nodes(client) if n["id"] == str(node_id)), None)
+        if current is not None and current.get("coming_soon", False):
+            changes["coming_soon"] = False
+
     try:
-        updated_rows = (
-            client.table("map_nodes").update({"is_open": is_open}).eq("id", str(node_id)).execute().data
-        )
+        updated_rows = client.table("map_nodes").update(changes).eq("id", str(node_id)).execute().data
     finally:
         # Before the response goes out, so the change is live on the very
         # next guest load (and the exploration bonus sees it immediately).

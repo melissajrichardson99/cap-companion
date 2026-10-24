@@ -43,7 +43,7 @@ Follow in order — later steps depend on earlier ones.
       itself. **No manual "create a bucket" step in the dashboard is
       needed** — schema.sql provisions them.
    2. Everything in `backend/supabase/migrations/`, in **numeric filename
-      order** (002 → the latest, currently 046; there is no 001, numbering
+      order** (002 → the latest, currently 047; there is no 001, numbering
       starts at 002). Most are idempotent (`add column if not exists`,
       `on conflict do nothing`), but **`017_grant_service_role_privileges.sql`
       is not optional** — a fresh Supabase project does not grant
@@ -88,6 +88,13 @@ Follow in order — later steps depend on earlier ones.
       Re-running 046's verify query A afterwards should still show every
       table `true`. (It needs no grant either; 017's default privileges
       already cover `service_role`.)
+      **`047_map_nodes_farm_toss_and_pins.sql`** adds the 4- and 5-point
+      Farm Toss scores, moves the Cornhole Mini Golf pin, renames Tractor
+      Ride to "Tractor Ride - West", adds Tractor Ride - East, Bee Maze and
+      a coming-soon building, and adds `map_nodes.coming_soon`. It can run
+      before or after the backend deploy (the backend treats a missing
+      column as false). Map changes show within 60 s and Farm Toss within
+      5 min (reference cache), or at once after a backend restart.
    3. `backend/supabase/seed.sql` — inserts map nodes, minigames, puzzles,
       scoring games, hunt characters, etc.
 3. Why this order: schema.sql must exist before migrations can `alter

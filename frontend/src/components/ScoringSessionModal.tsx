@@ -337,7 +337,7 @@ export function ScoringSessionModal({ game, onClose, onCoinsChanged }: ScoringSe
                     </p>
                   </div>
                 ) : (
-                  <div className="scoring-event-buttons">
+                  <div className="scoring-event-buttons" data-game-slug={game.slug}>
                     {normalEvents.map((event) => (
                       <button
                         type="button"

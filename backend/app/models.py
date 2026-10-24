@@ -113,6 +113,9 @@ class MapNode(BaseModel):
     # Drives the Map's grey-pin/lock-icon closed treatment; never affects
     # Hunt/QR completion.
     is_open: bool = True
+    # Under construction (migration 047): shown with a construction icon,
+    # can't be visited, not counted by Map Exploration or the heatmap.
+    coming_soon: bool = False
     linked_tiles: list[LinkedTile] = Field(default_factory=list)
     # Percentage position (0-100) on the map background image, not pixel
     # coordinates, so pins stay correctly placed regardless of the final

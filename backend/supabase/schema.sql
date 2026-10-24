@@ -24,7 +24,11 @@ create table if not exists map_nodes (
     -- Staff-managed operational status (migration 019) -- independent of a
     -- guest's own visit progress (node_visits below) and never touched by
     -- Reset Session.
-    is_open     boolean not null default true
+    is_open     boolean not null default true,
+    -- Under construction (migration 047): no visits, not counted by Map
+    -- Exploration, not on the heatmap. Opening the node from the Staff Page
+    -- (set_node_open_status) clears it.
+    coming_soon boolean not null default false
 );
 
 -- Note: MapNode.linked_bingo_tile_ids (tech spec section 3) is intentionally NOT
