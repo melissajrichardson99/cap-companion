@@ -1,0 +1,56 @@
+THIRD-PARTY NOTICES
+===================
+
+This repository is not open source: all rights are reserved for the
+project's own code and assets (see README.md). The components below keep
+their own licences, reproduced here as their terms require.
+
+
+Godot Engine 4.7.1-stable (web export templates)
+------------------------------------------------
+
+The ten minigames under frontend/games-dist/ (built from minigames/) are
+HTML5/WebAssembly exports made with the official Godot Engine 4.7.1-stable
+web export templates. Each build's index.js, index.wasm and the audio
+worklet scripts are part of Godot Engine.
+
+Sources of the texts below, taken verbatim from the godotengine/godot
+repository at tag 4.7.1-stable (commit a13da4feb8d8aefc283c3763d33a2f170a18d541):
+
+  - Godot Engine licence: LICENSE.txt
+    https://github.com/godotengine/godot/blob/4.7.1-stable/LICENSE.txt
+  - Third-party components bundled with the engine (FreeType, mbedTLS,
+    zlib, ENet, HarfBuzz, ICU, libpng, libwebp, zstd, Brotli and others),
+    with their copyright statements and full licence texts: COPYRIGHT.txt,
+    copied unchanged to GODOT_COPYRIGHT.txt in this repository.
+    https://github.com/godotengine/godot/blob/4.7.1-stable/COPYRIGHT.txt
+
+Shipping COPYRIGHT.txt under the name GODOT_COPYRIGHT.txt is the approach
+the Godot documentation recommends for third-party licences
+("Complying with licenses", godot-docs branch 4.7,
+https://docs.godotengine.org/en/4.7/about/complying_with_licenses.html).
+COPYRIGHT.txt covers every component in the engine repository, so it is a
+superset of what the web export templates actually compile in.
+
+This game uses Godot Engine, available under the following license:
+
+Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md).
+Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

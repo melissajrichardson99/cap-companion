@@ -1,0 +1,5 @@
+# Paths to remove from the public repo's entire history, one per line, read by
+# scripts/prepare-public-history.sh (git filter-repo --paths-from-file syntax):
+#   a file or folder path relative to the repo root (a folder takes everything
+#   under it), or glob:<pattern> (fnmatch, where * also matches /).
+# Blank lines and lines starting with # are ignored.

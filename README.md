@@ -292,3 +292,5 @@ This is a solo-built portfolio project. Real deployment at the physical
 park is on hold until next year; the live demo above runs the same code
 against a standalone Supabase project. Active feature development is
 currently paused while this repo is prepared for review.
+
+Licence status: all rights reserved; third-party components keep their own licences, see NOTICE.
